@@ -10,9 +10,16 @@
                 <gemini_api_key backend_model="Magento\Config\Model\Config\Backend\Encrypted"/>
             </listings>
             <ebay_api>
+                <trading_daily_limit>5000</trading_daily_limit>
                 <ebay_cert_id backend_model="Magento\Config\Model\Config\Backend\Encrypted"/>
                 <ebay_trading_token backend_model="Magento\Config\Model\Config\Backend\Encrypted"/>
             </ebay_api>
+            <condition>
+                <text_enabled>0</text_enabled>
+                <visual_enabled>0</visual_enabled>
+                <text_model>qwen3.6:35b-a3b-coding-nvfp4</text_model>
+                <visual_model>qwen3.6:35b-a3b-coding-nvfp4</visual_model>
+            </condition>
             <email>
                 <alert_smtp_pass backend_model="Magento\Config\Model\Config\Backend\Encrypted"/>
             </email>

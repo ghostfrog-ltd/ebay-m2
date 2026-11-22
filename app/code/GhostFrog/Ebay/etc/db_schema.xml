@@ -79,7 +79,7 @@
         <column xsi:type="varchar" name="source" nullable="false" length="255" comment="Source"/>
         <column xsi:type="varchar" name="external_id" nullable="false" length="255" comment="External ID"/>
         <column xsi:type="longtext" name="title" nullable="true" comment="Title"/>
-        <column xsi:type="bigint" name="price_current" nullable="true" comment="Current price in V1 units"/>
+        <column xsi:type="decimal" name="price_current" nullable="true" precision="21" scale="2" comment="Current price in GBP"/>
         <column xsi:type="int" name="bids_count" nullable="true" comment="Bids count"/>
         <column xsi:type="datetime" name="end_time" nullable="true" on_update="false" comment="End time"/>
         <column xsi:type="varchar" name="status" nullable="false" length="64" default="live" comment="Status"/>
@@ -95,7 +95,7 @@
         <column xsi:type="varchar" name="model_key" nullable="true" length="255" comment="Model key"/>
         <column xsi:type="int" name="time_left_s" nullable="true" comment="Time left in seconds"/>
         <column xsi:type="boolean" name="finalized" nullable="true" default="false" comment="Finalized"/>
-        <column xsi:type="int" name="price_bid_current" nullable="true" comment="Current bid price in V1 units"/>
+        <column xsi:type="decimal" name="price_bid_current" nullable="true" precision="12" scale="2" comment="Current bid price in GBP"/>
         <column xsi:type="longtext" name="brand" nullable="true" comment="Brand"/>
         <column xsi:type="longtext" name="product_family" nullable="true" comment="Product family"/>
         <column xsi:type="longtext" name="model_name" nullable="true" comment="Model name"/>
@@ -174,7 +174,7 @@
 
     <table name="ghostfrog_ebay_auction_price_history" resource="default" engine="innodb" comment="Auction price history">
         <column xsi:type="int" name="id" nullable="false" identity="true" comment="ID"/>
-        <column xsi:type="bigint" name="price" nullable="true" comment="Observed price in V1 units"/>
+        <column xsi:type="decimal" name="price" nullable="true" precision="21" scale="2" comment="Observed price in GBP"/>
         <column xsi:type="int" name="bids_count" nullable="true" comment="Bids count"/>
         <column xsi:type="datetime" name="timestamp" nullable="true" on_update="false" default="CURRENT_TIMESTAMP" comment="Timestamp"/>
         <column xsi:type="varchar" name="external_id" nullable="true" length="255" comment="External ID"/>
@@ -193,7 +193,7 @@
 
     <table name="ghostfrog_ebay_auction_price_history_orphans" resource="default" engine="innodb" comment="Auction price history orphans">
         <column xsi:type="int" name="original_id" nullable="false" comment="Original ID"/>
-        <column xsi:type="bigint" name="price" nullable="true" comment="Archived price in V1 units"/>
+        <column xsi:type="decimal" name="price" nullable="true" precision="21" scale="2" comment="Archived price in GBP"/>
         <column xsi:type="int" name="bids_count" nullable="true" comment="Bids count"/>
         <column xsi:type="datetime" name="timestamp" nullable="true" on_update="false" comment="Timestamp"/>
         <column xsi:type="varchar" name="external_id" nullable="true" length="255" comment="External ID"/>

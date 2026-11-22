@@ -6,20 +6,24 @@ namespace GhostFrog\Ebay\Model\Collection;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use GhostFrog\Ebay\Model\Enrichment\Queue;
 use Magento\Framework\App\ResourceConnection;
 use Magento\Framework\DB\Adapter\AdapterInterface;
 use Magento\Framework\DB\Sql\Expression;
 use Magento\Framework\Lock\LockManagerInterface;
+use RuntimeException;
 use Throwable;
 
 final class MysqlListings
 {
+    public const TRADING_ENRICHMENT_SERVICE = 'ebay_attributes_v1';
     private const LOCK_NAME = 'ghostfrog_ebay_collection';
     private const REFRESHABLE_STATUSES = ['live', 'active', 'open', 'ending', 'ending_soon', 'unknown'];
 
     public function __construct(
         private readonly ResourceConnection $resource,
-        private readonly LockManagerInterface $lock
+        private readonly LockManagerInterface $lock,
+        private readonly Queue $enrichmentQueue
     ) {
     }
 
@@ -50,6 +54,15 @@ final class MysqlListings
         );
     }
 
+    public function tradingCallsToday(): int
+    {
+        $db = $this->resource->getConnection();
+        return (int)$db->fetchOne($db->select()
+            ->from($this->resource->getTableName('ghostfrog_ebay_api_usage'), new Expression('SUM(call_count)'))
+            ->where('date = UTC_DATE()')
+            ->where('service IN (?)', [self::TRADING_ENRICHMENT_SERVICE, 'ebay_ended_v1']));
+    }
+
     public function tryLock(): bool
     {
         return $this->lock->lock(self::LOCK_NAME, 0);
@@ -72,6 +85,9 @@ final class MysqlListings
         $listings = $this->resource->getTableName('ghostfrog_ebay_auction_listings');
         $history = $this->resource->getTableName('ghostfrog_ebay_auction_price_history');
         $seen = $this->utcDateTime($observedAt);
+        if ($rows !== []) {
+            $this->assertDecimalPrices($db, $listings, $history);
+        }
 
         $db->beginTransaction();
         try {
@@ -155,6 +171,7 @@ final class MysqlListings
                 'external_id' => $externalId,
                 'first_seen' => $seen,
             ]);
+            $this->enrichmentQueue->enqueue((string)$db->lastInsertId($table));
             return true;
         }
 
@@ -179,6 +196,18 @@ final class MysqlListings
         }
         $db->update($table, $row, ['id = ?' => $existing['id']]);
         return true;
+    }
+
+    private function assertDecimalPrices(AdapterInterface $db, string $listings, string $history): void
+    {
+        foreach ([$listings => ['price_current', 'price_bid_current'], $history => ['price']] as $table => $fields) {
+            $columns = $db->describeTable($table);
+            foreach ($fields as $field) {
+                if ($columns[$field]['DATA_TYPE'] !== 'decimal' || (int)$columns[$field]['SCALE'] !== 2) {
+                    throw new RuntimeException('Run Magento setup:upgrade before collecting decimal prices.');
+                }
+            }
+        }
     }
 
     private function ensureStatuses(AdapterInterface $db): void

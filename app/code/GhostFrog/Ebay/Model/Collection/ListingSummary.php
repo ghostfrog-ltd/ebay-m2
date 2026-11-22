@@ -117,15 +117,24 @@ final class ListingSummary
         }
     }
 
-    private function price(array $price): ?int
+    private function price(array $price): ?string
     {
         $value = $price['value'] ?? null;
-        if (($price['currency'] ?? 'GBP') !== 'GBP' || !is_numeric($value) || (float)$value < 0
-            || (float)$value > 2147483647
+        if (($price['currency'] ?? 'GBP') !== 'GBP' || (!is_string($value) && !is_int($value) && !is_float($value))
+            || !preg_match('/\A([0-9]+)(?:\.([0-9]{1,2})0*)?\z/', (string)$value, $amount)
         ) {
             return null;
         }
-        return (int)round((float)$value, 0, PHP_ROUND_HALF_EVEN);
+
+        $pounds = ltrim($amount[1], '0') ?: '0';
+        $pence = str_pad($amount[2] ?? '', 2, '0');
+        if (strlen($pounds) > 10 || (int)$pounds > 2147483647
+            || ($pounds === '2147483647' && $pence !== '00')
+        ) {
+            return null;
+        }
+
+        return $pounds . '.' . $pence;
     }
 
     private function evidence(array $item): array

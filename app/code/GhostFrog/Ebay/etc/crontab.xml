@@ -5,5 +5,14 @@
         <job name="ghostfrog_ebay_collect_listings" instance="GhostFrog\Ebay\Cron\CollectListings" method="execute">
             <schedule>* * * * *</schedule>
         </job>
+        <job name="ghostfrog_ebay_enrich_listings" instance="GhostFrog\Ebay\Model\Enrichment\Worker" method="execute">
+            <schedule>*/5 * * * *</schedule>
+        </job>
+        <job name="ghostfrog_ebay_generate_model_keys" instance="GhostFrog\Ebay\Model\ModelKey\Worker" method="execute">
+            <schedule>*/5 * * * *</schedule>
+        </job>
+        <job name="ghostfrog_ebay_check_condition" instance="GhostFrog\Ebay\Model\Condition\Worker" method="execute">
+            <schedule>*/5 * * * *</schedule>
+        </job>
     </group>
 </config>
