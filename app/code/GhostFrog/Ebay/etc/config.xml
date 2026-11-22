@@ -6,9 +6,23 @@
             <general>
                 <enabled>0</enabled>
             </general>
+            <listings>
+                <gemini_api_key backend_model="Magento\Config\Model\Config\Backend\Encrypted"/>
+            </listings>
             <ebay_api>
                 <ebay_cert_id backend_model="Magento\Config\Model\Config\Backend\Encrypted"/>
+                <ebay_trading_token backend_model="Magento\Config\Model\Config\Backend\Encrypted"/>
             </ebay_api>
+            <email>
+                <alert_smtp_pass backend_model="Magento\Config\Model\Config\Backend\Encrypted"/>
+            </email>
+            <slack>
+                <slack_webhook_url backend_model="Magento\Config\Model\Config\Backend\Encrypted"/>
+                <slack_bot_token backend_model="Magento\Config\Model\Config\Backend\Encrypted"/>
+            </slack>
+            <telegram>
+                <telegram_bot_token backend_model="Magento\Config\Model\Config\Backend\Encrypted"/>
+            </telegram>
         </ghostfrog_ebay>
     </default>
 </config>

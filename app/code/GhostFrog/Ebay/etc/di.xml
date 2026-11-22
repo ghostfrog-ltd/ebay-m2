@@ -4,7 +4,13 @@
     <type name="Magento\Config\Model\Config\TypePool">
         <arguments>
             <argument name="sensitive" xsi:type="array">
+                <item name="ghostfrog_ebay/listings/gemini_api_key" xsi:type="string">1</item>
                 <item name="ghostfrog_ebay/ebay_api/ebay_cert_id" xsi:type="string">1</item>
+                <item name="ghostfrog_ebay/ebay_api/ebay_trading_token" xsi:type="string">1</item>
+                <item name="ghostfrog_ebay/email/alert_smtp_pass" xsi:type="string">1</item>
+                <item name="ghostfrog_ebay/slack/slack_webhook_url" xsi:type="string">1</item>
+                <item name="ghostfrog_ebay/slack/slack_bot_token" xsi:type="string">1</item>
+                <item name="ghostfrog_ebay/telegram/telegram_bot_token" xsi:type="string">1</item>
             </argument>
         </arguments>
     </type>

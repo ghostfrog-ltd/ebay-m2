@@ -35,6 +35,31 @@
             </group>
             <group id="listings" translate="label" sortOrder="30" showInDefault="1">
                 <label>Listing Processing</label>
+                <field id="gf_pph_enabled" translate="label" type="select"
+                       sortOrder="10" showInDefault="1">
+                    <label>Enable PeoplePerHour Listings</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+                <field id="gemini_api_key" translate="label" type="obscure"
+                       sortOrder="20" showInDefault="1">
+                    <label>Gemini API Key</label>
+                    <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
+                </field>
+                <field id="gf_assess_limit" translate="label" type="text"
+                       sortOrder="30" showInDefault="1">
+                    <label>Assessment Limit</label>
+                    <validate>validate-digits</validate>
+                </field>
+                <field id="gf_comps_refresh_hours" translate="label" type="text"
+                       sortOrder="40" showInDefault="1">
+                    <label>Comparables Refresh Interval (Hours)</label>
+                    <validate>validate-digits</validate>
+                </field>
+                <field id="gf_attr_backfill_limit" translate="label" type="text"
+                       sortOrder="50" showInDefault="1">
+                    <label>Attribute Backfill Limit</label>
+                    <validate>validate-digits</validate>
+                </field>
                 <field id="gf_listing_stale_minutes" translate="label" type="text"
                        sortOrder="60" showInDefault="1">
                     <label>Listing Staleness Threshold (Minutes)</label>
@@ -43,9 +68,49 @@
             </group>
             <group id="heartbeat" translate="label" sortOrder="40" showInDefault="1">
                 <label>Heartbeat</label>
+                <field id="gf_heartbeat_sleep_seconds" translate="label" type="text"
+                       sortOrder="10" showInDefault="1">
+                    <label>Interval (Seconds)</label>
+                    <validate>validate-number validate-zero-or-greater</validate>
+                </field>
+                <field id="gf_heartbeat_jitter_s" translate="label" type="text"
+                       sortOrder="20" showInDefault="1">
+                    <label>Jitter (Seconds)</label>
+                    <validate>validate-number validate-zero-or-greater</validate>
+                </field>
+                <field id="gf_heartbeat_enable_roi" translate="label" type="select"
+                       sortOrder="30" showInDefault="1">
+                    <label>Enable ROI Processing</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+                <field id="gf_heartbeat_enable_close" translate="label" type="select"
+                       sortOrder="40" showInDefault="1">
+                    <label>Enable Ended Listing Processing</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
                 <field id="gf_heartbeat_enable_scrape" translate="label" type="select"
                        sortOrder="50" showInDefault="1">
                     <label>Enable Scraping</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+                <field id="gf_heartbeat_enable_comps" translate="label" type="select"
+                       sortOrder="60" showInDefault="1">
+                    <label>Enable Comparables Refresh</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+                <field id="gf_heartbeat_enable_hot" translate="label" type="select"
+                       sortOrder="70" showInDefault="1">
+                    <label>Enable Hot Listing Processing</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+                <field id="gf_heartbeat_enable_alerts" translate="label" type="select"
+                       sortOrder="80" showInDefault="1">
+                    <label>Enable Alerts</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+                <field id="gf_heartbeat_enable_attrs" translate="label" type="select"
+                       sortOrder="90" showInDefault="1">
+                    <label>Enable Attribute Backfill</label>
                     <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
                 </field>
             </group>
@@ -64,6 +129,122 @@
                        sortOrder="30" showInDefault="1">
                     <label>Certificate ID (Client Secret)</label>
                     <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
+                </field>
+                <field id="ebay_dev_id" translate="label" type="text"
+                       sortOrder="40" showInDefault="1">
+                    <label>Developer ID</label>
+                </field>
+                <field id="ebay_env" translate="label" type="text"
+                       sortOrder="50" showInDefault="1">
+                    <label>Environment</label>
+                </field>
+                <field id="ebay_api_base" translate="label" type="text"
+                       sortOrder="60" showInDefault="1">
+                    <label>API Base URL</label>
+                </field>
+                <field id="ebay_oauth_scope" translate="label" type="text"
+                       sortOrder="70" showInDefault="1">
+                    <label>OAuth Scope</label>
+                </field>
+                <field id="ebay_trading_token" translate="label" type="obscure"
+                       sortOrder="80" showInDefault="1">
+                    <label>Trading API Token</label>
+                    <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
+                </field>
+            </group>
+            <group id="email" translate="label" sortOrder="60" showInDefault="1">
+                <label>Email Alerts</label>
+                <field id="alert_smtp_host" translate="label" type="text"
+                       sortOrder="10" showInDefault="1">
+                    <label>SMTP Host</label>
+                </field>
+                <field id="alert_smtp_port" translate="label" type="text"
+                       sortOrder="20" showInDefault="1">
+                    <label>SMTP Port</label>
+                    <validate>validate-digits</validate>
+                </field>
+                <field id="alert_smtp_user" translate="label" type="text"
+                       sortOrder="30" showInDefault="1">
+                    <label>SMTP Username</label>
+                </field>
+                <field id="alert_smtp_pass" translate="label" type="obscure"
+                       sortOrder="40" showInDefault="1">
+                    <label>SMTP Password</label>
+                    <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
+                </field>
+                <field id="alert_from" translate="label" type="text"
+                       sortOrder="50" showInDefault="1">
+                    <label>Sender</label>
+                </field>
+                <field id="alert_to" translate="label" type="text"
+                       sortOrder="60" showInDefault="1">
+                    <label>Recipients</label>
+                </field>
+            </group>
+            <group id="slack" translate="label" sortOrder="70" showInDefault="1">
+                <label>Slack</label>
+                <field id="slack_notifications_enabled" translate="label" type="select"
+                       sortOrder="10" showInDefault="1">
+                    <label>Enable Notifications</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+                <field id="slack_webhook_url" translate="label" type="obscure"
+                       sortOrder="20" showInDefault="1">
+                    <label>Webhook URL</label>
+                    <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
+                </field>
+                <field id="slack_timeout_seconds" translate="label" type="text"
+                       sortOrder="30" showInDefault="1">
+                    <label>Request Timeout (Seconds)</label>
+                    <validate>validate-digits</validate>
+                </field>
+                <field id="gf_heartbeat_slack_minutes" translate="label" type="text"
+                       sortOrder="40" showInDefault="1">
+                    <label>Heartbeat Notification Interval (Minutes)</label>
+                    <validate>validate-digits</validate>
+                </field>
+                <field id="slack_review_commands_enabled" translate="label" type="select"
+                       sortOrder="50" showInDefault="1">
+                    <label>Enable Review Commands</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+                <field id="slack_bot_token" translate="label" type="obscure"
+                       sortOrder="60" showInDefault="1">
+                    <label>Bot Token</label>
+                    <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
+                </field>
+                <field id="slack_review_channel_id" translate="label" type="text"
+                       sortOrder="70" showInDefault="1">
+                    <label>Review Channel ID</label>
+                </field>
+            </group>
+            <group id="telegram" translate="label" sortOrder="80" showInDefault="1">
+                <label>Telegram</label>
+                <field id="gf_enable_telegram_bot" translate="label" type="select"
+                       sortOrder="10" showInDefault="1">
+                    <label>Enable Bot</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+                <field id="telegram_bot_token" translate="label" type="obscure"
+                       sortOrder="20" showInDefault="1">
+                    <label>Bot Token</label>
+                    <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
+                </field>
+                <field id="telegram_chat_id" translate="label" type="text"
+                       sortOrder="30" showInDefault="1">
+                    <label>Chat ID</label>
+                </field>
+                <field id="telegram_firehose_channel_id" translate="label" type="text"
+                       sortOrder="40" showInDefault="1">
+                    <label>Firehose Channel ID</label>
+                </field>
+            </group>
+            <group id="reminders" translate="label" sortOrder="90" showInDefault="1">
+                <label>Reminders</label>
+                <field id="gf_cjtaxi_reminder_enabled" translate="label" type="select"
+                       sortOrder="10" showInDefault="1">
+                    <label>Enable CJTaxi Domain Expiry Reminder</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
                 </field>
             </group>
         </section>
