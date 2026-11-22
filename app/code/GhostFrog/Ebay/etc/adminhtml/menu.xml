@@ -16,5 +16,13 @@
              parent="GhostFrog_Ebay::ghostfrog"
              action="adminhtml/system_config/edit/section/ghostfrog_ebay"
              resource="GhostFrog_Ebay::config"/>
+        <add id="GhostFrog_Ebay::listings"
+             title="Listings"
+             translate="title"
+             module="GhostFrog_Ebay"
+             sortOrder="20"
+             parent="GhostFrog_Ebay::ghostfrog"
+             action="ghostfrog_ebay/listing/index"
+             resource="GhostFrog_Ebay::listings"/>
     </menu>
 </config>

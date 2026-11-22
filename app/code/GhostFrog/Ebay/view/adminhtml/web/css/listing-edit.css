@@ -1,0 +1,35 @@
+.ghostfrog-listing-edit__sections {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 46rem), 1fr));
+    align-items: start;
+    gap: 3rem;
+    max-width: 128rem;
+}
+
+.ghostfrog-listing-edit__sections > .admin__fieldset {
+    padding: 0;
+}
+
+.ghostfrog-listing-edit__sections .admin__legend,
+.ghostfrog-listing-edit__sections .admin__table-secondary caption {
+    font-weight: 600;
+    line-height: 1.4;
+    margin-bottom: 1.6rem;
+}
+
+.ghostfrog-listing-edit__sections .admin__fieldset > .admin__field {
+    margin-bottom: 2rem;
+}
+
+.ghostfrog-listing-edit__sections .admin__fieldset > .admin__field:last-child {
+    margin-bottom: 0;
+}
+
+.ghostfrog-listing-edit__sections .admin__table-secondary th {
+    width: 17rem;
+    font-weight: 600;
+}
+
+.ghostfrog-listing-edit__sections .admin__table-secondary td {
+    overflow-wrap: anywhere;
+}

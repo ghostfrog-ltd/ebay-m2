@@ -7,7 +7,9 @@
                 <resource id="Magento_Backend::stores">
                     <resource id="Magento_Backend::stores_settings">
                         <resource id="Magento_Config::config">
-                            <resource id="GhostFrog_Ebay::config" title="Ebay Configuration" translate="title"/>
+                            <resource id="GhostFrog_Ebay::config" title="Ebay Configuration" translate="title">
+                                <resource id="GhostFrog_Ebay::listings" title="Manage eBay Listings" translate="title"/>
+                            </resource>
                         </resource>
                     </resource>
                 </resource>

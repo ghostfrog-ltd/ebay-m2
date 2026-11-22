@@ -1,0 +1,119 @@
+<?php
+
+use GhostFrog\Ebay\Model\Condition\Assessment;
+use Magento\Backend\Block\Template;
+use Magento\Framework\Escaper;
+
+/** @var Template $block */
+/** @var Escaper $escaper */
+$listing = $block->getData('listing');
+$details = [
+    'external_id' => __('eBay Item ID'),
+    'source' => __('Source'),
+    'status' => __('Status'),
+    'sale_type' => __('Sale Type'),
+    'price_current' => __('Current Price (GBP)'),
+    'price_bid_current' => __('Current Bid (GBP)'),
+    'bids_count' => __('Bids'),
+    'final_price' => __('Final Price (GBP)'),
+    'end_time' => __('End Time (UTC)'),
+    'last_seen_at' => __('Last Seen (UTC)'),
+];
+$grade = (string)$listing['condition_grade'];
+$grades = array_unique(['', ...Assessment::GRADES, $grade]);
+$notes = "\n" . (string)$listing['notes'];
+$url = (string)$listing['url'];
+?>
+<form class="admin__scope-old"
+      method="post"
+      action="<?= $escaper->escapeUrl($block->getUrl('ghostfrog_ebay/listing/save', ['id' => $listing['id']])) ?>">
+    <input type="hidden" name="form_key" value="<?= $escaper->escapeHtmlAttr($block->getFormKey()) ?>">
+    <input type="hidden" name="revision" value="<?= $escaper->escapeHtmlAttr($block->getData('revision')) ?>">
+    <div class="page-main-actions">
+        <div class="page-actions">
+            <div class="page-actions-inner">
+                <div class="page-actions-buttons">
+                    <a class="action action-default action-back"
+                       href="<?= $escaper->escapeUrl($block->getUrl('ghostfrog_ebay/listing/index')) ?>">
+                        <span><?= $escaper->escapeHtml(__('Back to Listings')) ?></span>
+                    </a>
+                    <button class="action-primary" type="submit">
+                        <span><?= $escaper->escapeHtml(__('Save Listing')) ?></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="ghostfrog-listing-edit__sections">
+        <fieldset class="admin__fieldset">
+            <legend class="admin__legend"><span><?= $escaper->escapeHtml(__('Listing Details')) ?></span></legend>
+            <div class="admin__field admin__field-wide">
+                <label class="admin__field-label" for="listing-title">
+                    <span><?= $escaper->escapeHtml(__('Title')) ?></span>
+                </label>
+                <div class="admin__field-control">
+                    <input class="admin__control-text" type="text" id="listing-title" name="listing[title]"
+                           maxlength="255" aria-describedby="listing-title-note"
+                           value="<?= $escaper->escapeHtmlAttr((string)$listing['title']) ?>">
+                    <div class="admin__field-note" id="listing-title-note">
+                        <?= $escaper->escapeHtml(__('A later eBay refresh can replace the title.')) ?>
+                    </div>
+                </div>
+            </div>
+            <div class="admin__field admin__field-wide">
+                <label class="admin__field-label" for="listing-model-key">
+                    <span><?= $escaper->escapeHtml(__('Model Key')) ?></span>
+                </label>
+                <div class="admin__field-control">
+                    <input class="admin__control-text" type="text" id="listing-model-key" name="listing[model_key]"
+                           maxlength="255" value="<?= $escaper->escapeHtmlAttr((string)$listing['model_key']) ?>">
+                </div>
+            </div>
+            <div class="admin__field admin__field-wide">
+                <label class="admin__field-label" for="listing-condition-grade">
+                    <span><?= $escaper->escapeHtml(__('Condition Grade')) ?></span>
+                </label>
+                <div class="admin__field-control">
+                    <select class="admin__control-select" id="listing-condition-grade" name="listing[condition_grade]">
+                        <?php foreach ($grades as $value): ?>
+                            <option value="<?= $escaper->escapeHtmlAttr($value) ?>"
+                                <?= $value === $grade ? 'selected' : '' ?>>
+                                <?= $escaper->escapeHtml($value === '' ? __('No grade') : $value) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
+            <div class="admin__field admin__field-wide">
+                <label class="admin__field-label" for="listing-notes">
+                    <span><?= $escaper->escapeHtml(__('Notes')) ?></span>
+                </label>
+                <div class="admin__field-control">
+                    <textarea class="admin__control-textarea" id="listing-notes"
+                              name="listing[notes]" rows="5"><?= $escaper->escapeHtml($notes) ?></textarea>
+                </div>
+            </div>
+        </fieldset>
+        <table class="admin__table-secondary">
+            <caption><?= $escaper->escapeHtml(__('Collected Data')) ?></caption>
+            <tbody>
+                <?php foreach ($details as $field => $label): ?>
+                    <tr>
+                        <th scope="row"><?= $escaper->escapeHtml($label) ?></th>
+                        <td><?= $escaper->escapeHtml($listing[$field] ?? '—') ?></td>
+                    </tr>
+                <?php endforeach; ?>
+                <?php if (preg_match('~^https?://~i', $url)): ?>
+                    <tr>
+                        <th scope="row"><?= $escaper->escapeHtml(__('eBay Listing')) ?></th>
+                        <td>
+                            <a href="<?= $escaper->escapeUrl($url) ?>" target="_blank" rel="noopener noreferrer">
+                                <?= $escaper->escapeHtml(__('View on eBay')) ?>
+                            </a>
+                        </td>
+                    </tr>
+                <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+</form>

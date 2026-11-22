@@ -8,7 +8,7 @@ use RuntimeException;
 
 final class Assessment
 {
-    private const GRADES = ['A', 'B', 'C', 'D', 'unknown'];
+    public const GRADES = ['A', 'B', 'C', 'D', 'unknown'];
     private const TEXT_SEVERE = [
         'accessory_only', 'functional_fault', 'locked_device', 'missing_major_part',
         'parts_or_repair', 'vague_or_untested', 'water_damage',

@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <type name="Magento\Framework\View\Element\UiComponent\DataProvider\CollectionFactory">
+        <arguments>
+            <argument name="collections" xsi:type="array">
+                <item name="ghostfrog_ebay_listing_data_source" xsi:type="string">GhostFrog\Ebay\Model\ResourceModel\Listing\Grid\Collection</item>
+            </argument>
+        </arguments>
+    </type>
+    <type name="GhostFrog\Ebay\Model\ResourceModel\Listing\Grid\Collection">
+        <arguments>
+            <argument name="mainTable" xsi:type="const">GhostFrog\Ebay\Model\ResourceModel\Listing::TABLE</argument>
+            <argument name="identifierName" xsi:type="string">id</argument>
+        </arguments>
+    </type>
+</config>
