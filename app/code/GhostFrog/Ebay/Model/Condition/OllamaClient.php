@@ -63,7 +63,8 @@ final class OllamaClient
         $client = $this->curlFactory->create();
         $client->setTimeout($visual ? 240 : 180);
         $client->setOptions([CURLOPT_CONNECTTIMEOUT => 5, CURLOPT_FOLLOWLOCATION => false, CURLOPT_NOPROXY => '*']);
-        $client->setHeaders(['Content-Type' => 'application/json']);
+        // Magento's cURL client records the first status line, including HTTP 100.
+        $client->setHeaders(['Content-Type' => 'application/json', 'Expect' => '']);
         try {
             $client->post($endpoint, $payload);
         } catch (\Exception) {
