@@ -6,6 +6,9 @@
             <general>
                 <enabled>0</enabled>
             </general>
+            <ebay_api>
+                <ebay_cert_id backend_model="Magento\Config\Model\Config\Backend\Encrypted"/>
+            </ebay_api>
         </ghostfrog_ebay>
     </default>
 </config>

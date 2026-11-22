@@ -16,6 +16,56 @@
                     <frontend_model>GhostFrog\Ebay\Block\Adminhtml\System\Config\Field\Enabled</frontend_model>
                 </field>
             </group>
+            <group id="scraping" translate="label" sortOrder="20" showInDefault="1">
+                <label>Scraping</label>
+                <field id="gf_scrape_tz" translate="label" type="text"
+                       sortOrder="10" showInDefault="1">
+                    <label>Scrape Time Zone</label>
+                </field>
+                <field id="gf_scrape_start_hour" translate="label" type="text"
+                       sortOrder="20" showInDefault="1">
+                    <label>Scrape Start Hour (0–23)</label>
+                    <validate>validate-digits validate-digits-range digits-range-0-23</validate>
+                </field>
+                <field id="gf_scrape_end_hour" translate="label" type="text"
+                       sortOrder="30" showInDefault="1">
+                    <label>Scrape End Hour (0–24, Exclusive)</label>
+                    <validate>validate-digits validate-digits-range digits-range-0-24</validate>
+                </field>
+            </group>
+            <group id="listings" translate="label" sortOrder="30" showInDefault="1">
+                <label>Listing Processing</label>
+                <field id="gf_listing_stale_minutes" translate="label" type="text"
+                       sortOrder="60" showInDefault="1">
+                    <label>Listing Staleness Threshold (Minutes)</label>
+                    <validate>validate-digits</validate>
+                </field>
+            </group>
+            <group id="heartbeat" translate="label" sortOrder="40" showInDefault="1">
+                <label>Heartbeat</label>
+                <field id="gf_heartbeat_enable_scrape" translate="label" type="select"
+                       sortOrder="50" showInDefault="1">
+                    <label>Enable Scraping</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+            </group>
+            <group id="ebay_api" translate="label" sortOrder="50" showInDefault="1">
+                <label>eBay API</label>
+                <field id="gf_allow_ebay_api" translate="label" type="select"
+                       sortOrder="10" showInDefault="1">
+                    <label>Allow eBay API Calls</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+                <field id="ebay_app_id" translate="label" type="text"
+                       sortOrder="20" showInDefault="1">
+                    <label>Application ID</label>
+                </field>
+                <field id="ebay_cert_id" translate="label" type="obscure"
+                       sortOrder="30" showInDefault="1">
+                    <label>Certificate ID (Client Secret)</label>
+                    <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
+                </field>
+            </group>
         </section>
     </system>
 </config>
