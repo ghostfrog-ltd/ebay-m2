@@ -28,11 +28,23 @@ class Index implements ActionInterface, MviewActionInterface
 
     public function executeFull(): void
     {
+        $this->refresh(null);
+    }
+
+    public function refreshSales(array $ids): void
+    {
+        if ($ids !== []) {
+            $this->refresh($ids);
+        }
+    }
+
+    private function refresh(?array $ids): void
+    {
         if (!$this->lock->lock(self::ID, 0)) {
             throw new RuntimeException('The GhostFrog comps index is already rebuilding.');
         }
         try {
-            $this->rebuild();
+            $this->rebuild($ids);
         } finally {
             $this->lock->unlock(self::ID);
         }
@@ -56,7 +68,7 @@ class Index implements ActionInterface, MviewActionInterface
         $this->executeList($ids);
     }
 
-    private function rebuild(): void
+    private function rebuild(?array $ids): void
     {
         $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
         $computedAt = $now->format('Y-m-d H:i:s');
@@ -64,16 +76,37 @@ class Index implements ActionInterface, MviewActionInterface
         $table = $this->resource->getTableName(self::TABLE);
         $db->beginTransaction();
         try {
+            $scope = null;
+            if ($ids !== null) {
+                $scope = [];
+                foreach ($this->listings->related($ids) as $listing) {
+                    $group = $this->eligibility->group($listing);
+                    if ($group !== null) {
+                        [$key, $grade] = $group;
+                        $scope[$key][$grade] = true;
+                    }
+                }
+                if ($scope === []) {
+                    $db->commit();
+                    return;
+                }
+            }
+
             $sales = [];
-            foreach ($this->listings->sold($now->modify('-365 days')->format('Y-m-d H:i:s'), $computedAt) as $listing) {
+            $modelKeys = $scope === null ? null : array_keys($scope);
+            foreach ($this->listings->sold($now->modify('-365 days')->format('Y-m-d H:i:s'), $computedAt, $modelKeys) as $listing) {
                 $group = $this->eligibility->group($listing);
                 if ($group === null) {
                     continue;
                 }
                 [$key, $grade] = $group;
-                $item = preg_replace('/^v1\|(\d+)\|0$/', '$1', $listing['external_id']);
-                if (!isset($sales[$item]) || $listing['end_time'] >= $sales[$item]['end_time']) {
+                $item = Listings::itemId($listing['external_id']);
+                $previous = $sales[$item] ?? null;
+                if ($previous === null || $listing['end_time'] > $previous['end_time']
+                    || ($listing['end_time'] === $previous['end_time'] && $listing['id'] > $previous['id'])
+                ) {
                     $sales[$item] = [
+                        'id' => $listing['id'],
                         'key' => $key,
                         'grade' => $grade,
                         'price' => (float)$listing['final_price'],
@@ -83,10 +116,18 @@ class Index implements ActionInterface, MviewActionInterface
             }
             $groups = [];
             foreach ($sales as $sale) {
-                $groups[$sale['key']][$sale['grade']][] = $sale['price'];
+                if ($scope === null || isset($scope[$sale['key']][$sale['grade']])) {
+                    $groups[$sale['key']][$sale['grade']][] = $sale['price'];
+                }
             }
 
-            $db->delete($table);
+            if ($scope === null) {
+                $db->delete($table);
+            } else {
+                foreach ($scope as $key => $grades) {
+                    $db->delete($table, ['model_key = ?' => $key, 'condition_grade IN (?)' => array_keys($grades)]);
+                }
+            }
             $rows = [];
             foreach ($groups as $key => $grades) {
                 foreach ($grades as $grade => $prices) {

@@ -7,11 +7,12 @@ namespace GhostFrog\Ebay\Model\Enrichment;
 use DOMDocument;
 use DOMElement;
 use DOMXPath;
+use GhostFrog\Ebay\Model\FinalPrice\Outcome;
 use RuntimeException;
 
 final class TradingResponse
 {
-    public function parse(string $xml, string $itemId): array
+    public function parse(string $xml, string $itemId, bool $saleOutcome = false): array
     {
         $document = new DOMDocument();
         if ($xml === '' || !$document->loadXML($xml, LIBXML_NONET | LIBXML_NOERROR | LIBXML_NOWARNING)
@@ -34,7 +35,13 @@ final class TradingResponse
             if (array_intersect($codes, [931, 932, 16110, 21917053])) {
                 throw new RuntimeException('eBay rejected the Trading user token.', 401);
             }
+            if ($saleOutcome && $codes !== [] && array_diff($codes, [17, 1505, 21920397]) === []) {
+                return ['status' => 'unavailable', 'reason' => 'trading_item_unavailable'];
+            }
             if (in_array(17, $codes, true)) {
+                if ($saleOutcome) {
+                    throw new RuntimeException('eBay returned conflicting GetItem errors.');
+                }
                 return ['status' => 'unavailable', 'fields' => [], 'raw' => []];
             }
             throw new RuntimeException('eBay GetItem failed.');
@@ -43,7 +50,7 @@ final class TradingResponse
         if (!$item instanceof DOMElement || $this->text($xpath, $item, 'ItemID') !== $itemId) {
             throw new RuntimeException('eBay GetItem returned a different or missing item.');
         }
-        return $this->attributes($xpath, $item);
+        return $saleOutcome ? Outcome::parse($xpath, $item) : $this->attributes($xpath, $item);
     }
 
     private function attributes(DOMXPath $xpath, DOMElement $item): array

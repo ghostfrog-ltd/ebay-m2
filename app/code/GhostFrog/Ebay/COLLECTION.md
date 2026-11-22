@@ -110,7 +110,8 @@ available in Magento. PostgreSQL remains the live source of truth. Imported
 listings need fresh sale outcomes in Magento for the index to include them.
 
 With the extension enabled, Magento cron marks the index for a full refresh
-hourly. The Magento index cron processes the refresh. To rebuild immediately:
+daily so sales age out and later identity and condition changes are picked up.
+The Magento index cron processes the refresh. To rebuild immediately:
 
     ddev php bin/magento indexer:reindex ghostfrog_ebay_comps
 
@@ -120,3 +121,26 @@ and other sources require 15. Change the GBP target profit, selling fee
 percentage and combined shipping in **GhostFrog → eBay Configuration →
 Comps and Pricing**. Pricing changes apply on the next listing view. The
 formula also deducts £5 for packaging and reserve.
+
+
+## Final sale prices
+
+After applying the declarative queue schema with `setup:upgrade`, turn on
+**GhostFrog → eBay Configuration → Heartbeat → Enable Ended Listing Processing**.
+The extension must also be enabled. The worker needs **Allow eBay API Calls**
+and a Trading API token.
+
+The enqueue cron checks every five minutes for unpriced listings between
+30 minutes and 90 days past their stored end time. A separate worker handles up
+to 20 due jobs every five minutes with the existing Trading API quota. It
+restores active listings only when eBay returns a future end time. Temporary
+errors retry with backoff. An inaccessible item keeps its local evidence and
+has an unconfirmed outcome unless it was already marked ended.
+
+Only sales with a usable GBP price can contribute to comps. Auctions require
+a reported sale, bids and confirmation that the reserve was met or absent.
+Fixed-price checks exclude ambiguous offers, revised prices, multi-unit and
+variation sales. A confirmed ending without a verifiable price stays ended.
+After recording a sale, the worker rebuilds its same-model, same-grade comp
+group and any group affected by another stored ID for the same eBay item.
+The queue retains the comp job until that write succeeds.

@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="urn:magento:framework:Mview/etc/mview.xsd">
-    <!-- The hourly full rebuild also drops sales that aged out without a listing update. -->
+    <!-- The daily full rebuild also drops sales that aged out without a listing update. -->
     <view id="ghostfrog_ebay_comps" class="GhostFrog\Ebay\Model\Comps\Index" group="indexer"/>
 </config>

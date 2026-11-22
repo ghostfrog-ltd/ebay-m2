@@ -15,19 +15,20 @@ final class Listings
     {
     }
 
-    public function sold(string $from, string $until): iterable
+    public function sold(string $from, string $until, ?array $modelKeys = null): iterable
     {
         $db = $this->resource->getConnection();
-        $select = $this->select()
-            ->where('a.id > :last_id')
+        $sales = $this->select()
             ->where('a.status = ?', 'sold')
             ->where('a.finalized = 1')
             ->where('a.final_price > 0')
             ->where('a.end_time >= ?', $from)
             ->where('a.end_time <= ?', $until)
-            ->where("a.model_key IS NOT NULL AND a.model_key NOT IN ('', 'unknown')")
-            ->order('a.id ASC')
-            ->limit(500);
+            ->where("a.model_key IS NOT NULL AND a.model_key NOT IN ('', 'unknown')");
+        $select = (clone $sales)->where('a.id > :last_id')->order('a.id ASC')->limit(500);
+        if ($modelKeys !== null) {
+            $select->where('a.model_key IN (?)', $modelKeys);
+        }
         $lastId = '0';
         do {
             $batch = $db->fetchAll($select, ['last_id' => $lastId]);
@@ -35,7 +36,44 @@ final class Listings
                 $lastId = $row['id'];
                 yield $row;
             }
+            if ($modelKeys !== null && $batch !== []) {
+                // An alias outside the selected models can win the deduplication.
+                $aliases = $this->aliases($batch);
+                if ($aliases !== []) {
+                    yield from $db->fetchAll((clone $sales)->where('a.external_id IN (?)', $aliases));
+                }
+            }
         } while (count($batch) === 500);
+    }
+
+    public function related(array $ids): array
+    {
+        $db = $this->resource->getConnection();
+        $rows = $db->fetchAll($this->select()->where('a.id IN (?)', $ids));
+        $aliases = $this->aliases($rows);
+        return $aliases === [] ? $rows : array_merge($rows,
+            $db->fetchAll($this->select()->where('a.external_id IN (?)', $aliases)));
+    }
+
+    public static function itemId(string $externalId): string
+    {
+        return preg_replace('/^v[12]\|(\d+)\|0$/', '$1', $externalId);
+    }
+
+    private function aliases(array $listings): array
+    {
+        $aliases = [];
+        foreach ($listings as $listing) {
+            $id = self::itemId($listing['external_id']);
+            if (ctype_digit($id)) {
+                foreach ([$id, "v1|$id|0", "v2|$id|0"] as $alias) {
+                    if ($alias !== $listing['external_id']) {
+                        $aliases[$alias] = true;
+                    }
+                }
+            }
+        }
+        return array_map('strval', array_keys($aliases));
     }
 
     public function live(int $id): ?array

@@ -22,6 +22,9 @@
                 <text_model>qwen3.6:35b-a3b-coding-nvfp4</text_model>
                 <visual_model>qwen3.6:35b-a3b-coding-nvfp4</visual_model>
             </condition>
+            <heartbeat>
+                <gf_heartbeat_enable_close>0</gf_heartbeat_enable_close>
+            </heartbeat>
             <comps>
                 <target_profit>50.00</target_profit>
                 <selling_fee_percent>13.00</selling_fee_percent>

@@ -295,6 +295,23 @@
         </constraint>
     </table>
 
+    <table name="ghostfrog_ebay_final_price_queue" resource="default" engine="innodb" comment="Final price check queue">
+        <column xsi:type="bigint" name="listing_id" nullable="false" comment="Listing ID"/>
+        <column xsi:type="datetime" name="available_at" nullable="false" on_update="false"
+                default="CURRENT_TIMESTAMP" comment="Next attempt UTC"/>
+        <column xsi:type="boolean" name="needs_comp" nullable="false" default="false"
+                comment="Sale saved and comp refresh pending"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="listing_id"/>
+        </constraint>
+        <constraint xsi:type="foreign" referenceId="GHOSTFROG_EBAY_FINAL_PRICE_QUEUE_LISTING_ID"
+                    table="ghostfrog_ebay_final_price_queue" column="listing_id"
+                    referenceTable="ghostfrog_ebay_auction_listings" referenceColumn="id" onDelete="CASCADE"/>
+        <index referenceId="GHOSTFROG_EBAY_FINAL_PRICE_QUEUE_AVAILABLE_AT" indexType="btree">
+            <column name="available_at"/>
+        </index>
+    </table>
+
     <table name="ghostfrog_ebay_listing_text_condition_queue" resource="default" engine="innodb" comment="Listing text condition queue">
         <column xsi:type="bigint" name="id" nullable="false" identity="true" comment="ID"/>
         <column xsi:type="bigint" name="listing_id" nullable="false" comment="Listing ID"/>

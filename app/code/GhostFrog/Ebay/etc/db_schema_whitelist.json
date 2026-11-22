@@ -246,6 +246,20 @@
             "PRIMARY": true
         }
     },
+    "ghostfrog_ebay_final_price_queue": {
+        "column": {
+            "listing_id": true,
+            "available_at": true,
+            "needs_comp": true
+        },
+        "index": {
+            "GHOSTFROG_EBAY_FINAL_PRICE_QUEUE_AVAILABLE_AT": true
+        },
+        "constraint": {
+            "PRIMARY": true,
+            "GHOSTFROG_EBAY_FINAL_PRICE_QUEUE_LISTING_ID": true
+        }
+    },
     "ghostfrog_ebay_listing_text_condition_queue": {
         "column": {
             "id": true,
