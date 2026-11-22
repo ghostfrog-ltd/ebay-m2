@@ -6,6 +6,7 @@ namespace GhostFrog\Ebay\Model\Collection;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use GhostFrog\Ebay\Model\Api\QuotaUnavailable;
 use Magento\Framework\App\Config\ScopeConfigInterface;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
@@ -58,6 +59,13 @@ final class Collector
                 }
                 try {
                     $results[$key] = ['status' => 'collected', 'listings' => $this->collect($source, $now)];
+                } catch (QuotaUnavailable $exception) {
+                    $results[$key] = [
+                        'status' => 'deferred_api_quota',
+                        'bucket' => $exception->bucket,
+                        'retry_at' => gmdate(DATE_ATOM, $exception->retryAt),
+                    ];
+                    break;
                 } catch (Throwable $exception) {
                     // Exceptions from HTTP clients or the database can contain credentials or listing data.
                     $message = get_class($exception) === RuntimeException::class
@@ -67,9 +75,6 @@ final class Collector
                         'reason' => $message,
                     ]);
                     $results[$key] = ['status' => 'failed', 'reason' => $message];
-                    if ($message === 'eBay Browse returned HTTP 429.') {
-                        break;
-                    }
                 }
             }
 

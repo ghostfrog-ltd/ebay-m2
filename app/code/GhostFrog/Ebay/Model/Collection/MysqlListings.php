@@ -16,7 +16,6 @@ use Throwable;
 
 final class MysqlListings
 {
-    public const TRADING_ENRICHMENT_SERVICE = 'ebay_attributes_v1';
     private const LOCK_NAME = 'ghostfrog_ebay_collection';
     private const REFRESHABLE_STATUSES = ['live', 'active', 'open', 'ending', 'ending_soon', 'unknown'];
 
@@ -37,30 +36,6 @@ final class MysqlListings
             ->where('enabled = ?', 1)
             ->where('domain IS NOT NULL')
             ->order(['last_scraped_at ASC', 'id ASC']));
-    }
-
-    public function recordApiCall(string $service): void
-    {
-        $this->resource->getConnection()->insertOnDuplicate(
-            $this->resource->getTableName('ghostfrog_ebay_api_usage'),
-            [
-                'service' => $service,
-                'call_count' => 1,
-                'date' => new Expression('UTC_DATE()'),
-                'created_at' => new Expression('UTC_TIMESTAMP()'),
-                'updated_at' => new Expression('UTC_TIMESTAMP()'),
-            ],
-            ['call_count' => new Expression('call_count + 1'), 'updated_at']
-        );
-    }
-
-    public function tradingCallsToday(): int
-    {
-        $db = $this->resource->getConnection();
-        return (int)$db->fetchOne($db->select()
-            ->from($this->resource->getTableName('ghostfrog_ebay_api_usage'), new Expression('SUM(call_count)'))
-            ->where('date = UTC_DATE()')
-            ->where('service IN (?)', [self::TRADING_ENRICHMENT_SERVICE, 'ebay_ended_v1']));
     }
 
     public function tryLock(): bool

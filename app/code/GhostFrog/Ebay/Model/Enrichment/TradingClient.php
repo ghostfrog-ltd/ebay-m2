@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace GhostFrog\Ebay\Model\Enrichment;
 
-use GhostFrog\Ebay\Model\Collection\MysqlListings;
+use GhostFrog\Ebay\Model\Api\Usage;
 use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Framework\HTTP\Client\CurlFactory;
 use RuntimeException;
@@ -14,7 +14,7 @@ final class TradingClient
     public function __construct(
         private readonly CurlFactory $curlFactory,
         private readonly ScopeConfigInterface $config,
-        private readonly MysqlListings $listings,
+        private readonly Usage $usage,
         private readonly TradingResponse $response
     ) {
     }
@@ -53,13 +53,23 @@ final class TradingClient
             </GetItemRequest>
             XML;
         // A timeout can still consume a provider call, so count each attempt before sending it.
-        $this->listings->recordApiCall(MysqlListings::TRADING_ENRICHMENT_SERVICE);
+        $this->usage->reserve(Usage::ATTRIBUTES);
         $client->post('https://api.ebay.com/ws/api.dll', $body);
         $status = (int)$client->getStatus();
+        if ($status === 429) {
+            throw $this->usage->recordThrottle(Usage::TRADING, $client->getHeaders());
+        }
         if ($status !== 200) {
             throw new RuntimeException("eBay GetItem returned HTTP {$status}.", $status);
         }
-        return $this->response->parse($client->getBody(), $itemId);
+        try {
+            return $this->response->parse($client->getBody(), $itemId);
+        } catch (RuntimeException $exception) {
+            if ($exception->getCode() === 429) {
+                throw $this->usage->recordThrottle(Usage::TRADING, $client->getHeaders());
+            }
+            throw $exception;
+        }
     }
 
     private function token(): string

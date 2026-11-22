@@ -11,6 +11,8 @@
             </listings>
             <ebay_api>
                 <trading_daily_limit>5000</trading_daily_limit>
+                <browse_daily_limit>5000</browse_daily_limit>
+                <oauth_daily_limit>1000</oauth_daily_limit>
                 <ebay_cert_id backend_model="Magento\Config\Model\Config\Backend\Encrypted"/>
                 <ebay_trading_token backend_model="Magento\Config\Model\Config\Backend\Encrypted"/>
             </ebay_api>

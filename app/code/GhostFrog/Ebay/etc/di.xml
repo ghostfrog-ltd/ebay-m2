@@ -17,6 +17,7 @@
     <type name="Magento\Framework\Console\CommandListInterface">
         <arguments>
             <argument name="commands" xsi:type="array">
+                <item name="ghostfrog_ebay_api_health" xsi:type="object">GhostFrog\Ebay\Console\Command\ApiHealth</item>
                 <item name="ghostfrog_ebay_collect" xsi:type="object">GhostFrog\Ebay\Console\Command\CollectListings</item>
             </argument>
         </arguments>

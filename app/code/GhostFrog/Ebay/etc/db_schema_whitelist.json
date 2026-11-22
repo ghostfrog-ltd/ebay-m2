@@ -43,6 +43,15 @@
             "GHOSTFROG_EBAY_API_USAGE_SERVICE_DATE": true
         }
     },
+    "ghostfrog_ebay_api_quota": {
+        "column": {
+            "bucket": true,
+            "blocked_until": true
+        },
+        "constraint": {
+            "PRIMARY": true
+        }
+    },
     "ghostfrog_ebay_articles": {
         "column": {
             "id": true,

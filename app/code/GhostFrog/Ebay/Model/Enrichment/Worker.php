@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace GhostFrog\Ebay\Model\Enrichment;
 
-use GhostFrog\Ebay\Model\Collection\MysqlListings;
+use GhostFrog\Ebay\Model\Api\QuotaUnavailable;
+use GhostFrog\Ebay\Model\Api\Usage;
 use Magento\Framework\App\CacheInterface;
 use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Framework\Lock\LockManagerInterface;
@@ -24,7 +25,7 @@ final class Worker
         private readonly CacheInterface $cache,
         private readonly Queue $queue,
         private readonly TradingClient $client,
-        private readonly MysqlListings $listings,
+        private readonly Usage $usage,
         private readonly LoggerInterface $logger
     ) {
     }
@@ -43,9 +44,8 @@ final class Worker
 
         $unprocessed = [];
         try {
-            $cap = (int)($this->config->getValue('ghostfrog_ebay/ebay_api/trading_daily_limit') ?? 5000);
             $batchSize = (int)($this->config->getValue('ghostfrog_ebay/listings/gf_attr_backfill_limit') ?? 20);
-            $limit = min($batchSize, $cap - $this->listings->tradingCallsToday());
+            $limit = min($batchSize, $this->usage->remaining(Usage::TRADING));
             if ($limit <= 0) {
                 return;
             }
@@ -61,9 +61,12 @@ final class Worker
                     $listing = $this->queue->listing($body);
                     $result = $listing === null ? null : $this->client->getItem($listing['external_id']);
                     $this->queue->complete($id, $body, $result);
+                } catch (QuotaUnavailable $exception) {
+                    $this->logger->warning('{message}', ['message' => $exception->getMessage()]);
+                    break;
                 } catch (Throwable $e) {
                     $code = get_class($e) === RuntimeException::class ? $e->getCode() : 0;
-                    if (in_array($code, [401, 403, 429], true)) {
+                    if (in_array($code, [401, 403], true)) {
                         $this->cache->save('1', self::COOLDOWN, [], 3600);
                         $this->logger->warning('GhostFrog Trading enrichment paused after eBay response {code}.', ['code' => $code]);
                         break;

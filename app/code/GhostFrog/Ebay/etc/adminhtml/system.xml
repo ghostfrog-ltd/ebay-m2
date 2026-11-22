@@ -155,6 +155,14 @@
                     <label>Trading API Daily Call Budget</label>
                     <validate>validate-digits</validate>
                 </field>
+                <field id="browse_daily_limit" translate="label" type="text" sortOrder="100" showInDefault="1">
+                    <label>Browse API Daily Call Budget</label>
+                    <validate>validate-digits</validate>
+                </field>
+                <field id="oauth_daily_limit" translate="label" type="text" sortOrder="110" showInDefault="1">
+                    <label>OAuth Client Credentials Daily Call Budget</label>
+                    <validate>validate-digits</validate>
+                </field>
             </group>
             <group id="email" translate="label" sortOrder="60" showInDefault="1">
                 <label>Email Alerts</label>

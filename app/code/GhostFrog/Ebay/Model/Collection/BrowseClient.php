@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace GhostFrog\Ebay\Model\Collection;
 
 use DateTimeImmutable;
+use GhostFrog\Ebay\Model\Api\Usage;
 use Magento\Framework\App\CacheInterface;
 use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Framework\Encryption\EncryptorInterface;
@@ -23,7 +24,7 @@ final class BrowseClient
         private readonly ScopeConfigInterface $config,
         private readonly EncryptorInterface $encryptor,
         private readonly CacheInterface $cache,
-        private readonly MysqlListings $listings
+        private readonly Usage $usage
     ) {
     }
 
@@ -53,7 +54,7 @@ final class BrowseClient
                         'q' => $query,
                         'category_ids' => $category,
                         'filter' => $buyingFilter,
-                    ], 'ebay_base_fetch_category_items_v1');
+                    ], Usage::CATEGORY_SEARCH);
                     foreach ($this->summaries($payload) as $item) {
                         yield [$saleType, $item];
                     }
@@ -85,7 +86,7 @@ final class BrowseClient
                     'q' => $definition['queries'][0],
                     'filter' => $filter,
                     'offset' => self::PAGE_SIZE * $page,
-                ], 'ebay_base_seller_items_v1', $page === 0);
+                ], Usage::SELLER_SEARCH, $page === 0);
                 if ($payload === null) {
                     continue 2;
                 }
@@ -121,16 +122,21 @@ final class BrowseClient
 
     private function get(array $params, string $service, bool $allowNarrowerWindow = false): ?array
     {
+        $token = $this->token();
         $client = $this->curlFactory->create();
         $client->setTimeout(10);
         $client->setHeaders([
-            'Authorization' => 'Bearer ' . $this->token(),
+            'Authorization' => 'Bearer ' . $token,
             'Accept' => 'application/json',
             'X-EBAY-C-MARKETPLACE-ID' => 'EBAY_GB',
         ]);
         $query = http_build_query($params, '', '&', PHP_QUERY_RFC3986);
+        $this->usage->reserve($service);
         $client->get(self::API . '/buy/browse/v1/item_summary/search?' . $query);
         $status = (int)$client->getStatus();
+        if ($status === 429) {
+            throw $this->usage->recordThrottle(Usage::BROWSE, $client->getHeaders());
+        }
         if ($allowNarrowerWindow && $status === 400 && preg_match('/too (?:large|many)/i', $client->getBody())) {
             return null;
         }
@@ -138,7 +144,6 @@ final class BrowseClient
             throw new RuntimeException(sprintf('eBay Browse returned HTTP %d.', $status));
         }
 
-        $this->listings->recordApiCall($service);
         return $this->decode($client->getBody());
     }
 
@@ -173,16 +178,21 @@ final class BrowseClient
             'Content-Type' => 'application/x-www-form-urlencoded',
             'Accept' => 'application/json',
         ]);
+        // Mint a token only when there is Browse budget for the search.
+        $this->usage->requireAvailable(Usage::BROWSE);
+        $this->usage->reserve(Usage::TOKEN);
         $client->post(self::API . '/identity/v1/oauth2/token', [
             'grant_type' => 'client_credentials',
             'scope' => self::API . '/oauth/api_scope',
         ]);
         $status = (int)$client->getStatus();
+        if ($status === 429) {
+            throw $this->usage->recordThrottle(Usage::OAUTH, $client->getHeaders());
+        }
         if ($status !== 200) {
             throw new RuntimeException(sprintf('eBay OAuth returned HTTP %d.', $status));
         }
 
-        $this->listings->recordApiCall('ebay_auth_v1');
         $payload = $this->decode($client->getBody());
         $token = $payload['access_token'] ?? null;
         $lifetime = (int)($payload['expires_in'] ?? 0);

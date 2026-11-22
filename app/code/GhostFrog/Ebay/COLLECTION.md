@@ -30,6 +30,26 @@ collecting. Current prices, bids and price observations are stored as GBP with
 two decimal places. Existing amounts keep their pound values. An old value of
 420 becomes 420.00, and the next observed price can restore the actual pence.
 
+## API budgets
+
+Run Magento's `setup:upgrade` to install the API quota table. Under
+**GhostFrog → eBay Configuration → eBay API**, set daily budgets for Trading,
+Browse and OAuth client credentials. The defaults are 5,000, 5,000 and 1,000
+attempts per UTC day. A budget of zero pauses that API. Assign Magento its own
+share of the allowance when Python uses the same eBay application. Magento's
+counters cover the calls made by this extension.
+
+Magento checks and records an attempt before each HTTP request. For a local
+budget stop, work becomes eligible again at 00:00 UTC. For a throttle reported
+by eBay, Magento honors the `Retry-After` header when available and falls back to
+00:00 UTC. Browse resumes on the next eligible collection run. An interrupted
+source keeps its previous successful scrape time.
+
+The following command shows local counts, budgets and pause times without
+calling eBay:
+
+    ddev php bin/magento ghostfrog:ebay:api-health
+
 ## Listing enrichment
 
 New listings enqueue their MySQL listing ID in Magento's
@@ -39,10 +59,10 @@ A refresh of an existing listing uses the same ID and enqueues no second job.
 Magento cron checks the queue every five minutes. To let it process jobs,
 enable **Enable Attribute Backfill** and **Allow eBay API Calls**, and configure
 the **Trading API Token**. The **Attribute Backfill Limit** bounds each batch.
-The **Trading API Daily Call Budget** caps recorded Trading requests in Magento
-per UTC day. Set it to the allowance available to Magento if another service
-shares the eBay application. eBay quota and authentication responses pause the
-worker and leave queued items eligible for retry.
+When Trading quota runs out, the worker leaves deliveries pending without
+adding a retry attempt. The next scheduled run after the pause resumes the
+queue. The local condition and model-key queues continue to process their own
+pending work.
 
 Enrichment fetches Trading GetItem evidence and stores the eBay item specifics,
 brand, model, storage, colour and ePID when supplied unambiguously. Magento's message queue retention settings apply.
