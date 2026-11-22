@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace GhostFrog\Ebay\Model\Enrichment;
 
 use GhostFrog\Ebay\Model\Api\QuotaUnavailable;
+use GhostFrog\Ebay\Model\Api\DailyQuota;
 use GhostFrog\Ebay\Model\Api\Usage;
 use Magento\Framework\App\CacheInterface;
 use Magento\Framework\App\Config\ScopeConfigInterface;
@@ -26,6 +27,7 @@ final class Worker
         private readonly Queue $queue,
         private readonly TradingClient $client,
         private readonly Usage $usage,
+        private readonly DailyQuota $quota,
         private readonly LoggerInterface $logger
     ) {
     }
@@ -44,6 +46,7 @@ final class Worker
 
         $unprocessed = [];
         try {
+            $this->quota->refreshIfDue();
             $batchSize = (int)($this->config->getValue('ghostfrog_ebay/listings/gf_attr_backfill_limit') ?? 20);
             $limit = min($batchSize, $this->usage->remaining(Usage::TRADING));
             if ($limit <= 0) {

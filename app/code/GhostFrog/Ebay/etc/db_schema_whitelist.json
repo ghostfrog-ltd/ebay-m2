@@ -46,7 +46,8 @@
     "ghostfrog_ebay_api_quota": {
         "column": {
             "bucket": true,
-            "blocked_until": true
+            "blocked_until": true,
+            "daily_snapshot": true
         },
         "constraint": {
             "PRIMARY": true

@@ -5,10 +5,9 @@ declare(strict_types=1);
 namespace GhostFrog\Ebay\Model\Collection;
 
 use DateTimeImmutable;
+use GhostFrog\Ebay\Model\Api\ApplicationToken;
+use GhostFrog\Ebay\Model\Api\DailyQuota;
 use GhostFrog\Ebay\Model\Api\Usage;
-use Magento\Framework\App\CacheInterface;
-use Magento\Framework\App\Config\ScopeConfigInterface;
-use Magento\Framework\Encryption\EncryptorInterface;
 use Magento\Framework\HTTP\Client\CurlFactory;
 use RuntimeException;
 
@@ -16,14 +15,11 @@ final class BrowseClient
 {
     private const API = 'https://api.ebay.com';
     private const PAGE_SIZE = 50;
-    private ?string $token = null;
-    private int $expiresAt = 0;
 
     public function __construct(
         private readonly CurlFactory $curlFactory,
-        private readonly ScopeConfigInterface $config,
-        private readonly EncryptorInterface $encryptor,
-        private readonly CacheInterface $cache,
+        private readonly ApplicationToken $token,
+        private readonly DailyQuota $quota,
         private readonly Usage $usage
     ) {
     }
@@ -122,7 +118,9 @@ final class BrowseClient
 
     private function get(array $params, string $service, bool $allowNarrowerWindow = false): ?array
     {
-        $token = $this->token();
+        $this->quota->refreshIfDue();
+        $this->usage->requireAvailable(Usage::BROWSE);
+        $token = $this->token->get();
         $client = $this->curlFactory->create();
         $client->setTimeout(10);
         $client->setHeaders([
@@ -145,66 +143,6 @@ final class BrowseClient
         }
 
         return $this->decode($client->getBody());
-    }
-
-    private function token(): string
-    {
-        if ($this->token !== null && $this->expiresAt > time() + 60) {
-            return $this->token;
-        }
-
-        $appId = trim((string)$this->config->getValue('ghostfrog_ebay/ebay_api/ebay_app_id'));
-        // Magento's config backend returns the decrypted Certificate ID.
-        $clientSecret = trim((string)$this->config->getValue('ghostfrog_ebay/ebay_api/ebay_cert_id'));
-        if ($appId === '' || $clientSecret === '') {
-            throw new RuntimeException('Configure the eBay Application ID and Certificate ID in Magento.');
-        }
-
-        $cacheKey = 'ghostfrog_ebay_browse_token_' . hash('sha256', $appId);
-        $cached = $this->cache->load($cacheKey);
-        if (is_string($cached) && $cached !== '') {
-            $token = $this->encryptor->decrypt($cached);
-            if ($token !== '') {
-                $this->token = $token;
-                $this->expiresAt = time() + 65;
-                return $token;
-            }
-        }
-
-        $client = $this->curlFactory->create();
-        $client->setTimeout(10);
-        $client->setHeaders([
-            'Authorization' => 'Basic ' . base64_encode($appId . ':' . $clientSecret),
-            'Content-Type' => 'application/x-www-form-urlencoded',
-            'Accept' => 'application/json',
-        ]);
-        // Mint a token only when there is Browse budget for the search.
-        $this->usage->requireAvailable(Usage::BROWSE);
-        $this->usage->reserve(Usage::TOKEN);
-        $client->post(self::API . '/identity/v1/oauth2/token', [
-            'grant_type' => 'client_credentials',
-            'scope' => self::API . '/oauth/api_scope',
-        ]);
-        $status = (int)$client->getStatus();
-        if ($status === 429) {
-            throw $this->usage->recordThrottle(Usage::OAUTH, $client->getHeaders());
-        }
-        if ($status !== 200) {
-            throw new RuntimeException(sprintf('eBay OAuth returned HTTP %d.', $status));
-        }
-
-        $payload = $this->decode($client->getBody());
-        $token = $payload['access_token'] ?? null;
-        $lifetime = (int)($payload['expires_in'] ?? 0);
-        if (!is_string($token) || $token === '' || $lifetime <= 0) {
-            throw new RuntimeException('eBay returned an invalid application token.');
-        }
-        $this->token = $token;
-        $this->expiresAt = time() + $lifetime;
-        if ($lifetime > 60) {
-            $this->cache->save($this->encryptor->encrypt($token), $cacheKey, [], $lifetime - 60);
-        }
-        return $token;
     }
 
     private function decode(string $body): array

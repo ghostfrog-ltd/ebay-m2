@@ -151,13 +151,13 @@
                     <label>Trading API Token</label>
                     <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
                 </field>
-                <field id="trading_daily_limit" translate="label" type="text" sortOrder="90" showInDefault="1">
-                    <label>Trading API Daily Call Budget</label>
-                    <validate>validate-digits</validate>
+                <field id="trading_daily_quota" translate="label" type="label" sortOrder="90" showInDefault="1">
+                    <label>Trading GetItem Daily Quota</label>
+                    <frontend_model>GhostFrog\Ebay\Block\Adminhtml\System\Config\Field\ApiQuota</frontend_model>
                 </field>
-                <field id="browse_daily_limit" translate="label" type="text" sortOrder="100" showInDefault="1">
-                    <label>Browse API Daily Call Budget</label>
-                    <validate>validate-digits</validate>
+                <field id="browse_daily_quota" translate="label" type="label" sortOrder="100" showInDefault="1">
+                    <label>Browse Search Daily Quota</label>
+                    <frontend_model>GhostFrog\Ebay\Block\Adminhtml\System\Config\Field\ApiQuota</frontend_model>
                 </field>
                 <field id="oauth_daily_limit" translate="label" type="text" sortOrder="110" showInDefault="1">
                     <label>OAuth Client Credentials Daily Call Budget</label>

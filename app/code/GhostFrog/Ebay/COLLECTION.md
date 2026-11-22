@@ -30,23 +30,28 @@ collecting. Current prices, bids and price observations are stored as GBP with
 two decimal places. Existing amounts keep their pound values. An old value of
 420 becomes 420.00, and the next observed price can restore the actual pence.
 
-## API budgets
+## eBay API quota
 
-Run Magento's `setup:upgrade` to install the API quota table. Under
-**GhostFrog → eBay Configuration → eBay API**, set daily budgets for Trading,
-Browse and OAuth client credentials. The defaults are 5,000, 5,000 and 1,000
-attempts per UTC day. A budget of zero pauses that API. Assign Magento its own
-share of the allowance when Python uses the same eBay application. Magento's
-counters cover the calls made by this extension.
+Run Magento's `setup:upgrade` to apply the quota schema. Under **GhostFrog
+→ eBay Configuration → eBay API**, the read-only Trading GetItem and Browse
+Search fields show eBay's daily limit, the balance at lookup, Magento's
+available balance, and the eBay reset time.
 
-Magento checks and records an attempt before each HTTP request. For a local
-budget stop, work becomes eligible again at 00:00 UTC. For a throttle reported
-by eBay, Magento honors the `Retry-After` header when available and falls back to
-00:00 UTC. Browse resumes on the next eligible collection run. An interrupted
-source keeps its previous successful scrape time.
+The first Trading or Browse job in each eBay quota day requests the current
+limits and remaining calls from Developer Analytics. Magento saves the
+response in MySQL and deducts its own attempts before sending requests.
+Other clients using the same application can consume calls between daily
+lookups. If eBay throttles a client, Magento honors `Retry-After` when supplied
+and otherwise uses the saved reset. If the lookup fails or a quota is missing,
+the affected job waits for verified limits. A failed lookup is retried after a
+cooldown. An interrupted collection source keeps its previous successful scrape
+time.
 
-The following command shows local counts, budgets and pause times without
-calling eBay:
+Developer Analytics does not provide the OAuth token allowance here. Magento
+logs token requests and applies the configured OAuth client-credentials budget.
+
+The following command reads the saved quota and usage. Add `--live-ebay` to
+trigger the daily lookup if due and eBay API calls are enabled.
 
     ddev php bin/magento ghostfrog:ebay:api-health
 

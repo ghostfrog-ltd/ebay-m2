@@ -51,6 +51,7 @@
     <table name="ghostfrog_ebay_api_quota" resource="default" engine="innodb" comment="eBay API quota pauses">
         <column xsi:type="varchar" name="bucket" nullable="false" length="32" comment="API quota bucket"/>
         <column xsi:type="bigint" name="blocked_until" nullable="false" unsigned="true" default="0" comment="Provider pause expiry as Unix time"/>
+        <column xsi:type="text" name="daily_snapshot" nullable="true" comment="eBay daily quota response and local balance"/>
         <constraint xsi:type="primary" referenceId="PRIMARY">
             <column name="bucket"/>
         </constraint>

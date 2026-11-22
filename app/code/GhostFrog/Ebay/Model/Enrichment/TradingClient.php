@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GhostFrog\Ebay\Model\Enrichment;
 
+use GhostFrog\Ebay\Model\Api\DailyQuota;
 use GhostFrog\Ebay\Model\Api\Usage;
 use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Framework\HTTP\Client\CurlFactory;
@@ -15,6 +16,7 @@ final class TradingClient
         private readonly CurlFactory $curlFactory,
         private readonly ScopeConfigInterface $config,
         private readonly Usage $usage,
+        private readonly DailyQuota $quota,
         private readonly TradingResponse $response
     ) {
     }
@@ -62,6 +64,7 @@ final class TradingClient
                 <IncludeItemSpecifics>true</IncludeItemSpecifics>
             </GetItemRequest>
             XML;
+        $this->quota->refreshIfDue();
         // A timeout can still consume a provider call, so count each attempt before sending it.
         $this->usage->reserve($saleOutcome ? 'ebay_ended_v1' : Usage::ATTRIBUTES);
         $client->post('https://api.ebay.com/ws/api.dll', $body);
