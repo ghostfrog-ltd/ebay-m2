@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Backend:etc/menu.xsd">
+    <menu>
+        <add id="GhostFrog_Ebay::ghostfrog"
+             title="GhostFrog"
+             translate="title"
+             module="GhostFrog_Ebay"
+             sortOrder="75"
+             resource="GhostFrog_Ebay::config"/>
+        <add id="GhostFrog_Ebay::ebay"
+             title="Ebay Configuration"
+             translate="title"
+             module="GhostFrog_Ebay"
+             sortOrder="10"
+             parent="GhostFrog_Ebay::ghostfrog"
+             action="adminhtml/system_config/edit/section/ghostfrog_ebay"
+             resource="GhostFrog_Ebay::config"/>
+    </menu>
+</config>

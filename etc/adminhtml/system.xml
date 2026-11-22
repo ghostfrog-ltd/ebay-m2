@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
+    <system>
+        <tab id="ghostfrog" translate="label" sortOrder="850">
+            <label>GhostFrog</label>
+        </tab>
+        <section id="ghostfrog_ebay" translate="label" sortOrder="10" showInDefault="1">
+            <label>Ebay</label>
+            <tab>ghostfrog</tab>
+            <resource>GhostFrog_Ebay::config</resource>
+            <group id="general" translate="label" sortOrder="10" showInDefault="1">
+                <label>General</label>
+                <field id="enabled" translate="label" type="checkbox" sortOrder="10" showInDefault="1">
+                    <label>Enabled</label>
+                    <frontend_model>GhostFrog\Ebay\Block\Adminhtml\System\Config\Field\Enabled</frontend_model>
+                </field>
+            </group>
+        </section>
+    </system>
+</config>

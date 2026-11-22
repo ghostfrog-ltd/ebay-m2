@@ -1,0 +1,601 @@
+<?xml version="1.0"?>
+<schema xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:Setup/Declaration/Schema/etc/schema.xsd">
+    <!-- V1 table layout. Writers supply UTC datetimes and explicit date and JSON defaults. -->
+    <table name="ghostfrog_ebay_alert_state" resource="default" engine="innodb" comment="Alert state">
+        <column xsi:type="varchar" name="name" nullable="false" length="255" comment="Name"/>
+        <column xsi:type="datetime" name="last_sent_at" nullable="false" on_update="false" default="CURRENT_TIMESTAMP" comment="Last sent at"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="name"/>
+        </constraint>
+    </table>
+
+    <table name="ghostfrog_ebay_alerts" resource="default" engine="innodb" comment="Alerts">
+        <column xsi:type="int" name="id" nullable="false" identity="true" comment="ID"/>
+        <column xsi:type="longtext" name="listing_external_id" nullable="true" comment="Listing external ID"/>
+        <column xsi:type="decimal" name="snipe_score" nullable="true" precision="24" scale="8" comment="Snipe score"/>
+        <column xsi:type="decimal" name="max_bid" nullable="true" precision="24" scale="8" comment="Max bid"/>
+        <column xsi:type="datetime" name="sent_at" nullable="true" on_update="false" default="CURRENT_TIMESTAMP" comment="Sent at"/>
+        <column xsi:type="longtext" name="outcome" nullable="true" comment="Outcome"/>
+        <column xsi:type="varchar" name="external_id" nullable="true" length="255" comment="External ID"/>
+        <column xsi:type="decimal" name="roi_net" nullable="true" precision="24" scale="8" comment="ROI net"/>
+        <column xsi:type="longtext" name="reason" nullable="true" comment="Reason"/>
+        <column xsi:type="longtext" name="model_key" nullable="true" comment="Model key"/>
+        <column xsi:type="float" name="score" nullable="true" default="0" comment="Score"/>
+        <column xsi:type="datetime" name="created_at" nullable="true" on_update="false" default="CURRENT_TIMESTAMP" comment="Created at"/>
+        <column xsi:type="datetime" name="updated_at" nullable="true" on_update="false" default="CURRENT_TIMESTAMP" comment="Updated at"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="id"/>
+        </constraint>
+        <constraint xsi:type="unique" referenceId="GHOSTFROG_EBAY_ALERTS_EXTERNAL_ID">
+            <column name="external_id"/>
+        </constraint>
+    </table>
+
+    <table name="ghostfrog_ebay_api_usage" resource="default" engine="innodb" comment="API usage">
+        <column xsi:type="int" name="id" nullable="false" identity="true" comment="ID"/>
+        <column xsi:type="varchar" name="service" nullable="false" length="128" comment="Service"/>
+        <column xsi:type="int" name="call_count" nullable="false" default="0" comment="Call count"/>
+        <column xsi:type="date" name="date" nullable="false" comment="Usage date, supplied by the writer"/>
+        <column xsi:type="datetime" name="created_at" nullable="true" on_update="false" default="CURRENT_TIMESTAMP" comment="Created at"/>
+        <column xsi:type="datetime" name="updated_at" nullable="true" on_update="false" default="CURRENT_TIMESTAMP" comment="Updated at"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="id"/>
+        </constraint>
+        <constraint xsi:type="unique" referenceId="GHOSTFROG_EBAY_API_USAGE_SERVICE_DATE">
+            <column name="service"/>
+            <column name="date"/>
+        </constraint>
+    </table>
+
+    <table name="ghostfrog_ebay_articles" resource="default" engine="innodb" comment="Articles">
+        <column xsi:type="int" name="id" nullable="false" identity="true" comment="ID"/>
+        <column xsi:type="int" name="source_id" nullable="false" comment="Source ID"/>
+        <column xsi:type="longtext" name="title" nullable="false" comment="Title"/>
+        <column xsi:type="varchar" name="url" nullable="false" length="768" comment="URL"/>
+        <column xsi:type="longtext" name="summary" nullable="true" comment="Summary"/>
+        <column xsi:type="datetime" name="published_at" nullable="true" on_update="false" comment="Published at"/>
+        <column xsi:type="datetime" name="fetched_at" nullable="false" on_update="false" default="CURRENT_TIMESTAMP" comment="Fetched at"/>
+        <column xsi:type="longtext" name="content" nullable="true" comment="Content"/>
+        <column xsi:type="longtext" name="sentiment" nullable="true" comment="Sentiment"/>
+        <column xsi:type="datetime" name="created_at_utc" nullable="false" on_update="false" default="CURRENT_TIMESTAMP" comment="Created at UTC"/>
+        <column xsi:type="datetime" name="updated_at_utc" nullable="false" on_update="false" default="CURRENT_TIMESTAMP" comment="Updated at UTC"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="id"/>
+        </constraint>
+        <constraint xsi:type="unique" referenceId="GHOSTFROG_EBAY_ARTICLES_URL">
+            <column name="url"/>
+        </constraint>
+        <constraint xsi:type="foreign" referenceId="GHOSTFROG_EBAY_ARTICLES_SOURCE_ID_SOURCES_ID"
+                    table="ghostfrog_ebay_articles" column="source_id"
+                    referenceTable="ghostfrog_ebay_sources" referenceColumn="id" onDelete="CASCADE"/>
+        <index referenceId="GHOSTFROG_EBAY_ARTICLES_SOURCE_ID" indexType="btree">
+            <column name="source_id"/>
+        </index>
+    </table>
+
+    <table name="ghostfrog_ebay_auction_listings" resource="default" engine="innodb" comment="Auction listings">
+        <column xsi:type="bigint" name="id" nullable="false" identity="true" comment="ID"/>
+        <column xsi:type="varchar" name="source" nullable="false" length="255" comment="Source"/>
+        <column xsi:type="varchar" name="external_id" nullable="false" length="255" comment="External ID"/>
+        <column xsi:type="longtext" name="title" nullable="true" comment="Title"/>
+        <column xsi:type="bigint" name="price_current" nullable="true" comment="Current price in V1 units"/>
+        <column xsi:type="int" name="bids_count" nullable="true" comment="Bids count"/>
+        <column xsi:type="datetime" name="end_time" nullable="true" on_update="false" comment="End time"/>
+        <column xsi:type="varchar" name="status" nullable="false" length="64" default="live" comment="Status"/>
+        <column xsi:type="longtext" name="url" nullable="true" comment="URL"/>
+        <column xsi:type="datetime" name="first_seen" nullable="true" on_update="false" default="CURRENT_TIMESTAMP" comment="First seen"/>
+        <column xsi:type="datetime" name="fetched_at" nullable="true" on_update="false" comment="Fetched at"/>
+        <column xsi:type="double" name="roi_estimate" nullable="true" comment="ROI estimate"/>
+        <column xsi:type="bigint" name="max_bid" nullable="true" comment="Maximum bid in V1 units"/>
+        <column xsi:type="longtext" name="notes" nullable="true" comment="Notes"/>
+        <column xsi:type="int" name="source_id" nullable="true" comment="Source ID"/>
+        <column xsi:type="decimal" name="final_price" nullable="true" precision="12" scale="2" comment="Final price"/>
+        <column xsi:type="longtext" name="sale_type" nullable="true" comment="Sale type"/>
+        <column xsi:type="varchar" name="model_key" nullable="true" length="255" comment="Model key"/>
+        <column xsi:type="int" name="time_left_s" nullable="true" comment="Time left in seconds"/>
+        <column xsi:type="boolean" name="finalized" nullable="true" default="false" comment="Finalized"/>
+        <column xsi:type="int" name="price_bid_current" nullable="true" comment="Current bid price in V1 units"/>
+        <column xsi:type="longtext" name="brand" nullable="true" comment="Brand"/>
+        <column xsi:type="longtext" name="product_family" nullable="true" comment="Product family"/>
+        <column xsi:type="longtext" name="model_name" nullable="true" comment="Model name"/>
+        <column xsi:type="int" name="storage_gb" nullable="true" comment="Storage in GB"/>
+        <column xsi:type="longtext" name="colour" nullable="true" comment="Colour"/>
+        <column xsi:type="longtext" name="epid" nullable="true" comment="ePID"/>
+        <column xsi:type="json" name="raw_attrs" nullable="true" comment="Raw listing attributes"/>
+        <column xsi:type="datetime" name="last_seen_at" nullable="true" on_update="false" comment="Last seen at"/>
+        <column xsi:type="longtext" name="bucket_key" nullable="true" comment="Bucket key"/>
+        <column xsi:type="datetime" name="backfill_checked_at" nullable="true" on_update="false" comment="Backfill checked at"/>
+        <column xsi:type="int" name="backfill_check_count" nullable="false" default="0" comment="Backfill check count"/>
+        <column xsi:type="longtext" name="backfill_last_reason" nullable="true" comment="Backfill last reason"/>
+        <column xsi:type="varchar" name="condition_grade" nullable="true" length="16" comment="Condition grade"/>
+        <column xsi:type="boolean" name="visual_condition_checked" nullable="false" default="false" comment="Visual condition checked"/>
+        <column xsi:type="datetime" name="visual_condition_checked_at" nullable="true" on_update="false" comment="Visual condition checked at"/>
+        <column xsi:type="boolean" name="text_condition_checked" nullable="false" default="false" comment="Text condition checked"/>
+        <column xsi:type="datetime" name="text_condition_checked_at" nullable="true" on_update="false" comment="Text condition checked at"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="id"/>
+        </constraint>
+        <constraint xsi:type="unique" referenceId="GHOSTFROG_EBAY_AUCTION_LISTINGS_EXTERNAL_ID">
+            <column name="external_id"/>
+        </constraint>
+        <constraint xsi:type="foreign" referenceId="GHOSTFROG_EBAY_AUCTION_LISTINGS_SOURCE_ID_SOURCES_ID"
+                    table="ghostfrog_ebay_auction_listings" column="source_id"
+                    referenceTable="ghostfrog_ebay_sources" referenceColumn="id" onDelete="NO ACTION"/>
+        <constraint xsi:type="foreign" referenceId="GHOSTFROG_EBAY_AUCTION_LISTINGS_STATUS_LISTING_STATUSES_STATUS"
+                    table="ghostfrog_ebay_auction_listings" column="status"
+                    referenceTable="ghostfrog_ebay_listing_statuses" referenceColumn="status" onDelete="NO ACTION"/>
+        <index referenceId="GHOSTFROG_EBAY_AUCTION_LISTINGS_SOURCE_ID" indexType="btree">
+            <column name="source_id"/>
+        </index>
+        <index referenceId="GHOSTFROG_EBAY_AUCTION_LISTINGS_END_TIME" indexType="btree">
+            <column name="end_time"/>
+        </index>
+        <index referenceId="GHOSTFROG_EBAY_AUCTION_LISTINGS_FETCHED_AT" indexType="btree">
+            <column name="fetched_at"/>
+        </index>
+        <index referenceId="GHOSTFROG_EBAY_AUCTION_LISTINGS_MODEL_KEY" indexType="btree">
+            <column name="model_key"/>
+        </index>
+        <index referenceId="GHOSTFROG_EBAY_AUCTION_LISTINGS_SOURCE" indexType="btree">
+            <column name="source"/>
+        </index>
+        <index referenceId="GHOSTFROG_EBAY_AUCTION_LISTINGS_STATUS_END_TIME" indexType="btree">
+            <column name="status"/>
+            <column name="end_time"/>
+        </index>
+        <index referenceId="GHOSTFROG_EBAY_AUCTION_LISTINGS_STATUS_ID" indexType="btree">
+            <column name="status"/>
+            <column name="id"/>
+        </index>
+        <index referenceId="GHOSTFROG_EBAY_AUCTION_LISTINGS_STATUS_TEXT_CONDITION_CHECKED_FIRST_SEEN" indexType="btree">
+            <column name="status"/>
+            <column name="text_condition_checked"/>
+            <column name="first_seen"/>
+        </index>
+        <index referenceId="GHOSTFROG_EBAY_AUCTION_LISTINGS_STATUS_VISUAL_CONDITION_CHECKED_FIRST_SEEN" indexType="btree">
+            <column name="status"/>
+            <column name="visual_condition_checked"/>
+            <column name="first_seen"/>
+        </index>
+        <index referenceId="GHOSTFROG_EBAY_AUCTION_LISTINGS_STATUS_MODEL_KEY_CONDITION_GRADE" indexType="btree">
+            <column name="status"/>
+            <column name="model_key"/>
+            <column name="condition_grade"/>
+        </index>
+        <index referenceId="GHOSTFROG_EBAY_AUCTION_LISTINGS_STATUS_LAST_SEEN_AT" indexType="btree">
+            <column name="status"/>
+            <column name="last_seen_at"/>
+        </index>
+        <index referenceId="GHOSTFROG_EBAY_AUCTION_LISTINGS_BACKFILL_CHECKED_AT" indexType="btree">
+            <column name="backfill_checked_at"/>
+        </index>
+    </table>
+
+    <table name="ghostfrog_ebay_auction_price_history" resource="default" engine="innodb" comment="Auction price history">
+        <column xsi:type="int" name="id" nullable="false" identity="true" comment="ID"/>
+        <column xsi:type="bigint" name="price" nullable="true" comment="Observed price in V1 units"/>
+        <column xsi:type="int" name="bids_count" nullable="true" comment="Bids count"/>
+        <column xsi:type="datetime" name="timestamp" nullable="true" on_update="false" default="CURRENT_TIMESTAMP" comment="Timestamp"/>
+        <column xsi:type="varchar" name="external_id" nullable="true" length="255" comment="External ID"/>
+        <column xsi:type="datetime" name="recorded_at" nullable="false" on_update="false" default="CURRENT_TIMESTAMP" comment="Recorded at"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="id"/>
+        </constraint>
+        <constraint xsi:type="foreign" referenceId="GHOSTFROG_EBAY_AUCTION_PRICE_HISTORY_EXTERNAL_ID_AUCTION_LISTINGS_EXTERNAL_ID"
+                    table="ghostfrog_ebay_auction_price_history" column="external_id"
+                    referenceTable="ghostfrog_ebay_auction_listings" referenceColumn="external_id" onDelete="NO ACTION"/>
+        <index referenceId="GHOSTFROG_EBAY_AUCTION_PRICE_HISTORY_EXTERNAL_ID_RECORDED_AT" indexType="btree">
+            <column name="external_id"/>
+            <column name="recorded_at"/>
+        </index>
+    </table>
+
+    <table name="ghostfrog_ebay_auction_price_history_orphans" resource="default" engine="innodb" comment="Auction price history orphans">
+        <column xsi:type="int" name="original_id" nullable="false" comment="Original ID"/>
+        <column xsi:type="bigint" name="price" nullable="true" comment="Archived price in V1 units"/>
+        <column xsi:type="int" name="bids_count" nullable="true" comment="Bids count"/>
+        <column xsi:type="datetime" name="timestamp" nullable="true" on_update="false" comment="Timestamp"/>
+        <column xsi:type="varchar" name="external_id" nullable="true" length="255" comment="External ID"/>
+        <column xsi:type="datetime" name="recorded_at" nullable="false" on_update="false" comment="Recorded at"/>
+        <column xsi:type="datetime" name="archived_at" nullable="false" on_update="false" default="CURRENT_TIMESTAMP" comment="Archived at"/>
+        <column xsi:type="longtext" name="archive_reason" nullable="false" comment="Archive reason"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="original_id"/>
+        </constraint>
+        <index referenceId="GHOSTFROG_EBAY_AUCTION_PRICE_HISTORY_ORPHANS_EXTERNAL_ID" indexType="btree">
+            <column name="external_id"/>
+        </index>
+        <index referenceId="GHOSTFROG_EBAY_AUCTION_PRICE_HISTORY_ORPHANS_RECORDED_AT" indexType="btree">
+            <column name="recorded_at"/>
+        </index>
+    </table>
+
+    <table name="ghostfrog_ebay_comps" resource="default" engine="innodb" comment="Price comparables">
+        <column xsi:type="varchar" name="model_key" nullable="false" length="255" comment="Model key"/>
+        <column xsi:type="decimal" name="median_final_price" nullable="true" precision="24" scale="8" comment="Median final price"/>
+        <column xsi:type="decimal" name="mean_final_price" nullable="true" precision="24" scale="8" comment="Mean final price"/>
+        <column xsi:type="int" name="samples" nullable="true" comment="Samples"/>
+        <column xsi:type="datetime" name="computed_at" nullable="true" on_update="false" comment="Computed at"/>
+        <column xsi:type="varchar" name="condition_grade" nullable="false" length="16" default="B" comment="Condition grade"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="model_key"/>
+            <column name="condition_grade"/>
+        </constraint>
+    </table>
+
+    <table name="ghostfrog_ebay_ebay_app_token" resource="default" engine="innodb" comment="Legacy eBay application token">
+        <column xsi:type="int" name="id" nullable="false" default="1" comment="ID"/>
+        <column xsi:type="longtext" name="token" nullable="false" comment="Token"/>
+        <column xsi:type="datetime" name="expiry_ts" nullable="false" on_update="false" comment="Expiry ts"/>
+        <column xsi:type="datetime" name="updated_at" nullable="false" on_update="false" default="CURRENT_TIMESTAMP" comment="Updated at"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="id"/>
+        </constraint>
+    </table>
+
+    <table name="ghostfrog_ebay_listing_assessments" resource="default" engine="innodb" comment="Listing assessments">
+        <column xsi:type="bigint" name="id" nullable="false" identity="true" comment="ID"/>
+        <column xsi:type="bigint" name="listing_id" nullable="false" comment="Listing ID"/>
+        <column xsi:type="json" name="assessment" nullable="false" comment="Assessment"/>
+        <column xsi:type="datetime" name="created_at" nullable="false" on_update="false" default="CURRENT_TIMESTAMP" comment="Created at"/>
+        <column xsi:type="longtext" name="verdict" nullable="true" comment="Verdict"/>
+        <column xsi:type="double" name="confidence" nullable="true" comment="Confidence"/>
+        <column xsi:type="decimal" name="recommended_max_bid" nullable="true" precision="24" scale="8" comment="Recommended max bid"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="id"/>
+        </constraint>
+        <constraint xsi:type="foreign" referenceId="GHOSTFROG_EBAY_LISTING_ASSESSMENTS_LISTING_ID_AUCTION_LISTINGS_ID"
+                    table="ghostfrog_ebay_listing_assessments" column="listing_id"
+                    referenceTable="ghostfrog_ebay_auction_listings" referenceColumn="id" onDelete="CASCADE"/>
+        <index referenceId="GHOSTFROG_EBAY_LISTING_ASSESSMENTS_LISTING_ID" indexType="btree">
+            <column name="listing_id"/>
+        </index>
+    </table>
+
+    <table name="ghostfrog_ebay_listing_review_actions" resource="default" engine="innodb" comment="Listing review actions">
+        <column xsi:type="bigint" name="id" nullable="false" identity="true" comment="ID"/>
+        <column xsi:type="longtext" name="source" nullable="true" comment="Source"/>
+        <column xsi:type="varchar" name="external_id" nullable="false" length="255" comment="External ID"/>
+        <column xsi:type="longtext" name="title" nullable="true" comment="Title"/>
+        <column xsi:type="longtext" name="url" nullable="true" comment="URL"/>
+        <column xsi:type="varchar" name="action" nullable="false" length="16" comment="Review action, up or down"/>
+        <column xsi:type="datetime" name="created_at" nullable="false" on_update="false" default="CURRENT_TIMESTAMP" comment="Created at"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="id"/>
+        </constraint>
+        <index referenceId="GHOSTFROG_EBAY_LISTING_REVIEW_ACTIONS_ACTION_CREATED_AT" indexType="btree">
+            <column name="action"/>
+            <column name="created_at"/>
+        </index>
+        <index referenceId="GHOSTFROG_EBAY_LISTING_REVIEW_ACTIONS_EXTERNAL_ID_CREATED_AT_ID" indexType="btree">
+            <column name="external_id"/>
+            <column name="created_at"/>
+            <column name="id"/>
+        </index>
+    </table>
+
+    <table name="ghostfrog_ebay_listing_statuses" resource="default" engine="innodb" comment="Listing statuses">
+        <column xsi:type="varchar" name="status" nullable="false" length="64" comment="Status"/>
+        <column xsi:type="longtext" name="lifecycle_stage" nullable="false" comment="Lifecycle stage"/>
+        <column xsi:type="boolean" name="is_live_like" nullable="false" default="false" comment="Is live like"/>
+        <column xsi:type="boolean" name="is_terminal" nullable="false" default="false" comment="Is terminal"/>
+        <column xsi:type="longtext" name="description" nullable="false" comment="Description"/>
+        <column xsi:type="datetime" name="created_at" nullable="false" on_update="false" default="CURRENT_TIMESTAMP" comment="Created at"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="status"/>
+        </constraint>
+    </table>
+
+    <table name="ghostfrog_ebay_listing_text_condition_queue" resource="default" engine="innodb" comment="Listing text condition queue">
+        <column xsi:type="bigint" name="id" nullable="false" identity="true" comment="ID"/>
+        <column xsi:type="bigint" name="listing_id" nullable="false" comment="Listing ID"/>
+        <column xsi:type="longtext" name="external_id" nullable="false" comment="External ID"/>
+        <column xsi:type="longtext" name="source" nullable="false" comment="Source"/>
+        <column xsi:type="longtext" name="status_name" nullable="false" comment="Status name"/>
+        <column xsi:type="varchar" name="priority_flag" nullable="false" length="64" default="backfill" comment="Priority flag"/>
+        <column xsi:type="bigint" name="priority" nullable="false" default="0" comment="Priority"/>
+        <column xsi:type="varchar" name="status" nullable="false" length="64" default="pending" comment="Status"/>
+        <column xsi:type="int" name="attempts" nullable="false" default="0" comment="Attempts"/>
+        <column xsi:type="longtext" name="last_error" nullable="true" comment="Last error"/>
+        <column xsi:type="datetime" name="queued_at" nullable="false" on_update="false" default="CURRENT_TIMESTAMP" comment="Queued at"/>
+        <column xsi:type="datetime" name="locked_at" nullable="true" on_update="false" comment="Locked at"/>
+        <column xsi:type="datetime" name="processed_at" nullable="true" on_update="false" comment="Processed at"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="id"/>
+        </constraint>
+        <constraint xsi:type="unique" referenceId="GHOSTFROG_EBAY_LISTING_TEXT_CONDITION_QUEUE_LISTING_ID">
+            <column name="listing_id"/>
+        </constraint>
+        <constraint xsi:type="foreign" referenceId="GHOSTFROG_EBAY_LISTING_TEXT_CONDITION_QUEUE_LISTING_ID_AUCTION_LISTINGS_ID"
+                    table="ghostfrog_ebay_listing_text_condition_queue" column="listing_id"
+                    referenceTable="ghostfrog_ebay_auction_listings" referenceColumn="id" onDelete="CASCADE"/>
+        <index referenceId="GHOSTFROG_EBAY_LISTING_TEXT_CONDITION_QUEUE_STATUS_PRIORITY_QUEUED_AT" indexType="btree">
+            <column name="status"/>
+            <column name="priority"/>
+            <column name="queued_at"/>
+        </index>
+    </table>
+
+    <table name="ghostfrog_ebay_listing_text_conditions" resource="default" engine="innodb" comment="Listing text conditions">
+        <column xsi:type="bigint" name="id" nullable="false" identity="true" comment="ID"/>
+        <column xsi:type="bigint" name="listing_id" nullable="false" comment="Listing ID"/>
+        <column xsi:type="varchar" name="external_id" nullable="false" length="255" comment="External ID"/>
+        <column xsi:type="longtext" name="model_name" nullable="false" comment="Model name"/>
+        <column xsi:type="json" name="assessment" nullable="false" comment="Assessment"/>
+        <column xsi:type="longtext" name="text_grade" nullable="true" comment="Text grade"/>
+        <column xsi:type="decimal" name="confidence" nullable="true" precision="24" scale="8" comment="Confidence"/>
+        <column xsi:type="json" name="risk_flags" nullable="false" comment="Risk flags as JSON array, supply [] when empty"/>
+        <column xsi:type="boolean" name="review_required" nullable="false" default="true" comment="Review required"/>
+        <column xsi:type="datetime" name="checked_at" nullable="false" on_update="false" default="CURRENT_TIMESTAMP" comment="Checked at"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="id"/>
+        </constraint>
+        <constraint xsi:type="foreign" referenceId="GHOSTFROG_EBAY_LISTING_TEXT_CONDITIONS_LISTING_ID_AUCTION_LISTINGS_ID"
+                    table="ghostfrog_ebay_listing_text_conditions" column="listing_id"
+                    referenceTable="ghostfrog_ebay_auction_listings" referenceColumn="id" onDelete="CASCADE"/>
+        <index referenceId="GHOSTFROG_EBAY_LISTING_TEXT_CONDITIONS_EXTERNAL_ID_CHECKED_AT_ID" indexType="btree">
+            <column name="external_id"/>
+            <column name="checked_at"/>
+            <column name="id"/>
+        </index>
+        <index referenceId="GHOSTFROG_EBAY_LISTING_TEXT_CONDITIONS_LISTING_ID_CHECKED_AT_ID" indexType="btree">
+            <column name="listing_id"/>
+            <column name="checked_at"/>
+            <column name="id"/>
+        </index>
+        <index referenceId="GHOSTFROG_EBAY_LISTING_TEXT_CONDITIONS_REVIEW_REQUIRED_CHECKED_AT" indexType="btree">
+            <column name="review_required"/>
+            <column name="checked_at"/>
+        </index>
+    </table>
+
+    <table name="ghostfrog_ebay_listing_visual_condition_queue" resource="default" engine="innodb" comment="Listing visual condition queue">
+        <column xsi:type="bigint" name="id" nullable="false" identity="true" comment="ID"/>
+        <column xsi:type="bigint" name="listing_id" nullable="false" comment="Listing ID"/>
+        <column xsi:type="longtext" name="external_id" nullable="false" comment="External ID"/>
+        <column xsi:type="longtext" name="source" nullable="false" comment="Source"/>
+        <column xsi:type="longtext" name="product" nullable="false" comment="Product"/>
+        <column xsi:type="varchar" name="priority_flag" nullable="false" length="64" default="backfill" comment="Priority flag"/>
+        <column xsi:type="bigint" name="priority" nullable="false" default="0" comment="Priority"/>
+        <column xsi:type="varchar" name="status" nullable="false" length="64" default="pending" comment="Status"/>
+        <column xsi:type="int" name="attempts" nullable="false" default="0" comment="Attempts"/>
+        <column xsi:type="longtext" name="last_error" nullable="true" comment="Last error"/>
+        <column xsi:type="datetime" name="queued_at" nullable="false" on_update="false" default="CURRENT_TIMESTAMP" comment="Queued at"/>
+        <column xsi:type="datetime" name="locked_at" nullable="true" on_update="false" comment="Locked at"/>
+        <column xsi:type="datetime" name="processed_at" nullable="true" on_update="false" comment="Processed at"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="id"/>
+        </constraint>
+        <constraint xsi:type="unique" referenceId="GHOSTFROG_EBAY_LISTING_VISUAL_CONDITION_QUEUE_LISTING_ID">
+            <column name="listing_id"/>
+        </constraint>
+        <constraint xsi:type="foreign" referenceId="GHOSTFROG_EBAY_LISTING_VISUAL_CONDITION_QUEUE_LISTING_ID_AUCTION_LISTINGS_ID"
+                    table="ghostfrog_ebay_listing_visual_condition_queue" column="listing_id"
+                    referenceTable="ghostfrog_ebay_auction_listings" referenceColumn="id" onDelete="CASCADE"/>
+        <index referenceId="GHOSTFROG_EBAY_LISTING_VISUAL_CONDITION_QUEUE_STATUS_PRIORITY_QUEUED_AT" indexType="btree">
+            <column name="status"/>
+            <column name="priority"/>
+            <column name="queued_at"/>
+        </index>
+    </table>
+
+    <table name="ghostfrog_ebay_listing_visual_conditions" resource="default" engine="innodb" comment="Listing visual conditions">
+        <column xsi:type="bigint" name="id" nullable="false" identity="true" comment="ID"/>
+        <column xsi:type="bigint" name="listing_id" nullable="false" comment="Listing ID"/>
+        <column xsi:type="varchar" name="external_id" nullable="false" length="255" comment="External ID"/>
+        <column xsi:type="longtext" name="model_name" nullable="false" comment="Model name"/>
+        <column xsi:type="json" name="image_urls" nullable="false" comment="Image URLs as JSON array, supply [] when empty"/>
+        <column xsi:type="json" name="assessment" nullable="false" comment="Assessment"/>
+        <column xsi:type="longtext" name="visual_grade" nullable="true" comment="Visual grade"/>
+        <column xsi:type="decimal" name="confidence" nullable="true" precision="24" scale="8" comment="Confidence"/>
+        <column xsi:type="json" name="damage_flags" nullable="false" comment="Damage flags as JSON array, supply [] when empty"/>
+        <column xsi:type="boolean" name="review_required" nullable="false" default="true" comment="Review required"/>
+        <column xsi:type="datetime" name="checked_at" nullable="false" on_update="false" default="CURRENT_TIMESTAMP" comment="Checked at"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="id"/>
+        </constraint>
+        <constraint xsi:type="foreign" referenceId="GHOSTFROG_EBAY_LISTING_VISUAL_CONDITIONS_LISTING_ID_AUCTION_LISTINGS_ID"
+                    table="ghostfrog_ebay_listing_visual_conditions" column="listing_id"
+                    referenceTable="ghostfrog_ebay_auction_listings" referenceColumn="id" onDelete="CASCADE"/>
+        <index referenceId="GHOSTFROG_EBAY_LISTING_VISUAL_CONDITIONS_EXTERNAL_ID_CHECKED_AT_ID" indexType="btree">
+            <column name="external_id"/>
+            <column name="checked_at"/>
+            <column name="id"/>
+        </index>
+        <index referenceId="GHOSTFROG_EBAY_LISTING_VISUAL_CONDITIONS_LISTING_ID_CHECKED_AT_ID" indexType="btree">
+            <column name="listing_id"/>
+            <column name="checked_at"/>
+            <column name="id"/>
+        </index>
+        <index referenceId="GHOSTFROG_EBAY_LISTING_VISUAL_CONDITIONS_REVIEW_REQUIRED_CHECKED_AT" indexType="btree">
+            <column name="review_required"/>
+            <column name="checked_at"/>
+        </index>
+    </table>
+
+    <table name="ghostfrog_ebay_mini_project_alerts" resource="default" engine="innodb" comment="Mini project alerts">
+        <column xsi:type="varchar" name="external_id" nullable="false" length="255" comment="External ID"/>
+        <column xsi:type="longtext" name="title" nullable="false" comment="Title"/>
+        <column xsi:type="longtext" name="source" nullable="false" comment="Source"/>
+        <column xsi:type="longtext" name="model_key" nullable="true" comment="Model key"/>
+        <column xsi:type="decimal" name="price_current" nullable="true" precision="10" scale="2" comment="Price current"/>
+        <column xsi:type="datetime" name="first_detected_at" nullable="false" on_update="false" comment="First detected at"/>
+        <column xsi:type="datetime" name="last_detected_at" nullable="false" on_update="false" comment="Last detected at"/>
+        <column xsi:type="datetime" name="email_sent_at" nullable="true" on_update="false" comment="Email sent at"/>
+        <column xsi:type="datetime" name="telegram_sent_at" nullable="true" on_update="false" comment="Telegram sent at"/>
+        <column xsi:type="json" name="payload" nullable="false" comment="Alert payload as JSON object, supply {} when empty"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="external_id"/>
+        </constraint>
+    </table>
+
+    <table name="ghostfrog_ebay_msx125_alerts" resource="default" engine="innodb" comment="MSX125 alerts">
+        <column xsi:type="varchar" name="external_id" nullable="false" length="255" comment="External ID"/>
+        <column xsi:type="longtext" name="title" nullable="false" comment="Title"/>
+        <column xsi:type="longtext" name="source" nullable="false" comment="Source"/>
+        <column xsi:type="longtext" name="model_key" nullable="true" comment="Model key"/>
+        <column xsi:type="decimal" name="price_current" nullable="true" precision="10" scale="2" comment="Price current"/>
+        <column xsi:type="datetime" name="first_detected_at" nullable="false" on_update="false" comment="First detected at"/>
+        <column xsi:type="datetime" name="last_detected_at" nullable="false" on_update="false" comment="Last detected at"/>
+        <column xsi:type="datetime" name="email_sent_at" nullable="true" on_update="false" comment="Email sent at"/>
+        <column xsi:type="json" name="payload" nullable="false" comment="Payload"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="external_id"/>
+        </constraint>
+    </table>
+
+    <table name="ghostfrog_ebay_paper_trade_predictions" resource="default" engine="innodb" comment="Paper trade predictions">
+        <column xsi:type="bigint" name="id" nullable="false" identity="true" comment="ID"/>
+        <column xsi:type="datetime" name="created_at" nullable="false" on_update="false" default="CURRENT_TIMESTAMP" comment="Created at"/>
+        <column xsi:type="datetime" name="updated_at" nullable="false" on_update="false" default="CURRENT_TIMESTAMP" comment="Updated at"/>
+        <column xsi:type="date" name="prediction_date" nullable="false" comment="Prediction date"/>
+        <column xsi:type="varchar" name="external_id" nullable="false" length="255" comment="External ID"/>
+        <column xsi:type="longtext" name="source" nullable="false" comment="Source"/>
+        <column xsi:type="longtext" name="title" nullable="false" comment="Title"/>
+        <column xsi:type="longtext" name="url" nullable="true" comment="URL"/>
+        <column xsi:type="longtext" name="model_key" nullable="true" comment="Model key"/>
+        <column xsi:type="decimal" name="current_price" nullable="false" precision="12" scale="2" comment="Current price"/>
+        <column xsi:type="decimal" name="predicted_resale_price" nullable="false" precision="12" scale="2" comment="Predicted resale price"/>
+        <column xsi:type="decimal" name="predicted_fees" nullable="false" precision="12" scale="2" comment="Predicted fees"/>
+        <column xsi:type="decimal" name="predicted_outbound_shipping" nullable="false" precision="12" scale="2" comment="Predicted outbound shipping"/>
+        <column xsi:type="decimal" name="predicted_profit" nullable="false" precision="12" scale="2" comment="Predicted profit"/>
+        <column xsi:type="decimal" name="predicted_roi" nullable="false" precision="10" scale="4" comment="Predicted ROI"/>
+        <column xsi:type="decimal" name="recommended_max_bid" nullable="false" precision="12" scale="2" comment="Recommended max bid"/>
+        <column xsi:type="int" name="comp_samples" nullable="false" comment="Comp samples"/>
+        <column xsi:type="datetime" name="end_time" nullable="true" on_update="false" comment="End time"/>
+        <column xsi:type="int" name="time_left_s" nullable="true" comment="Time left in seconds"/>
+        <column xsi:type="varchar" name="decision_status" nullable="false" length="64" default="watching" comment="Decision status"/>
+        <column xsi:type="longtext" name="observed_status" nullable="true" comment="Observed status"/>
+        <column xsi:type="decimal" name="observed_final_price" nullable="true" precision="12" scale="2" comment="Observed final price"/>
+        <column xsi:type="datetime" name="observed_at" nullable="true" on_update="false" comment="Observed at"/>
+        <column xsi:type="decimal" name="observed_price_error" nullable="true" precision="12" scale="2" comment="Observed price error"/>
+        <column xsi:type="decimal" name="observed_paper_profit" nullable="true" precision="12" scale="2" comment="Observed paper profit"/>
+        <column xsi:type="decimal" name="observed_paper_roi" nullable="true" precision="10" scale="4" comment="Observed paper ROI"/>
+        <column xsi:type="longtext" name="outcome_reason" nullable="true" comment="Outcome reason"/>
+        <column xsi:type="datetime" name="outcome_checked_at" nullable="true" on_update="false" comment="Outcome checked at"/>
+        <column xsi:type="int" name="outcome_check_count" nullable="false" default="0" comment="Outcome check count"/>
+        <column xsi:type="longtext" name="outcome_last_reason" nullable="true" comment="Outcome last reason"/>
+        <column xsi:type="decimal" name="predicted_inbound_shipping" nullable="false" precision="12" scale="2" default="0" comment="Predicted inbound shipping"/>
+        <column xsi:type="decimal" name="predicted_packaging" nullable="false" precision="12" scale="2" default="0" comment="Predicted packaging"/>
+        <column xsi:type="decimal" name="predicted_selling_reserve" nullable="false" precision="12" scale="2" default="0" comment="Predicted selling reserve"/>
+        <column xsi:type="decimal" name="observed_purchase_price" nullable="true" precision="12" scale="2" comment="Observed purchase price"/>
+        <column xsi:type="boolean" name="would_have_bid" nullable="true" comment="Would have bid"/>
+        <column xsi:type="boolean" name="would_have_won" nullable="true" comment="Would have won"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="id"/>
+        </constraint>
+        <constraint xsi:type="unique" referenceId="GHOSTFROG_EBAY_PAPER_TRADE_PREDICTIONS_EXTERNAL_ID_PREDICTION_DATE">
+            <column name="external_id"/>
+            <column name="prediction_date"/>
+        </constraint>
+        <index referenceId="GHOSTFROG_EBAY_PAPER_TRADE_PREDICTIONS_DECISION_STATUS_END_TIME_OUTCOME_CHECKED_AT" indexType="btree">
+            <column name="decision_status"/>
+            <column name="end_time"/>
+            <column name="outcome_checked_at"/>
+        </index>
+        <index referenceId="GHOSTFROG_EBAY_PAPER_TRADE_PREDICTIONS_DECISION_STATUS_CREATED_AT" indexType="btree">
+            <column name="decision_status"/>
+            <column name="created_at"/>
+        </index>
+    </table>
+
+    <table name="ghostfrog_ebay_pipeline_runtime_flags" resource="default" engine="innodb" comment="Pipeline runtime flags">
+        <column xsi:type="varchar" name="name" nullable="false" length="255" comment="Name"/>
+        <column xsi:type="boolean" name="is_active" nullable="false" default="false" comment="Is active"/>
+        <column xsi:type="json" name="payload" nullable="true" comment="Payload"/>
+        <column xsi:type="datetime" name="updated_at" nullable="false" on_update="false" default="CURRENT_TIMESTAMP" comment="Updated at"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="name"/>
+        </constraint>
+    </table>
+
+    <table name="ghostfrog_ebay_prices" resource="default" engine="innodb" comment="Prices">
+        <column xsi:type="int" name="id" nullable="false" identity="true" comment="ID"/>
+        <column xsi:type="int" name="source_id" nullable="false" comment="Source ID"/>
+        <column xsi:type="longtext" name="symbol" nullable="false" comment="Symbol"/>
+        <column xsi:type="decimal" name="price" nullable="false" precision="18" scale="8" comment="Price"/>
+        <column xsi:type="varchar" name="currency" nullable="false" length="3" default="USD" comment="Currency"/>
+        <column xsi:type="datetime" name="fetched_at" nullable="false" on_update="false" default="CURRENT_TIMESTAMP" comment="Fetched at"/>
+        <column xsi:type="datetime" name="created_at_utc" nullable="false" on_update="false" default="CURRENT_TIMESTAMP" comment="Created at UTC"/>
+        <column xsi:type="datetime" name="updated_at_utc" nullable="false" on_update="false" default="CURRENT_TIMESTAMP" comment="Updated at UTC"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="id"/>
+        </constraint>
+        <constraint xsi:type="foreign" referenceId="GHOSTFROG_EBAY_PRICES_SOURCE_ID_SOURCES_ID"
+                    table="ghostfrog_ebay_prices" column="source_id"
+                    referenceTable="ghostfrog_ebay_sources" referenceColumn="id" onDelete="CASCADE"/>
+        <index referenceId="GHOSTFROG_EBAY_PRICES_SOURCE_ID" indexType="btree">
+            <column name="source_id"/>
+        </index>
+    </table>
+
+    <table name="ghostfrog_ebay_roi_alert_markers" resource="default" engine="innodb" comment="ROI alert markers">
+        <column xsi:type="varchar" name="external_id" nullable="false" length="255" comment="External ID"/>
+        <column xsi:type="varchar" name="marker" nullable="false" length="128" comment="Marker"/>
+        <column xsi:type="datetime" name="created_at" nullable="false" on_update="false" default="CURRENT_TIMESTAMP" comment="Created at"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="external_id"/>
+            <column name="marker"/>
+        </constraint>
+    </table>
+
+    <table name="ghostfrog_ebay_roi_snapshots" resource="default" engine="innodb" comment="ROI snapshots">
+        <column xsi:type="bigint" name="id" nullable="false" identity="true" comment="ID"/>
+        <column xsi:type="longtext" name="external_id" nullable="false" comment="External ID"/>
+        <column xsi:type="longtext" name="source" nullable="false" comment="Source"/>
+        <column xsi:type="longtext" name="model_key" nullable="true" comment="Model key"/>
+        <column xsi:type="decimal" name="current_price" nullable="false" precision="10" scale="2" comment="Current price"/>
+        <column xsi:type="decimal" name="roi_estimate" nullable="false" precision="10" scale="2" comment="ROI estimate"/>
+        <column xsi:type="decimal" name="profit_estimate" nullable="false" precision="10" scale="2" comment="Profit estimate"/>
+        <column xsi:type="datetime" name="ends_at" nullable="true" on_update="false" comment="Ends at"/>
+        <column xsi:type="int" name="time_left_s" nullable="true" comment="Time left in seconds"/>
+        <column xsi:type="datetime" name="created_at" nullable="false" on_update="false" default="CURRENT_TIMESTAMP" comment="Created at"/>
+        <column xsi:type="longtext" name="bucket_key" nullable="true" comment="Bucket key"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="id"/>
+        </constraint>
+    </table>
+
+    <table name="ghostfrog_ebay_schema_migrations" resource="default" engine="innodb" comment="Legacy V1 schema migration records">
+        <column xsi:type="varchar" name="name" nullable="false" length="255" comment="Name"/>
+        <column xsi:type="longtext" name="checksum" nullable="false" comment="Checksum"/>
+        <column xsi:type="datetime" name="applied_at" nullable="false" on_update="false" default="CURRENT_TIMESTAMP" comment="Applied at"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="name"/>
+        </constraint>
+    </table>
+
+    <table name="ghostfrog_ebay_scrape_state" resource="default" engine="innodb" comment="Scrape state">
+        <column xsi:type="int" name="id" nullable="false" identity="true" comment="ID"/>
+        <column xsi:type="datetime" name="last_scrape" nullable="true" on_update="false" comment="Last scrape"/>
+        <column xsi:type="datetime" name="created_at" nullable="false" on_update="false" default="CURRENT_TIMESTAMP" comment="Created at"/>
+        <column xsi:type="datetime" name="updated_at" nullable="false" on_update="false" default="CURRENT_TIMESTAMP" comment="Updated at"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="id"/>
+        </constraint>
+    </table>
+
+    <table name="ghostfrog_ebay_sources" resource="default" engine="innodb" comment="Sources">
+        <column xsi:type="int" name="id" nullable="false" identity="true" comment="ID"/>
+        <column xsi:type="varchar" name="name" nullable="false" length="255" comment="Name"/>
+        <column xsi:type="varchar" name="type" nullable="false" length="64" default="website" comment="Type"/>
+        <column xsi:type="longtext" name="base_url" nullable="false" comment="Base URL"/>
+        <column xsi:type="boolean" name="enabled" nullable="true" default="true" comment="Enabled"/>
+        <column xsi:type="datetime" name="created_at_utc" nullable="false" on_update="false" comment="Created at UTC"/>
+        <column xsi:type="datetime" name="updated_at_utc" nullable="false" on_update="false" comment="Updated at UTC"/>
+        <column xsi:type="longtext" name="niche" nullable="true" comment="Niche"/>
+        <column xsi:type="int" name="scrape_interval_seconds" nullable="false" default="300" comment="Scrape interval seconds"/>
+        <column xsi:type="datetime" name="last_scraped_at" nullable="true" on_update="false" comment="Last scraped at"/>
+        <column xsi:type="longtext" name="domain" nullable="true" comment="Domain"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="id"/>
+        </constraint>
+        <constraint xsi:type="unique" referenceId="GHOSTFROG_EBAY_SOURCES_NAME">
+            <column name="name"/>
+        </constraint>
+        <index referenceId="GHOSTFROG_EBAY_SOURCES_LAST_SCRAPED_AT" indexType="btree">
+            <column name="last_scraped_at"/>
+        </index>
+    </table>
+</schema>

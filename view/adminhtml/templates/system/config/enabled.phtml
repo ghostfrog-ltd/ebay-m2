@@ -1,0 +1,25 @@
+<?php
+/** @var \GhostFrog\Ebay\Block\Adminhtml\System\Config\Field\Enabled $block */
+/** @var \Magento\Framework\Escaper $escaper */
+$element = $block->getData('element');
+$id = $escaper->escapeHtmlAttr($element->getHtmlId());
+$name = $escaper->escapeHtmlAttr($element->getName());
+$disabled = (bool) $element->getDisabled();
+?>
+<div class="admin__actions-switch">
+    <input type="hidden" name="<?= /* @noEscape */ $name ?>" value="0" <?= $disabled ? 'disabled' : '' ?>>
+    <input type="checkbox"
+           role="switch"
+           class="admin__actions-switch-checkbox<?= $disabled ? ' disabled' : '' ?>"
+           id="<?= /* @noEscape */ $id ?>"
+           name="<?= /* @noEscape */ $name ?>"
+           value="1"
+           <?= (string) $element->getValue() === '1' ? 'checked' : '' ?>
+           <?= $disabled ? 'disabled' : '' ?>>
+    <label class="admin__actions-switch-label" for="<?= /* @noEscape */ $id ?>">
+        <span class="admin__actions-switch-text"
+              aria-hidden="true"
+              data-text-on="<?= $escaper->escapeHtmlAttr(__('Yes')) ?>"
+              data-text-off="<?= $escaper->escapeHtmlAttr(__('No')) ?>"></span>
+    </label>
+</div>
