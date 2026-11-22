@@ -4,6 +4,7 @@
     <module name="GhostFrog_Ebay">
         <sequence>
             <module name="Magento_MysqlMq"/>
+            <module name="Magento_Indexer"/>
         </sequence>
     </module>
 </config>

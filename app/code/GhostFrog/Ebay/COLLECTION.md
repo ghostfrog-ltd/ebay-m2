@@ -99,3 +99,24 @@ sound cards, and processors. Incomplete or conflicting evidence produces `unknow
 Generic condition grades belong in `condition_grade`. MotoMine keys have their
 own prefix so that parts and complete motorcycles use separate identities.
 Existing assigned keys are preserved.
+
+## Sold comparables
+
+The GhostFrog eBay Comps indexer rebuilds the Magento comps table from the
+last 365 days of finalized sales with a positive final price. It groups by
+verified model key and effective condition grade, keeps one sale per eBay
+item and stores the median, mean and comp count. It reads the listing data
+available in Magento. PostgreSQL remains the live source of truth. Imported
+listings need fresh sale outcomes in Magento for the index to include them.
+
+With the extension enabled, Magento cron marks the index for a full refresh
+hourly. The Magento index cron processes the refresh. To rebuild immediately:
+
+    ddev php bin/magento indexer:reindex ghostfrog_ebay_comps
+
+Eligible live listings show comps and pricing on the listing edit screen.
+Apple requires 10 same-grade sales, Samsung and graphics cards require 5,
+and other sources require 15. Change the GBP target profit, selling fee
+percentage and combined shipping in **GhostFrog → eBay Configuration →
+Comps and Pricing**. Pricing changes apply on the next listing view. The
+formula also deducts £5 for packaging and reserve.

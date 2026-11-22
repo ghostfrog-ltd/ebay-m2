@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GhostFrog\Ebay\Controller\Adminhtml\Listing;
 
+use GhostFrog\Ebay\Model\Comps\Valuation;
 use GhostFrog\Ebay\Model\ResourceModel\Listing;
 use Magento\Backend\App\Action;
 use Magento\Backend\App\Action\Context;
@@ -20,7 +21,8 @@ class Edit extends Action implements HttpGetActionInterface
     public function __construct(
         Context $context,
         private readonly PageFactory $pageFactory,
-        private readonly Listing $listings
+        private readonly Listing $listings,
+        private readonly Valuation $valuation
     ) {
         parent::__construct($context);
     }
@@ -43,6 +45,7 @@ class Edit extends Action implements HttpGetActionInterface
         $page->getConfig()->getTitle()->prepend(__('Edit Listing #%1', $id));
         $page->getLayout()->getBlock('ghostfrog.ebay.listing.edit')->addData([
             'listing' => $listing,
+            'valuation' => $this->valuation->forListing($id),
             'revision' => $this->listings->revision($listing),
         ]);
         return $page;

@@ -7,6 +7,7 @@ use Magento\Framework\Escaper;
 /** @var Template $block */
 /** @var Escaper $escaper */
 $listing = $block->getData('listing');
+$valuation = $block->getData('valuation');
 $details = [
     'external_id' => __('eBay Item ID'),
     'source' => __('Source'),
@@ -115,5 +116,35 @@ $url = (string)$listing['url'];
                 <?php endif; ?>
             </tbody>
         </table>
+        <?php if ($valuation !== null): ?>
+            <table class="admin__table-secondary">
+                <caption><?= $escaper->escapeHtml(__('Sold Comparables')) ?></caption>
+                <tbody>
+                    <?php
+                    $values = [
+                        (string)__('Effective Condition Grade') => $valuation['condition_grade'],
+                        (string)__('Sold Comps') => __('%1 found, %2 required', $valuation['comp_count'], $valuation['minimum']),
+                        (string)__('Sold Median (GBP)') => isset($valuation['sold_median'])
+                            ? number_format($valuation['sold_median'], 2) : '—',
+                        (string)__('Indexed At (UTC)') => $valuation['computed_at'] ?? '—',
+                        (string)__('Signal') => $valuation['signal'],
+                    ];
+                    if (isset($valuation['max_safe_buy'])) {
+                        $values += [
+                            (string)__('Max Safe Buy (GBP)') => number_format($valuation['max_safe_buy'], 2),
+                            (string)__('Expected Profit (GBP)') => number_format($valuation['expected_profit'], 2),
+                            (string)__('Expected ROI') => number_format($valuation['expected_roi_percent'], 2) . '%',
+                        ];
+                    }
+                    ?>
+                    <?php foreach ($values as $label => $value): ?>
+                        <tr>
+                            <th scope="row"><?= $escaper->escapeHtml($label) ?></th>
+                            <td><?= $escaper->escapeHtml($value) ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        <?php endif; ?>
     </div>
 </form>

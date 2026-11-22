@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:Indexer/etc/indexer.xsd">
+    <indexer id="ghostfrog_ebay_comps" view_id="ghostfrog_ebay_comps" class="GhostFrog\Ebay\Model\Comps\Index">
+        <title translate="true">GhostFrog eBay Comps</title>
+        <description translate="true">Rebuilds same-model, same-grade sold price statistics.</description>
+    </indexer>
+</config>
