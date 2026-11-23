@@ -115,7 +115,9 @@
             "visual_condition_checked": true,
             "visual_condition_checked_at": true,
             "text_condition_checked": true,
-            "text_condition_checked_at": true
+            "text_condition_checked_at": true,
+            "price_bin_current": true,
+            "last_price_checked_at": true
         },
         "index": {
             "GHOSTFROG_EBAY_AUCTION_LISTINGS_SOURCE_ID": true,
@@ -145,7 +147,8 @@
             "bids_count": true,
             "timestamp": true,
             "external_id": true,
-            "recorded_at": true
+            "recorded_at": true,
+            "bin_price": true
         },
         "index": {
             "GHOSTFROG_EBAY_AUCTION_PRICE_HISTORY_EXTERNAL_ID_RECORDED_AT": true
@@ -573,7 +576,11 @@
             "end_time": true,
             "eligible_until": true,
             "external_id": true,
-            "url": true
+            "url": true,
+            "bid_price": true,
+            "bin_price": true,
+            "last_seen_at": true,
+            "last_price_checked_at": true
         },
         "index": {
             "GHOSTFROG_EBAY_OPPORTUNITIES_EXPECTED_PROFIT_LISTING_ID": true,
@@ -582,6 +589,37 @@
         },
         "constraint": {
             "PRIMARY": true
+        }
+    },
+    "ghostfrog_ebay_price_refresh_queue": {
+        "column": {
+            "listing_id": true,
+            "due_at": true,
+            "available_at": true,
+            "attempts": true
+        },
+        "index": {
+            "GHOSTFROG_EBAY_PRICE_REFRESH_QUEUE_AVAILABLE_AT": true
+        },
+        "constraint": {
+            "PRIMARY": true,
+            "FK_8132C45B287E90A51E4BF23F8F7DBFBC": true
+        }
+    },
+    "ghostfrog_ebay_opportunity_notification_queue": {
+        "column": {
+            "listing_id": true,
+            "sale_type": true,
+            "status": true,
+            "available_at": true,
+            "attempts": true
+        },
+        "index": {
+            "GHOSTFROG_EBAY_OPPORTUNITY_NTFC_QUEUE_STS_AVAILABLE_AT": true
+        },
+        "constraint": {
+            "PRIMARY": true,
+            "FK_D01E0FFE58D2793BA61F9B93C3EC756C": true
         }
     }
 }

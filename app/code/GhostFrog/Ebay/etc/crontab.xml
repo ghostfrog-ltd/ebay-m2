@@ -27,4 +27,9 @@
             <schedule>*/5 * * * *</schedule>
         </job>
     </group>
+    <group id="ghostfrog_ebay_monitoring">
+        <job name="ghostfrog_ebay_monitor_opportunities" instance="GhostFrog\Ebay\Cron\MonitorOpportunities" method="execute">
+            <schedule>* * * * *</schedule>
+        </job>
+    </group>
 </config>

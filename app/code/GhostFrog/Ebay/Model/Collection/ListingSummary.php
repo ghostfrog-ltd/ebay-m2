@@ -18,24 +18,25 @@ final class ListingSummary
     public function unavailable(array $item, DateTimeImmutable $now): bool
     {
         $end = $this->endTime($item);
-        if ($end !== null && $end <= $now) {
-            return true;
-        }
+        return ($end !== null && $end <= $now) || $this->availability($item) === false;
+    }
 
+    public function availability(array $item): ?bool
+    {
         $unavailable = ['OUT_OF_STOCK', 'SOLD_OUT', 'ENDED', 'UNAVAILABLE'];
         $available = ['IN_STOCK', 'LIMITED_QUANTITY', 'AVAILABLE'];
         $status = strtoupper(trim((string)($item['availabilityStatus']
             ?? $item['availability'] ?? $item['estimatedAvailabilityStatus'] ?? '')));
         if (in_array($status, $unavailable, true)) {
-            return true;
+            return false;
         }
         if (in_array($status, $available, true)) {
-            return false;
+            return true;
         }
 
         $availabilities = $item['estimatedAvailabilities'] ?? [];
         if (!is_array($availabilities)) {
-            return false;
+            return null;
         }
         if (!array_is_list($availabilities)) {
             $availabilities = [$availabilities];
@@ -50,15 +51,15 @@ final class ListingSummary
             $quantity = $availability['estimatedAvailableQuantity']
                 ?? $availability['availableQuantity'] ?? $availability['quantity'] ?? null;
             if (in_array($status, $available, true) || (is_numeric($quantity) && (float)$quantity > 0)) {
-                return false;
+                return true;
             }
             if (in_array($status, $unavailable, true) || (is_numeric($quantity) && (float)$quantity === 0.0)) {
                 $negative = true;
             } elseif ($status !== '') {
-                return false;
+                return null;
             }
         }
-        return $negative;
+        return $negative ? false : null;
     }
 
     public function normalize(array $item, string $requestedSaleType, DateTimeImmutable $now): ?array
@@ -75,35 +76,48 @@ final class ListingSummary
             return null;
         }
 
-        $options = array_map('strtoupper', (array)($item['buyingOptions'] ?? []));
-        $auction = in_array('AUCTION', $options, true);
-        $bin = in_array('FIXED_PRICE', $options, true);
-        $saleType = match (true) {
-            $auction && $bin => 'both',
-            $auction => 'auction',
-            $bin => 'bin',
-            default => $requestedSaleType,
-        };
+        $saleType = $this->saleType($item) ?? $requestedSaleType;
         if ($saleType !== 'both' && $saleType !== $requestedSaleType) {
             return null;
         }
 
-        $bid = $saleType === 'bin' ? null : $this->price($item['currentBidPrice'] ?? []);
+        $prices = $this->prices($item, $saleType);
         $end = $this->endTime($item);
         return [
             'title' => mb_substr((string)($item['title'] ?? ''), 0, 255),
-            'price_current' => $bid ?? $this->price($item['price'] ?? []),
-            'price_bid_current' => $bid,
+            'price_current' => $prices['price_bid_current'] ?? $prices['price_bin_current']
+                ?? $this->price($item['price'] ?? []),
             'bids_count' => max(0, (int)($item['bidCount'] ?? 0)),
             'end_time' => $end?->format(DATE_ATOM),
             'url' => mb_substr((string)($item['itemWebUrl'] ?? $item['itemUrl'] ?? ''), 0, 1024),
             'sale_type' => $saleType,
             'time_left_s' => $end === null ? null : max(0, $end->getTimestamp() - $now->getTimestamp()),
             'raw_attrs' => json_encode((object)$this->evidence($item), JSON_THROW_ON_ERROR),
+        ] + $prices;
+    }
+
+    public function saleType(array $item): ?string
+    {
+        $options = array_map('strtoupper', array_filter((array)($item['buyingOptions'] ?? []), 'is_string'));
+        $auction = in_array('AUCTION', $options, true);
+        $bin = in_array('FIXED_PRICE', $options, true);
+        return match (true) {
+            $auction && $bin => 'both',
+            $auction => 'auction',
+            $bin => 'bin',
+            default => null,
+        };
+    }
+
+    public function prices(array $item, string $saleType, bool $requireCurrency = false): array
+    {
+        return [
+            'price_bid_current' => $saleType === 'bin' ? null : $this->price($item['currentBidPrice'] ?? [], $requireCurrency),
+            'price_bin_current' => $saleType === 'auction' ? null : $this->price($item['price'] ?? [], $requireCurrency),
         ];
     }
 
-    private function endTime(array $item): ?DateTimeImmutable
+    public function endTime(array $item): ?DateTimeImmutable
     {
         $value = $item['itemEndDate'] ?? '';
         if (!is_string($value) || $value === '') {
@@ -117,10 +131,14 @@ final class ListingSummary
         }
     }
 
-    private function price(array $price): ?string
+    public function price(mixed $price, bool $requireCurrency = false): ?string
     {
+        if (!is_array($price)) {
+            return null;
+        }
         $value = $price['value'] ?? null;
-        if (($price['currency'] ?? 'GBP') !== 'GBP' || (!is_string($value) && !is_int($value) && !is_float($value))
+        if (($price['currency'] ?? ($requireCurrency ? null : 'GBP')) !== 'GBP'
+            || (!is_string($value) && !is_int($value) && !is_float($value))
             || !preg_match('/\A([0-9]+)(?:\.([0-9]{1,2})0*)?\z/', (string)$value, $amount)
         ) {
             return null;

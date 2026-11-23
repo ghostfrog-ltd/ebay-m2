@@ -64,6 +64,12 @@ final class Rows
     {
         $db = $this->resource->getConnection();
         foreach ($batches as $batch) {
+            foreach ($batch as $offset => $listing) {
+                if ($listing['sale_type'] === 'both' && $listing['price_bin_current'] > 0
+                    && $listing['price_bin_current'] < $listing['price_current']) {
+                    $batch[$offset]['price_current'] = $listing['price_bin_current'];
+                }
+            }
             $valuations = $this->valuation->forLiveBatch($batch, $cohorts);
             $rows = [];
             foreach ($batch as $listing) {
@@ -79,6 +85,10 @@ final class Rows
                     'model_key' => $value['model_key'],
                     'condition_grade' => $value['condition_grade'],
                     'current_price' => $listing['price_current'],
+                    'bid_price' => $listing['price_bid_current'],
+                    'bin_price' => $listing['price_bin_current'],
+                    'last_seen_at' => $listing['last_seen_at'],
+                    'last_price_checked_at' => $listing['last_price_checked_at'],
                     'sold_median' => $value['sold_median'],
                     'comp_count' => $value['comp_count'],
                     'max_safe_buy' => $value['max_safe_buy'],

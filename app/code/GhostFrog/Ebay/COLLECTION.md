@@ -204,3 +204,46 @@ After recording a sale, the worker rebuilds its same-model, same-grade comp
 group and any group affected by another stored ID for the same eBay item.
 The queue retains the comp job until the comp and opportunity writes succeed,
 so the worker can retry indexing from the saved sale.
+
+## Opportunity price monitoring and alerts
+
+Run `setup:upgrade` after deploying. Magento cron runs the
+`ghostfrog_ebay_monitoring` group every minute. It adds due indexed listing
+IDs to a dedicated MySQL queue, then checks those listings through Browse
+GetItem. The module and **Allow eBay API Calls** must be enabled. In
+**GhostFrog → eBay Configuration → Opportunity Price Refresh and Alerts**,
+set the intervals and batch limits. Auctions with more than 24 hours left
+follow normal collection. Auctions within 24 hours, 60 minutes and 10 minutes
+default to 30, 5 and 1 minute respectively. Buy It Now defaults to 5 minutes.
+Combined listings keep both prices, use the shorter interval and are valued
+in the grid using the lower available price. The grid provides optional
+separate Auction Price and Buy It Now Price columns.
+
+The worker prioritises auctions ending within ten minutes and reserves a slot
+for other due listings. It shares the Browse quota with collection and leaves
+20% of the verified daily limit for searches. It waits through quota and
+authentication pauses and retries transient errors with backoff. The
+observation, price history, individual opportunity index update and alert
+handoff share a database transaction. An unavailable item leaves the
+Opportunities grid with its sale outcome unconfirmed.
+
+**Last Price Checked** records the most recent successful individual check.
+**Price Freshness** shows whether the displayed price still matches that check
+and is within its interval. A later collection observation can supersede the
+checked price. Both fields are available in the grid without making API calls.
+
+For alerts, enter an incoming **Webhook URL** under **Slack**, then enable
+**Send Opportunity Alerts to Slack** under **Opportunity Price Refresh and
+Alerts**. The webhook selects the Slack channel. Alerts start disabled and
+require a destination. Buy It Now alerts queue on successful checks. Auction
+alerts require a successful check within the final five minutes and a price
+less than 60 seconds old by default. Delivery rechecks eligibility and prices
+with current comps. Each purchase option can alert once while it remains
+actionable. Explicit temporary Slack failures retry with backoff. Interrupted
+requests with an unknown delivery outcome are recorded without automatic
+replay. The cron log reports refresh queue depth, oldest due time, stale
+opportunities, quota pauses and alert outcomes in `var/log/system.log`.
+
+Run the monitoring cron group in DDEV to check registration and execution.
+
+    ddev exec php bin/magento cron:run --group=ghostfrog_ebay_monitoring
