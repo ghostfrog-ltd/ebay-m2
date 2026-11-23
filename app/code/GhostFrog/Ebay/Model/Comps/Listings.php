@@ -8,6 +8,7 @@ use GhostFrog\Ebay\Model\Condition\Stage;
 use GhostFrog\Ebay\Model\ResourceModel\Listing;
 use Magento\Framework\App\ResourceConnection;
 use Magento\Framework\DB\Select;
+use Magento\Framework\DB\Sql\Expression;
 
 final class Listings
 {
@@ -15,44 +16,37 @@ final class Listings
     {
     }
 
-    public function sold(string $from, string $until, ?array $modelKeys = null): iterable
+    public function sold(string $from, string $until): iterable
+    {
+        foreach ($this->batches($this->soldSelect($from, $until)) as $batch) {
+            yield from $batch;
+        }
+    }
+
+    public function soldItemIds(string $from, string $until, array $ids): array
     {
         $db = $this->resource->getConnection();
-        $sales = $this->select()
+        $select = $this->soldSelect($from, $until, false)->where('a.id IN (?)', $ids);
+        return array_map(self::itemId(...), $db->fetchCol($select));
+    }
+
+    public function soldItems(string $from, string $until, array $itemIds): array
+    {
+        $select = $this->soldSelect($from, $until)->where('a.external_id IN (?)', $this->externalIds($itemIds));
+        return $this->resource->getConnection()->fetchAll($select);
+    }
+
+    private function soldSelect(string $from, string $until, bool $includeEvidence = true): Select
+    {
+        $select = $includeEvidence ? $this->select() : $this->resource->getConnection()->select()
+            ->from(['a' => $this->resource->getTableName(Listing::TABLE)], ['external_id']);
+        return $select
             ->where('a.status = ?', 'sold')
             ->where('a.finalized = 1')
             ->where('a.final_price > 0')
             ->where('a.end_time >= ?', $from)
             ->where('a.end_time <= ?', $until)
             ->where("a.model_key IS NOT NULL AND a.model_key NOT IN ('', 'unknown')");
-        $select = (clone $sales)->where('a.id > :last_id')->order('a.id ASC')->limit(500);
-        if ($modelKeys !== null) {
-            $select->where('a.model_key IN (?)', $modelKeys);
-        }
-        $lastId = '0';
-        do {
-            $batch = $db->fetchAll($select, ['last_id' => $lastId]);
-            foreach ($batch as $row) {
-                $lastId = $row['id'];
-                yield $row;
-            }
-            if ($modelKeys !== null && $batch !== []) {
-                // An alias outside the selected models can win the deduplication.
-                $aliases = $this->aliases($batch);
-                if ($aliases !== []) {
-                    yield from $db->fetchAll((clone $sales)->where('a.external_id IN (?)', $aliases));
-                }
-            }
-        } while (count($batch) === 500);
-    }
-
-    public function related(array $ids): array
-    {
-        $db = $this->resource->getConnection();
-        $rows = $db->fetchAll($this->select()->where('a.id IN (?)', $ids));
-        $aliases = $this->aliases($rows);
-        return $aliases === [] ? $rows : array_merge($rows,
-            $db->fetchAll($this->select()->where('a.external_id IN (?)', $aliases)));
     }
 
     public static function itemId(string $externalId): string
@@ -60,32 +54,62 @@ final class Listings
         return preg_replace('/^v[12]\|(\d+)\|0$/', '$1', $externalId);
     }
 
-    private function aliases(array $listings): array
+    private function externalIds(array $items): array
     {
-        $aliases = [];
-        foreach ($listings as $listing) {
-            $id = self::itemId($listing['external_id']);
+        $ids = [];
+        foreach ($items as $id) {
+            $id = (string)$id;
+            $ids[] = $id;
             if (ctype_digit($id)) {
-                foreach ([$id, "v1|$id|0", "v2|$id|0"] as $alias) {
-                    if ($alias !== $listing['external_id']) {
-                        $aliases[$alias] = true;
-                    }
-                }
+                $ids[] = "v1|$id|0";
+                $ids[] = "v2|$id|0";
             }
         }
-        return array_map('strval', array_keys($aliases));
+        return array_unique($ids);
     }
 
     public function live(int $id): ?array
     {
-        $select = $this->select()
-            ->where('a.id = ?', $id)
+        $row = $this->resource->getConnection()->fetchRow($this->liveSelect()->where('a.id = ?', $id));
+        return $row ?: null;
+    }
+
+    public function liveBatch(?array $ids = null, ?array $modelKeys = null): iterable
+    {
+        $select = $this->liveSelect()->where("a.model_key IS NOT NULL AND a.model_key NOT IN ('', 'unknown')");
+        if ($ids !== null) {
+            $select->where('a.id IN (?)', $ids);
+        }
+        if ($modelKeys !== null) {
+            $select->where('a.model_key IN (?)', $modelKeys);
+        }
+        yield from $this->batches($select);
+    }
+
+    private function liveSelect(): Select
+    {
+        $freshUntil = 'DATE_ADD(COALESCE(a.last_seen_at, a.first_seen), INTERVAL 24 HOUR)';
+        return $this->select()
+            ->columns([
+                'sale_type' => 'a.sale_type',
+                'url' => 'a.url',
+                'eligible_until' => new Expression("LEAST(COALESCE(a.end_time, $freshUntil), $freshUntil)"),
+            ])
             ->where('a.status = ?', 'live')
             ->where('(a.end_time > UTC_TIMESTAMP() OR (a.end_time IS NULL AND a.sale_type = ?))', 'bin')
             ->where('a.price_current > 0')
             ->where('COALESCE(a.last_seen_at, a.first_seen) >= UTC_TIMESTAMP() - INTERVAL 24 HOUR');
-        $row = $this->resource->getConnection()->fetchRow($select);
-        return $row ?: null;
+    }
+
+    private function batches(Select $select): iterable
+    {
+        $db = $this->resource->getConnection();
+        $select->where('a.id > :last_id')->order('a.id ASC')->limit(500);
+        $lastId = 0;
+        while ($batch = $db->fetchAll($select, ['last_id' => $lastId])) {
+            yield $batch;
+            $lastId = end($batch)['id'];
+        }
     }
 
     private function select(): Select

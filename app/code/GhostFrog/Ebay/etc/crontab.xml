@@ -23,5 +23,8 @@
         <job name="ghostfrog_ebay_refresh_comps" instance="GhostFrog\Ebay\Cron\RefreshComps" method="execute">
             <schedule>10 3 * * *</schedule>
         </job>
+        <job name="ghostfrog_ebay_expire_opportunities" instance="GhostFrog\Ebay\Model\Opportunities\Index" method="expire">
+            <schedule>*/5 * * * *</schedule>
+        </job>
     </group>
 </config>

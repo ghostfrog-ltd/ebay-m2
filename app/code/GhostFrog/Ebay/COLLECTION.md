@@ -128,18 +128,59 @@ available in Magento. PostgreSQL remains the live source of truth. Imported
 listings need fresh sale outcomes in Magento for the index to include them.
 
 With the extension enabled, Magento cron marks the index for a full refresh
-daily so sales age out and later identity and condition changes are picked up.
-The Magento index cron processes the refresh. To rebuild immediately:
+daily so sales age out and missed changes are reconciled. The index keeps a
+record of the selected sale for each eBay item. A listing change recalculates
+only the cohorts whose selected sales changed. A sale can leave a cohort when
+its identity, condition or eligibility changes, or when the listing is deleted.
+Another stored representation of the same eBay item can then become the
+selected sale. Magento updates the selected sales, comp statistics and
+affected opportunities in one database transaction.
 
-    ddev php bin/magento indexer:reindex ghostfrog_ebay_comps
+## Opportunities
 
-Eligible live listings show comps and pricing on the listing edit screen.
-Apple requires 10 same-grade sales, Samsung and graphics cards require 5,
-and other sources require 15. Change the GBP target profit, selling fee
-percentage and combined shipping in **GhostFrog → eBay Configuration →
-Comps and Pricing**. Pricing changes apply on the next listing view. The
-formula also deducts £5 for packaging and reserve.
+**GhostFrog → Opportunities** shows live listings from the
+`ghostfrog_ebay_opportunities` index, sorted by expected profit. Use the
+filters or row actions to find and inspect a listing. The current price for
+an auction is the observed bid when available. The final purchase price can
+be higher.
 
+The index uses the same eligibility and pricing services as the listing edit
+screen. Listings must be live, within their end time when applicable, and seen
+within the past 24 hours. Apple requires 10 same-grade sales, Samsung and
+graphics cards require 5, and other sources require 15. Set the GBP target
+profit, selling fee percentage and combined shipping in **GhostFrog →
+eBay Configuration → Comps and Pricing**. The estimate also deducts £5 for
+packaging and reserve. Saving pricing in Magento Admin or with the default
+`config:set` command invalidates Opportunities. Rebuild Opportunities after
+deploying pricing overrides in files or environment variables.
+
+The upgrade patch enables **Update by Schedule** for both GhostFrog indexers
+and builds the initial indexes from local listing data. Keep both indexers in
+scheduled mode and run the Magento index cron. The materialized views capture
+listing writes, condition assessments and review actions in the same
+transaction as those changes. Comparable changes immediately refresh their
+affected opportunities when the comps transaction commits. Every five
+minutes the expiry job rechecks indexed opportunities whose end time or
+24-hour freshness deadline passed. With the extension enabled, the daily
+03:10 Magento cron job queues a full rebuild of both indexes.
+
+Run the upgrade and check the native indexer status during deployment.
+
+    ddev exec php bin/magento setup:upgrade
+    ddev exec php bin/magento indexer:status ghostfrog_ebay_comps ghostfrog_ebay_opportunities
+
+Run both indexers directly for an immediate reconciliation.
+
+    ddev exec php bin/magento indexer:reindex ghostfrog_ebay_comps ghostfrog_ebay_opportunities
+
+The unit tests run from the Magento root. Run the database tests from a
+disposable Magento installation with the module enabled and upgraded, and
+an empty listing table. The tests use Magento's materialized views and UI
+data source, exercise sale and listing changes, compare full and incremental
+results, and inject a database write failure to verify rollback and retry.
+
+    ddev exec vendor/bin/phpunit --no-extensions -c dev/tests/unit/phpunit.xml.dist app/code/GhostFrog/Ebay/Test/Unit
+    GHOSTFROG_EBAY_TEST_DB=disposable_database vendor/bin/phpunit --bootstrap app/bootstrap.php app/code/GhostFrog/Ebay/Test/Integration
 
 ## Final sale prices
 
@@ -161,4 +202,5 @@ Fixed-price checks exclude ambiguous offers, revised prices, multi-unit and
 variation sales. A confirmed ending without a verifiable price stays ended.
 After recording a sale, the worker rebuilds its same-model, same-grade comp
 group and any group affected by another stored ID for the same eBay item.
-The queue retains the comp job until that write succeeds.
+The queue retains the comp job until the comp and opportunity writes succeed,
+so the worker can retry indexing from the saved sale.

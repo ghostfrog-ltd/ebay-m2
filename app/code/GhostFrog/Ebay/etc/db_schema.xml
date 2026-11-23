@@ -233,6 +233,57 @@
         </constraint>
     </table>
 
+    <table name="ghostfrog_ebay_comp_sales" resource="default" engine="innodb" comment="Selected comparable sale per eBay item">
+        <column xsi:type="varbinary" name="item_id" nullable="false" length="255" comment="Canonical eBay item ID"/>
+        <column xsi:type="bigint" name="listing_id" nullable="false" comment="Selected listing ID"/>
+        <column xsi:type="varchar" name="model_key" nullable="false" length="255" comment="Model key"/>
+        <column xsi:type="varchar" name="condition_grade" nullable="false" length="16" comment="Effective condition grade"/>
+        <column xsi:type="decimal" name="final_price" nullable="false" precision="12" scale="2" comment="Final sale price in GBP"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="item_id"/>
+        </constraint>
+        <index referenceId="GHOSTFROG_EBAY_COMP_SALES_LISTING_ID" indexType="btree">
+            <column name="listing_id"/>
+        </index>
+        <index referenceId="GHOSTFROG_EBAY_COMP_SALES_MODEL_KEY_CONDITION_GRADE" indexType="btree">
+            <column name="model_key"/>
+            <column name="condition_grade"/>
+        </index>
+    </table>
+
+    <table name="ghostfrog_ebay_opportunities" resource="default" engine="innodb" comment="Indexed live eBay opportunities">
+        <column xsi:type="bigint" name="listing_id" nullable="false" comment="Listing ID"/>
+        <column xsi:type="longtext" name="title" nullable="true" comment="Listing title"/>
+        <column xsi:type="varchar" name="source" nullable="false" length="255" comment="Listing source"/>
+        <column xsi:type="longtext" name="sale_type" nullable="true" comment="Sale type"/>
+        <column xsi:type="varchar" name="model_key" nullable="false" length="255" comment="Model key"/>
+        <column xsi:type="varchar" name="condition_grade" nullable="false" length="16" comment="Effective condition grade"/>
+        <column xsi:type="decimal" name="current_price" nullable="false" precision="21" scale="2" comment="Current price or bid in GBP"/>
+        <column xsi:type="decimal" name="sold_median" nullable="false" precision="24" scale="3" comment="Median sold price in GBP"/>
+        <column xsi:type="int" name="comp_count" nullable="false" comment="Comparable sales count"/>
+        <column xsi:type="decimal" name="max_safe_buy" nullable="false" precision="21" scale="2" comment="Maximum safe purchase price in GBP"/>
+        <column xsi:type="decimal" name="expected_profit" nullable="false" precision="21" scale="2" comment="Expected profit in GBP"/>
+        <column xsi:type="decimal" name="expected_roi_percent" nullable="false" precision="24" scale="2" comment="Expected ROI percent"/>
+        <column xsi:type="datetime" name="end_time" nullable="true" on_update="false" comment="Listing end time in UTC"/>
+        <column xsi:type="datetime" name="eligible_until" nullable="false" on_update="false" comment="Listing eligibility deadline in UTC"/>
+        <column xsi:type="varchar" name="external_id" nullable="false" length="255" comment="eBay item ID"/>
+        <column xsi:type="longtext" name="url" nullable="true" comment="Listing URL"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="listing_id"/>
+        </constraint>
+        <index referenceId="GHOSTFROG_EBAY_OPPORTUNITIES_EXPECTED_PROFIT_LISTING_ID" indexType="btree">
+            <column name="expected_profit"/>
+            <column name="listing_id"/>
+        </index>
+        <index referenceId="GHOSTFROG_EBAY_OPPORTUNITIES_ELIGIBLE_UNTIL" indexType="btree">
+            <column name="eligible_until"/>
+        </index>
+        <index referenceId="GHOSTFROG_EBAY_OPPORTUNITIES_MODEL_KEY_CONDITION_GRADE" indexType="btree">
+            <column name="model_key"/>
+            <column name="condition_grade"/>
+        </index>
+    </table>
+
     <table name="ghostfrog_ebay_ebay_app_token" resource="default" engine="innodb" comment="Legacy eBay application token">
         <column xsi:type="int" name="id" nullable="false" default="1" comment="ID"/>
         <column xsi:type="longtext" name="token" nullable="false" comment="Token"/>

@@ -40,6 +40,12 @@ final class Pricing
             && (float)$value <= ($field === self::SELLING_FEE ? 100 : 999999999.99);
     }
 
+    public static function isSettingPath(string $path): bool
+    {
+        return str_starts_with($path, self::CONFIG_PREFIX)
+            && isset(self::DEFAULTS[substr($path, strlen(self::CONFIG_PREFIX))]);
+    }
+
     private function setting(string $field): float
     {
         $value = $this->config->getValue(self::CONFIG_PREFIX . $field);

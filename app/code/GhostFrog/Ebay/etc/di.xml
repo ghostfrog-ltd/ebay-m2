@@ -14,6 +14,12 @@
             </argument>
         </arguments>
     </type>
+    <type name="Magento\Framework\Mview\View\Changelog">
+        <plugin name="ghostfrog_ebay_changelog_listing_ids" type="GhostFrog\Ebay\Plugin\Mview\ListingIds"/>
+    </type>
+    <type name="Magento\Framework\Mview\View\ChangelogBatchWalker\IdsTableBuilder">
+        <plugin name="ghostfrog_ebay_batch_listing_ids" type="GhostFrog\Ebay\Plugin\Mview\ListingIds"/>
+    </type>
     <type name="Magento\Framework\Console\CommandListInterface">
         <arguments>
             <argument name="commands" xsi:type="array">

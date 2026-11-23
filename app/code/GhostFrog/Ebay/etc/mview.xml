@@ -1,6 +1,22 @@
 <?xml version="1.0"?>
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="urn:magento:framework:Mview/etc/mview.xsd">
-    <!-- The daily full rebuild also drops sales that aged out without a listing update. -->
-    <view id="ghostfrog_ebay_comps" class="GhostFrog\Ebay\Model\Comps\Index" group="indexer"/>
+    <view id="ghostfrog_ebay_comps" class="GhostFrog\Ebay\Model\Comps\Index" group="indexer">
+        <subscriptions>
+            <table name="ghostfrog_ebay_auction_listings" entity_column="id"/>
+            <table name="ghostfrog_ebay_listing_text_conditions" entity_column="listing_id"/>
+            <table name="ghostfrog_ebay_listing_visual_conditions" entity_column="listing_id"/>
+            <table name="ghostfrog_ebay_listing_review_actions" entity_column="external_id"
+                   subscription_model="GhostFrog\Ebay\Model\Indexing\ReviewSubscription"/>
+        </subscriptions>
+    </view>
+    <view id="ghostfrog_ebay_opportunities" class="GhostFrog\Ebay\Model\Opportunities\Index" group="indexer">
+        <subscriptions>
+            <table name="ghostfrog_ebay_auction_listings" entity_column="id"/>
+            <table name="ghostfrog_ebay_listing_text_conditions" entity_column="listing_id"/>
+            <table name="ghostfrog_ebay_listing_visual_conditions" entity_column="listing_id"/>
+            <table name="ghostfrog_ebay_listing_review_actions" entity_column="external_id"
+                   subscription_model="GhostFrog\Ebay\Model\Indexing\ReviewSubscription"/>
+        </subscriptions>
+    </view>
 </config>

@@ -5,4 +5,11 @@
         <title translate="true">GhostFrog eBay Comps</title>
         <description translate="true">Rebuilds same-model, same-grade sold price statistics.</description>
     </indexer>
+    <indexer id="ghostfrog_ebay_opportunities" view_id="ghostfrog_ebay_opportunities" class="GhostFrog\Ebay\Model\Opportunities\Index">
+        <title translate="true">GhostFrog eBay Opportunities</title>
+        <description translate="true">Indexes eligible live eBay listings that meet the configured profit target.</description>
+        <dependencies>
+            <indexer id="ghostfrog_ebay_comps"/>
+        </dependencies>
+    </indexer>
 </config>
