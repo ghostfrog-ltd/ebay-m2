@@ -23,7 +23,7 @@ class ApiHealth extends Command
     {
         $this->setName('ghostfrog:ebay:api-health')
             ->setDescription('Show Magento call counts and stored eBay quotas')
-            ->addOption('live-ebay', null, InputOption::VALUE_NONE, 'Ask eBay for quotas if the stored quota day has ended');
+            ->addOption('live-ebay', null, InputOption::VALUE_NONE, 'Ask eBay for quotas when a refresh is due');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int

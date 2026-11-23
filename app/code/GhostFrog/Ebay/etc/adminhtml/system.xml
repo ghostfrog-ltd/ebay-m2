@@ -279,6 +279,21 @@
                     <label>Ollama Base URL</label>
                     <comment>Uses the Mac host in DDEV and localhost outside DDEV by default.</comment>
                 </field>
+                <field id="batch_size" translate="label comment" type="text" sortOrder="60" showInDefault="1">
+                    <label>Condition Batch Size</label>
+                    <comment>Maximum listings per enabled stage per cron run, from 1 to 100.</comment>
+                    <validate>required-entry validate-digits validate-number-range number-range-1-100</validate>
+                </field>
+                <field id="text_concurrency" translate="label comment" type="text" sortOrder="70" showInDefault="1">
+                    <label>Concurrent Ollama Text Requests</label>
+                    <comment>From 1 to 8. Match this to the local Ollama server's capacity.</comment>
+                    <validate>required-entry validate-digits validate-number-range number-range-1-8</validate>
+                </field>
+                <field id="visual_concurrency" translate="label comment" type="text" sortOrder="80" showInDefault="1">
+                    <label>Concurrent Ollama Image Requests</label>
+                    <comment>From 1 to 2. Images use more PHP and Ollama memory.</comment>
+                    <validate>required-entry validate-digits validate-number-range number-range-1-2</validate>
+                </field>
             </group>
             <group id="comps" translate="label" sortOrder="56" showInDefault="1">
                 <label>Comps and Pricing</label>

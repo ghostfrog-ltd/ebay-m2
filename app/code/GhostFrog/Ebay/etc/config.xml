@@ -19,6 +19,9 @@
                 <visual_enabled>0</visual_enabled>
                 <text_model>qwen3.6:35b-a3b-coding-nvfp4</text_model>
                 <visual_model>qwen3.6:35b-a3b-coding-nvfp4</visual_model>
+                <batch_size>50</batch_size>
+                <text_concurrency>2</text_concurrency>
+                <visual_concurrency>1</visual_concurrency>
             </condition>
             <heartbeat>
                 <gf_heartbeat_enable_close>0</gf_heartbeat_enable_close>

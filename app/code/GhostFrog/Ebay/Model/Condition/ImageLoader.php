@@ -28,6 +28,9 @@ final class ImageLoader
         $seen = [];
         $transient = false;
         foreach ($urls as $url) {
+            if (count($seen) === self::LIMIT) {
+                break;
+            }
             if (!is_string($url) || isset($seen[$url]) || !$this->allowed($url)) {
                 continue;
             }
@@ -41,9 +44,6 @@ final class ImageLoader
             if ($image !== null) {
                 $encoded[] = $image;
                 $used[] = $url;
-            }
-            if (count($seen) === self::LIMIT) {
-                break;
             }
         }
         if ($encoded === [] && $transient) {

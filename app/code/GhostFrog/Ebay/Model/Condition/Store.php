@@ -8,6 +8,7 @@ use GhostFrog\Ebay\Model\Enrichment\Queue;
 use Magento\Framework\App\ResourceConnection;
 use Magento\Framework\DB\Adapter\AdapterInterface;
 use Magento\Framework\DB\Sql\Expression;
+use Magento\MysqlMq\Model\QueueManagement;
 use RuntimeException;
 use Throwable;
 
@@ -30,15 +31,18 @@ final class Store
      * Record the assessment, publish its successor, and acknowledge the message
      * together. A disabled stage advances without marking it as checked.
      */
-    public function complete(Stage $stage, int $delivery, string $id, ?array $evidence, ?array $assessment): void
+    public function complete(Stage $stage, int $delivery, string $id, ?array $evidence, ?array $assessment): bool
     {
         $db = $this->resource->getConnection();
         $table = $this->resource->getTableName('ghostfrog_ebay_auction_listings');
         $db->beginTransaction();
         try {
             $listing = $this->find($db, $id, true);
-            if ($this->needsCheck($listing, $stage)) {
-                if ($evidence === null || $listing['title'] !== $evidence['title'] || $listing['raw_attrs'] !== $evidence['raw_attrs']) {
+            $needed = $this->needsCheck($listing, $stage);
+            if ($needed) {
+                if ($assessment !== null && ($evidence === null || $listing['title'] !== $evidence['title']
+                    || $listing['raw_attrs'] !== $evidence['raw_attrs'])
+                ) {
                     throw new RuntimeException('Listing evidence changed while checking condition.');
                 }
 
@@ -64,10 +68,33 @@ final class Store
             }
             $this->queue->acknowledge($delivery);
             $db->commit();
+            return $needed;
         } catch (Throwable $exception) {
             $db->rollBack();
             throw $exception;
         }
+    }
+
+    public function backlog(Stage $stage): array
+    {
+        $db = $this->resource->getConnection();
+        $select = $db->select()->from(
+            ['delivery' => $this->resource->getTableName('queue_message_status')],
+            [
+                'waiting' => new Expression('COUNT(*)'),
+                'oldest_wait_seconds' => new Expression('TIMESTAMPDIFF(SECOND, MIN(delivery.updated_at), NOW())'),
+            ]
+        )->join(
+            ['queue' => $this->resource->getTableName('queue')],
+            'queue.id = delivery.queue_id',
+            []
+        )->where('queue.name = ?', $stage->queue())
+            ->where('delivery.status IN (?)', [
+                QueueManagement::MESSAGE_STATUS_NEW,
+                QueueManagement::MESSAGE_STATUS_RETRY_REQUIRED,
+            ]);
+        $row = $db->fetchRow($select);
+        return ['waiting' => (int)$row['waiting'], 'oldest_wait_seconds' => (int)$row['oldest_wait_seconds']];
     }
 
     private function find(AdapterInterface $db, string $id, bool $lock): ?array

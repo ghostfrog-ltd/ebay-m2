@@ -43,15 +43,16 @@ response in MySQL and deducts its own attempts before sending requests.
 Other clients using the same application can consume calls between daily
 lookups. If eBay throttles a client, Magento honors `Retry-After` when supplied
 and otherwise uses the saved reset. If the lookup fails or a quota is missing,
-the affected job waits for verified limits. A failed lookup is retried after a
-cooldown. An interrupted collection source keeps its previous successful scrape
-time.
+the affected job waits for verified limits. A failed or partial lookup is
+retried after a five-minute cooldown, subject to eBay's throttle. A partial
+response preserves previously verified balances until their reset. An
+interrupted collection source keeps its previous successful scrape time.
 
 Developer Analytics does not provide the OAuth token allowance here. Magento
 logs token requests and applies the configured OAuth client-credentials budget.
 
 The following command reads the saved quota and usage. Add `--live-ebay` to
-trigger the daily lookup if due and eBay API calls are enabled.
+refresh the quota if due and eBay API calls are enabled.
 
     ddev php bin/magento ghostfrog:ebay:api-health
 
@@ -84,9 +85,21 @@ and localhost.
 
 The listing proceeds from Trading GetItem to the enabled text and image stages,
 then to model-key generation. Each handoff and its saved result share a MySQL
-transaction. A disabled stage is skipped. An unavailable Ollama endpoint leaves
-the affected job pending for retry. Photos are fetched from eBay's image CDN
-and sent as bytes to local Ollama.
+transaction. Condition cron runs every minute. Each enabled stage can claim up
+to **Condition Batch Size** listings per run (50 by default). It sends up to
+**Concurrent Ollama Text Requests** (2 by default) or **Concurrent Ollama Image
+Requests** (1 by default) at once. Each stage starts new groups of requests for
+up to 25 seconds, and lets the last group finish within the existing HTTP
+timeouts. Ollama's parallel capacity determines the actual throughput. Photos
+are fetched from eBay's image CDN and sent as bytes to local Ollama.
+
+A disabled stage advances up to 500 queued listings per run without downloads
+or inference. An unavailable Ollama endpoint leaves the affected deliveries
+pending and pauses that stage for the remainder of the run. Each stage with
+work logs a batch summary in `var/log/system.log` with completions per minute
+of active processing, failures and deferrals as a percentage of deliveries
+claimed, remaining queue depth, and seconds since the oldest waiting delivery's
+last status change. A retry starts a new wait.
 
 Text and image results are recorded separately in the module's condition
 tables. The final condition grade uses the worse supported evidence. Sparse or

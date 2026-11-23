@@ -37,6 +37,18 @@ final class Settings
         return trim((string)$this->config->getValue(self::CONFIG . $stage->value . '_model')) ?: self::MODEL;
     }
 
+    public function batchSize(): int
+    {
+        return max(1, min(100, (int)($this->config->getValue(self::CONFIG . 'batch_size') ?? 50)));
+    }
+
+    public function concurrency(Stage $stage): int
+    {
+        $visual = $stage === Stage::Visual;
+        $value = $this->config->getValue(self::CONFIG . $stage->value . '_concurrency');
+        return max(1, min($visual ? 2 : 8, (int)($value ?? ($visual ? 1 : 2))));
+    }
+
     public function endpoint(): string
     {
         $host = getenv('IS_DDEV_PROJECT') === 'true' ? 'host.docker.internal' : '127.0.0.1';

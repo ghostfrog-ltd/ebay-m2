@@ -12,7 +12,7 @@
             <schedule>*/5 * * * *</schedule>
         </job>
         <job name="ghostfrog_ebay_check_condition" instance="GhostFrog\Ebay\Model\Condition\Worker" method="execute">
-            <schedule>*/5 * * * *</schedule>
+            <schedule>* * * * *</schedule>
         </job>
         <job name="ghostfrog_ebay_enqueue_final_prices" instance="GhostFrog\Ebay\Model\FinalPrice\Worker" method="enqueue">
             <schedule>*/5 * * * *</schedule>

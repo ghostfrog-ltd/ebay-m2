@@ -95,8 +95,10 @@ final class Usage
 
     public function dailyLookupIsDue(): bool
     {
-        $snapshot = $this->snapshot($this->resource->getConnection());
-        return ($snapshot['refresh_at'] ?? 0) <= time();
+        $db = $this->resource->getConnection();
+        $now = time();
+        return $this->refreshAt($this->snapshot($db)) <= $now
+            && $this->blockedUntil($db, self::ANALYTICS) <= $now;
     }
 
     public function saveDailyRates(array $rates, int $checkedAt): void
@@ -106,17 +108,28 @@ final class Usage
         try {
             $this->lockBucket($db, self::ANALYTICS);
             $previous = $this->snapshot($db);
+            $refreshAt = min(array_column($rates, 'reset_at'));
+            if (!isset($rates[self::TRADING], $rates[self::BROWSE])) {
+                $refreshAt = min($refreshAt, $checkedAt + self::LOOKUP_RETRY_SECONDS);
+            }
             foreach ($rates as $bucket => $rate) {
+                $rates[$bucket]['checked_at'] = $checkedAt;
                 $old = $previous['rates'][$bucket] ?? null;
                 if ($old !== null && $old['reset_at'] === $rate['reset_at']) {
                     // A refresh for another API must not reissue credits already reserved here.
                     $rates[$bucket]['remaining'] = min($old['remaining'], $rate['remaining']);
                 }
             }
+            foreach ($previous['rates'] ?? [] as $bucket => $rate) {
+                if (!isset($rates[$bucket]) && $rate['reset_at'] > $checkedAt) {
+                    $rates[$bucket] = $rate + ['checked_at' => $previous['checked_at']];
+                    $refreshAt = min($refreshAt, $rate['reset_at']);
+                }
+            }
             $this->writeSnapshot($db, [
                 'app' => $this->appKey(),
                 'checked_at' => $checkedAt,
-                'refresh_at' => min(array_column($rates, 'reset_at')),
+                'refresh_at' => $refreshAt,
                 'rates' => $rates,
             ]);
             $db->commit();
@@ -184,14 +197,13 @@ final class Usage
                 $remaining = $rate['remaining'];
                 $reportedRemaining = $rate['reported_remaining'];
                 $resetAt = $rate['reset_at'];
-                $checkedAt = $snapshot['checked_at'];
+                $checkedAt = $rate['checked_at'] ?? $snapshot['checked_at'];
                 if ($remaining === 0) {
                     $retryAt = max($retryAt, $resetAt);
                 }
             } else {
                 $lookupBlocked = $this->blockedUntil($db, self::ANALYTICS);
-                $refreshAt = $snapshot['refresh_at'] ?? 0;
-                $retryAt = max($retryAt, $lookupBlocked, $refreshAt, $now + self::LOOKUP_RETRY_SECONDS);
+                $retryAt = max($retryAt, $lookupBlocked, $this->refreshAt($snapshot), $now + 1);
             }
         } elseif ($bucket === self::OAUTH) {
             $limit = max(0, (int)($this->config->getValue('ghostfrog_ebay/ebay_api/oauth_daily_limit') ?? 1000));
@@ -236,6 +248,15 @@ final class Usage
             ->from($this->quotaTable(), 'daily_snapshot')->where('bucket = ?', self::ANALYTICS));
         $snapshot = json_decode((string)$value, true);
         return ($snapshot['app'] ?? null) === $this->appKey() ? $snapshot : null;
+    }
+
+    private function refreshAt(?array $snapshot): int
+    {
+        $scheduled = $snapshot['refresh_at'] ?? 0;
+        // Older snapshots scheduled partial responses for the next eBay reset.
+        return isset($snapshot['rates'][self::TRADING], $snapshot['rates'][self::BROWSE])
+            ? $scheduled
+            : min($scheduled, ($snapshot['checked_at'] ?? 0) + self::LOOKUP_RETRY_SECONDS);
     }
 
     private function writeSnapshot(AdapterInterface $db, array $snapshot): void
