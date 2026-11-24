@@ -117,31 +117,49 @@ final class BrowseClient
         }
     }
 
-    public function getItem(string $externalId): ?array
-    {
+    public function getItem(
+        string $externalId,
+        ?int $candidateBudget = null,
+        int $refreshHeadroom = 0,
+        ?callable $onReservation = null
+    ): ?array {
+        $service = $candidateBudget === null ? Usage::ITEM_REFRESH : Usage::CANDIDATE_REFRESH;
         if (preg_match('/\A[0-9]{1,20}\z/', $externalId)) {
             return $this->get(
                 ['legacy_item_id' => $externalId],
-                Usage::ITEM_REFRESH,
-                path: 'item/get_item_by_legacy_id'
+                $service,
+                path: 'item/get_item_by_legacy_id',
+                candidateBudget: $candidateBudget,
+                refreshHeadroom: $refreshHeadroom,
+                onReservation: $onReservation
             );
         }
         if (!preg_match('/\Av[12]\|[0-9]{1,20}\|[0-9]{1,20}\z/', $externalId)) {
             throw new RuntimeException('Unsupported eBay item identity.');
         }
-        return $this->get([], Usage::ITEM_REFRESH, path: 'item/' . rawurlencode($externalId));
+        return $this->get(
+            [], $service, path: 'item/' . rawurlencode($externalId), candidateBudget: $candidateBudget,
+            refreshHeadroom: $refreshHeadroom, onReservation: $onReservation
+        );
     }
 
     private function get(
         array $params,
         string $service,
         bool $allowNarrowerWindow = false,
-        string $path = 'item_summary/search'
+        string $path = 'item_summary/search',
+        ?int $candidateBudget = null,
+        int $refreshHeadroom = 0,
+        ?callable $onReservation = null
     ): ?array
     {
-        $itemRefresh = $service === Usage::ITEM_REFRESH;
+        $itemRefresh = $service === Usage::ITEM_REFRESH || $service === Usage::CANDIDATE_REFRESH;
         $this->quota->refreshIfDue(Usage::BROWSE, $itemRefresh);
-        $this->usage->requireAvailable(Usage::BROWSE, $itemRefresh);
+        if ($candidateBudget === null) {
+            $this->usage->requireAvailable(Usage::BROWSE, $itemRefresh);
+        } else {
+            $this->usage->requireCandidateAvailable($candidateBudget, $refreshHeadroom);
+        }
         $token = $this->token->get();
         $client = $this->curlFactory->create();
         $client->setTimeout(10);
@@ -152,12 +170,12 @@ final class BrowseClient
         ]);
         $query = http_build_query($params, '', '&', PHP_QUERY_RFC3986);
         $url = self::API . self::BROWSE . $path . ($query === '' ? '' : '?' . $query);
-        $this->usage->send($service, static fn () => $client->get($url));
+        $this->usage->send($service, static fn () => $client->get($url), $candidateBudget ?? 0, $refreshHeadroom, $onReservation);
         $status = (int)$client->getStatus();
         if ($status === 429) {
             throw $this->usage->recordThrottle(Usage::BROWSE, $client->getHeaders());
         }
-        if ($status === 404 && $service === Usage::ITEM_REFRESH) {
+        if ($status === 404 && $itemRefresh) {
             return null;
         }
         if ($allowNarrowerWindow && $status === 400 && preg_match('/too (?:large|many)/i', $client->getBody())) {

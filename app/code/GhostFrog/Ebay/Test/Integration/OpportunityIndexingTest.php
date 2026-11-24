@@ -17,6 +17,7 @@ use GhostFrog\Ebay\Model\Notification\Slack;
 use GhostFrog\Ebay\Model\Notification\Worker as NotificationWorker;
 use GhostFrog\Ebay\Model\Opportunities\Index;
 use GhostFrog\Ebay\Model\Opportunities\Rows;
+use GhostFrog\Ebay\Model\PriceRefresh\Candidates;
 use GhostFrog\Ebay\Model\PriceRefresh\Pause;
 use GhostFrog\Ebay\Model\PriceRefresh\Queue as PriceQueue;
 use GhostFrog\Ebay\Model\PriceRefresh\Worker as RefreshWorker;
@@ -53,6 +54,8 @@ final class OpportunityIndexingTest extends TestCase
     private const PHONE = 'Samsung Galaxy S21 128GB SM-G991B';
     private const OTHER_PHONE = 'Samsung Galaxy S22 128GB SM-S901B';
     private const SOURCE = 'ebay-samsung';
+    private const APPLE = 'Apple iPhone 15 Pro 128GB';
+    private const APPLE_SOURCE = 'ebay-apple';
 
     private static ObjectManagerInterface $objects;
     private ResourceConnection $resource;
@@ -110,10 +113,13 @@ final class OpportunityIndexingTest extends TestCase
             'ghostfrog_ebay/ebay_api/ebay_app_id', 'ghostfrog_ebay/ebay_api/ebay_cert_id',
             'ghostfrog_ebay/slack/slack_webhook_url', 'ghostfrog_ebay/opportunity_monitoring/notifications_enabled',
             'ghostfrog_ebay/opportunity_monitoring/refresh_batch', 'ghostfrog_ebay/opportunity_monitoring/auction_60_minutes',
+            'ghostfrog_ebay/opportunity_monitoring/prequalification_enabled',
+            'ghostfrog_ebay/opportunity_monitoring/prequalification_batch',
+            'ghostfrog_ebay/opportunity_monitoring/prequalification_budget',
         ]]);
         $cache = self::$objects->get(CacheInterface::class);
         foreach (['ghostfrog_ebay_price_refresh_pause', 'ghostfrog_ebay_opportunity_slack_throttle',
-            'ghostfrog_ebay_browse_token_' . hash('sha256', 'issue9-fixture-app')] as $key) {
+            'ghostfrog_ebay_browse_token_' . hash('sha256', 'issue9-fixture-app'), Candidates::CURSOR] as $key) {
             $cache->remove($key);
         }
         self::$objects->get(ReinitableConfigInterface::class)->reinit();
@@ -906,6 +912,267 @@ final class OpportunityIndexingTest extends TestCase
         }
     }
 
+    public function testCandidatePreviewAndFreshPricesControlIndexAndAlerts(): void
+    {
+        $this->sales(10, self::APPLE, ['source' => self::APPLE_SOURCE]);
+        $end = time() + 240;
+        $qualified = $this->appleCandidate(['end_time' => $this->date($end)]);
+        $expensive = $this->appleCandidate(['sale_type' => 'both', 'price_bin_current' => 70]);
+        $gone = $this->appleCandidate();
+        $fixedOnly = $this->appleCandidate(['sale_type' => 'both', 'price_bin_current' => 300]);
+        $this->appleCandidate(['sale_type' => 'both', 'price_bid_current' => null, 'price_bin_current' => 80]);
+        $this->appleCandidate(['model_key' => null]);
+        $ambiguous = $this->appleCandidate();
+        $this->change($ambiguous, ['title' => self::APPLE . ' faulty']);
+        $lowerGrade = $this->appleCandidate();
+        $this->db->insert($this->table('ghostfrog_ebay_listing_text_conditions'), [
+            'listing_id' => $lowerGrade, 'external_id' => $this->externalId($lowerGrade), 'model_name' => 'fixture',
+            'assessment' => '{}', 'risk_flags' => '[]', 'text_grade' => 'C', 'review_required' => 0,
+        ]);
+        $this->updateViews();
+        self::assertFalse($this->opportunity($qualified));
+        $preview = self::$objects->get(Candidates::class)->scan(5);
+        self::assertSame([$qualified, $expensive, $gone, $fixedOnly], array_column($preview['selected'], 'listing_id'));
+        self::assertEquals([
+            'no_stored_bid' => 1, 'missing_model_key' => 1, 'identity_condition_or_risk' => 1, 'insufficient_comps' => 1,
+        ], $preview['excluded']);
+        $queue = self::$objects->get(PriceQueue::class);
+        self::assertSame(0, (int)$queue->metrics()['depth']);
+
+        $external = array_map($this->externalId(...), [$qualified, $expensive, $gone, $fixedOnly]);
+        $calls = [];
+        $worker = $this->browseWorker(function (string $url) use ($external, $end, &$calls): array {
+            parse_str((string)parse_url($url, PHP_URL_QUERY), $params);
+            $id = $calls[] = $params['legacy_item_id'];
+            return match ($id) {
+                $external[0] => [200, $this->auctionItem($id, '102', $end), []],
+                $external[1] => [200, array_replace($this->auctionItem($id, '210', time() + 3600), [
+                    'buyingOptions' => ['AUCTION', 'FIXED_PRICE'],
+                    'price' => ['value' => '220', 'currency' => 'GBP'],
+                ]), []],
+                $external[2] => [404, [], []],
+                $external[3] => [200, array_replace($this->auctionItem($id, '210', time() + 3600), [
+                    'buyingOptions' => ['AUCTION', 'FIXED_PRICE'],
+                    'price' => ['value' => '120', 'currency' => 'GBP'],
+                    'estimatedAvailabilities' => [['estimatedAvailabilityStatus' => 'IN_STOCK']],
+                ]), []],
+            };
+        });
+        $worker->execute();
+        self::assertSame([], $calls);
+        $this->enableAlerts();
+        $this->setMonitoringConfig(['prequalification_enabled' => '1']);
+        self::assertSame(4, $queue->enqueueCandidates($preview['selected']));
+        $queue->enqueueCandidates($preview['selected']);
+        $queue->request($qualified);
+        self::assertSame(4, (int)$queue->metrics()['depth']);
+        $worker->execute();
+        self::assertSame($external, $calls);
+        self::assertSame(0, (int)$queue->metrics()['depth']);
+        self::assertSame('102.00', $this->opportunity($qualified)['current_price']);
+        self::assertSame('pending', $this->stored(NotificationQueue::TABLE, 'listing_id', $qualified)['status']);
+        self::assertSame('210.00', $this->stored(Listing::TABLE, 'id', $expensive)['price_bid_current']);
+        self::assertSame('220.00', $this->stored(Listing::TABLE, 'id', $expensive)['price_bin_current']);
+        self::assertSame('unknown', $this->stored(Listing::TABLE, 'id', $gone)['status']);
+        self::assertSame('120.00', $this->opportunity($fixedOnly)['current_price']);
+        self::assertSame('bin', $this->stored(NotificationQueue::TABLE, 'listing_id', $fixedOnly)['sale_type']);
+        foreach ([$expensive, $gone] as $id) {
+            self::assertFalse($this->opportunity($id));
+            self::assertFalse($this->stored(NotificationQueue::TABLE, 'listing_id', $id));
+            self::assertNotNull($this->stored(Listing::TABLE, 'id', $id)['candidate_attempted_at']);
+        }
+        $worker->execute();
+        self::assertSame($external, $calls);
+        $this->updateViews();
+        $incremental = $this->opportunity($qualified);
+        $this->indexers->get(Index::ID)->reindexAll();
+        self::assertSame($incremental, $this->opportunity($qualified));
+
+        $queue->request($qualified);
+        $worker->execute();
+        self::assertSame([...$external, $external[0]], $calls);
+        $usage = self::$objects->get(Usage::class)->quota(Usage::BROWSE);
+        self::assertSame(4, $usage['candidate_calls']);
+        self::assertSame(1, $usage['services'][Usage::ITEM_REFRESH]);
+    }
+
+    public function testCandidatesRespectBatchBudgetHeadroomAndVerifiedReset(): void
+    {
+        $this->sales(10, self::APPLE, ['source' => self::APPLE_SOURCE]);
+        $this->sales(5);
+        $bin = $this->listing(['sale_type' => 'bin', 'end_time' => null]);
+        $soon = $this->listing(['end_time' => $this->date(time() + 240)]);
+        $first = $this->appleCandidate();
+        $best = $this->appleCandidate(['price_bid_current' => 70]);
+        $third = $this->appleCandidate(['price_bid_current' => 130]);
+        $this->updateViews();
+        $ids = array_map($this->externalId(...), [$bin, $soon, $first, $best, $third]);
+        $calls = [];
+        $worker = $this->browseWorker(function (string $url) use ($ids, &$calls): array {
+            parse_str((string)parse_url($url, PHP_URL_QUERY), $params);
+            $id = $calls[] = $params['legacy_item_id'];
+            return [200, $id === $ids[0] ? $this->binItem($id, '110') : $this->auctionItem($id, '220', time() + 3600), []];
+        }, 32);
+        $this->setMonitoringConfig([
+            'prequalification_enabled' => '1', 'prequalification_batch' => '2', 'prequalification_budget' => '1',
+        ]);
+        $worker->execute();
+        self::assertSame([$ids[1], $ids[0]], $calls);
+        $queue = self::$objects->get(PriceQueue::class);
+        self::assertCount(2, $queue->dueCandidates(10));
+        self::assertNull($this->stored(Listing::TABLE, 'id', $best)['candidate_attempted_at']);
+        self::assertFalse($this->stored(PriceQueue::TABLE, 'listing_id', $third));
+
+        $this->setQuotaSnapshotField('$.rates.browse.remaining', 90);
+        $worker->execute();
+        $worker->execute();
+        self::assertSame([$ids[1], $ids[0], $ids[3]], $calls);
+        self::assertNull($this->stored(Listing::TABLE, 'id', $first)['candidate_attempted_at']);
+        $usage = self::$objects->get(Usage::class);
+        self::assertSame(1, $usage->quota(Usage::BROWSE)['candidate_calls']);
+
+        $expired = time() - 1;
+        $this->setQuotaSnapshotField('$.rates.browse.reset_at', $expired);
+        $this->setQuotaSnapshotField('$.refresh_at', $expired);
+        $lookup = $usage->beginLookup();
+        $rate = $this->dailyRate(100, time() + 1800);
+        $usage->saveDailyRates([Usage::BROWSE => $rate, Usage::TRADING => $this->dailyRate(100, time() + 1800)], time(), $lookup);
+        self::assertSame(0, $usage->quota(Usage::BROWSE)['candidate_calls']);
+        $worker->execute();
+        self::assertSame([$ids[1], $ids[0], $ids[3], $ids[2]], $calls);
+        self::assertSame(1, $usage->quota(Usage::BROWSE)['candidate_calls']);
+        self::assertSame(2, $usage->quota(Usage::BROWSE)['services'][Usage::CANDIDATE_REFRESH]);
+    }
+
+    public function testCandidateRetriesApplyTheStagedObservationWithoutCallingBrowseAgain(): void
+    {
+        $this->sales(10, self::APPLE, ['source' => self::APPLE_SOURCE]);
+        $id = $this->appleCandidate();
+        $external = $this->externalId($id);
+        $this->updateViews();
+        $calls = 0;
+        $worker = $this->browseWorker(function () use ($external, &$calls): array {
+            ++$calls;
+            return [200, $this->auctionItem($external, '105', time() + 3700), []];
+        });
+        $this->setMonitoringConfig(['prequalification_enabled' => '1']);
+        $table = $this->db->quoteIdentifier($this->table(Rows::TABLE));
+        $trigger = $this->db->quoteIdentifier($this->table('gf_test_candidate_index_failure'));
+        $this->db->query("CREATE TRIGGER $trigger BEFORE INSERT ON $table FOR EACH ROW "
+            . "SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'fixture candidate index write failure'");
+        try {
+            $worker->execute();
+            self::assertSame(1, $calls);
+            self::assertFalse($this->opportunity($id));
+            self::assertNull($this->stored(Listing::TABLE, 'id', $id)['last_price_checked_at']);
+            self::assertFalse($this->stored('ghostfrog_ebay_auction_price_history', 'external_id', $external));
+            $job = $this->stored(PriceQueue::TABLE, 'listing_id', $id);
+            self::assertNotNull($job['candidate_observation']);
+            self::assertSame(1, (int)$job['attempts']);
+        } finally {
+            $this->db->query("DROP TRIGGER $trigger");
+        }
+        $this->makeDue(PriceQueue::TABLE, $id);
+        $worker->execute();
+        self::assertSame(1, $calls);
+        self::assertSame('105.00', $this->opportunity($id)['current_price']);
+        self::assertSame('105.00', $this->stored('ghostfrog_ebay_auction_price_history', 'external_id', $external)['price']);
+        self::assertFalse($this->stored(PriceQueue::TABLE, 'listing_id', $id));
+    }
+
+    public function testCandidateRevalidatesQueuedListingsAndRejectsASupersededResponse(): void
+    {
+        $this->sales(10, self::APPLE, ['source' => self::APPLE_SOURCE]);
+        $expired = $this->appleCandidate();
+        $changed = $this->appleCandidate();
+        $overlap = $this->appleCandidate();
+        $this->updateViews();
+        $external = $this->externalId($overlap);
+        $queue = self::$objects->get(PriceQueue::class);
+        $queue->enqueueCandidates(self::$objects->get(Candidates::class)->scan(5)['selected']);
+        $this->change($expired, ['end_time' => $this->date(time() - 10)]);
+        $this->change($changed, ['title' => self::APPLE . ' activation locked']);
+        $calls = 0;
+        $worker = $this->browseWorker(function (string $url) use ($overlap, $external, &$calls): array {
+            ++$calls;
+            self::assertStringEndsWith('legacy_item_id=' . $external, $url);
+            $this->change($overlap, ['price_current' => '115.00', 'last_seen_at' => $this->date(time())]);
+            return [200, $this->auctionItem($external, '110', time() + 3700), []];
+        });
+        $this->setMonitoringConfig(['prequalification_enabled' => '1']);
+        $connection = self::$objects->get(ConnectionFactory::class)->create($this->db->getConfig());
+        $lock = $this->db->fetchOne('SELECT DATABASE()') . '|ghostfrog_ebay_price_refresh';
+        self::assertSame(1, (int)$connection->fetchOne('SELECT GET_LOCK(?, 0)', [$lock]));
+        try {
+            $worker->execute();
+            self::assertSame(0, $calls);
+        } finally {
+            $connection->fetchOne('SELECT RELEASE_LOCK(?)', [$lock]);
+            $connection->closeConnection();
+        }
+        $worker->execute();
+        $worker->execute();
+        self::assertSame(1, $calls);
+        foreach ([$expired, $changed] as $id) {
+            self::assertNull($this->stored(Listing::TABLE, 'id', $id)['candidate_attempted_at']);
+        }
+        self::assertSame('115.00', $this->stored(Listing::TABLE, 'id', $overlap)['price_current']);
+        self::assertFalse($this->stored('ghostfrog_ebay_auction_price_history', 'external_id', $external));
+        self::assertSame(0, (int)$queue->metrics()['depth']);
+    }
+
+    public function testCandidateQuotaAndAuthenticationDeferralsAndFailedRequestHaveDistinctEffects(): void
+    {
+        $this->sales(10, self::APPLE, ['source' => self::APPLE_SOURCE]);
+        $id = $this->appleCandidate();
+        $this->updateViews();
+        $statuses = [429, 403, 503];
+        $calls = 0;
+        $worker = $this->browseWorker(static function () use ($statuses, &$calls): array {
+            return [$statuses[$calls++], [], ['Retry-After' => '120']];
+        });
+        $this->setMonitoringConfig(['prequalification_enabled' => '1']);
+        $worker->execute();
+        $worker->execute();
+        self::assertSame(1, $calls);
+        self::assertNull($this->stored(Listing::TABLE, 'id', $id)['candidate_attempted_at']);
+        self::assertSame(0, (int)$this->stored(PriceQueue::TABLE, 'listing_id', $id)['attempts']);
+
+        $this->db->update($this->table('ghostfrog_ebay_api_quota'), ['blocked_until' => 0], ['bucket = ?' => Usage::BROWSE]);
+        $worker->execute();
+        $worker->execute();
+        self::assertSame(2, $calls);
+        self::assertNull($this->stored(Listing::TABLE, 'id', $id)['candidate_attempted_at']);
+        self::assertSame(Pause::AUTHENTICATION, self::$objects->get(Pause::class)->state()['reason']);
+
+        self::$objects->get(CacheInterface::class)->remove('ghostfrog_ebay_price_refresh_pause');
+        $worker->execute();
+        $worker->execute();
+        self::assertSame(3, $calls);
+        self::assertNotNull($this->stored(Listing::TABLE, 'id', $id)['candidate_attempted_at']);
+        self::assertFalse($this->stored(PriceQueue::TABLE, 'listing_id', $id));
+        self::assertFalse($this->opportunity($id));
+        self::assertSame(3, self::$objects->get(Usage::class)->quota(Usage::BROWSE)['candidate_calls']);
+    }
+
+    public function testCandidateScanAdvancesPastAnIneligiblePage(): void
+    {
+        $this->sales(10, self::APPLE, ['source' => self::APPLE_SOURCE]);
+        $early = $this->date(time() + 600);
+        for ($i = 0; $i < 250; ++$i) {
+            $this->appleCandidate(['end_time' => $early, 'model_key' => 'unknown']);
+        }
+        $id = $this->appleCandidate();
+        $this->updateViews();
+        $candidates = self::$objects->get(Candidates::class);
+        $preview = $candidates->scan(5);
+        self::assertSame(250, $preview['scanned']);
+        self::assertSame(['missing_model_key' => 250], $preview['excluded']);
+        self::assertSame([], $preview['selected']);
+        self::assertSame($preview, $candidates->scan(5, advance: true));
+        self::assertSame([$id], array_column($candidates->scan(5)['selected'], 'listing_id'));
+    }
+
     private function cronJobs(): array
     {
         return self::$objects->get(CronConfig::class)->getJobs()['ghostfrog_ebay_monitoring'];
@@ -1046,6 +1313,27 @@ final class OpportunityIndexingTest extends TestCase
         ];
     }
 
+    private function auctionItem(string $id, string $price, int $end): array
+    {
+        return [
+            'itemId' => "v1|$id|0", 'buyingOptions' => ['AUCTION'], 'bidCount' => 2,
+            'currentBidPrice' => ['value' => $price, 'currency' => 'GBP'], 'itemEndDate' => gmdate(DATE_ATOM, $end),
+        ];
+    }
+
+    private function appleCandidate(array $fields = []): int
+    {
+        return $this->listing($fields + [
+            'source' => self::APPLE_SOURCE, 'title' => self::APPLE, 'price_bid_current' => 100,
+            'last_seen_at' => $this->date(time() - 90000), 'first_seen' => $this->date(time() - 93600),
+        ]);
+    }
+
+    private function externalId(int $id): string
+    {
+        return $this->stored(Listing::TABLE, 'id', $id)['external_id'];
+    }
+
     private function makeDue(string $table, int $id): void
     {
         $this->db->update($this->table($table), ['available_at' => $this->date(time() - 1)], ['listing_id = ?' => $id]);
@@ -1124,9 +1412,9 @@ final class OpportunityIndexingTest extends TestCase
         $this->indexers->get(Index::ID)->getView()->update();
     }
 
-    private function modelKey(string $title): string
+    private function modelKey(string $title, string $source = self::SOURCE): string
     {
-        $key = self::$objects->get(Classifier::class)->key(self::SOURCE, $title, []);
+        $key = self::$objects->get(Classifier::class)->key($source, $title, []);
         self::assertNotSame('unknown', $key);
         return $key;
     }
@@ -1134,11 +1422,12 @@ final class OpportunityIndexingTest extends TestCase
     private function listing(array $fields = []): int
     {
         $title = $fields['title'] ?? self::PHONE;
+        $source = $fields['source'] ?? self::SOURCE;
         $this->db->insert($this->table(Listing::TABLE), $fields + [
             'external_id' => (string)(950000000000 + ++$this->sequence),
-            'source' => self::SOURCE,
+            'source' => $source,
             'title' => $title,
-            'model_key' => $this->modelKey($title),
+            'model_key' => $this->modelKey($title, $source),
             'condition_grade' => 'B',
             'status' => 'live',
             'sale_type' => 'auction',
