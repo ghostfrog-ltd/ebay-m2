@@ -5,23 +5,36 @@ declare(strict_types=1);
 namespace GhostFrog\Ebay\Test\Integration;
 
 use GhostFrog\Ebay\Cron\RefreshComps;
+use GhostFrog\Ebay\Model\Api\Usage;
+use GhostFrog\Ebay\Model\Collection\BrowseClient;
 use GhostFrog\Ebay\Model\Comps\Index as CompsIndex;
 use GhostFrog\Ebay\Model\FinalPrice\Queue;
 use GhostFrog\Ebay\Model\FinalPrice\Worker;
 use GhostFrog\Ebay\Model\ModelKey\Classifier;
+use GhostFrog\Ebay\Model\Notification\Queue as NotificationQueue;
+use GhostFrog\Ebay\Model\Notification\Slack;
+use GhostFrog\Ebay\Model\Notification\Worker as NotificationWorker;
 use GhostFrog\Ebay\Model\Opportunities\Index;
 use GhostFrog\Ebay\Model\Opportunities\Rows;
+use GhostFrog\Ebay\Model\PriceRefresh\Queue as PriceQueue;
+use GhostFrog\Ebay\Model\PriceRefresh\Worker as RefreshWorker;
 use GhostFrog\Ebay\Model\ResourceModel\Listing;
 use Magento\Backend\Model\Auth\Session;
 use Magento\Config\Model\Config;
+use Magento\Cron\Model\ConfigInterface as CronConfig;
 use Magento\Framework\Api\FilterBuilder;
 use Magento\Framework\App\Area;
 use Magento\Framework\App\Bootstrap;
+use Magento\Framework\App\CacheInterface;
 use Magento\Framework\App\Config\ReinitableConfigInterface;
 use Magento\Framework\App\ObjectManager\ConfigLoader;
 use Magento\Framework\App\ResourceConnection;
+use Magento\Framework\App\ResourceConnection\ConnectionFactory;
 use Magento\Framework\App\State;
 use Magento\Framework\DB\Adapter\AdapterInterface;
+use Magento\Framework\Encryption\EncryptorInterface;
+use Magento\Framework\HTTP\Client\Curl;
+use Magento\Framework\HTTP\Client\CurlFactory;
 use Magento\Framework\Indexer\IndexerRegistry;
 use Magento\Framework\ObjectManagerInterface;
 use Magento\Framework\View\Element\UiComponent\ContextFactory;
@@ -84,11 +97,22 @@ final class OpportunityIndexingTest extends TestCase
 
         $this->db->query('SET timestamp = 0');
         $this->db->delete($this->table('ghostfrog_ebay_listing_review_actions'));
+        $this->db->delete($this->table('ghostfrog_ebay_auction_price_history'));
+        $this->db->delete($this->table('ghostfrog_ebay_api_quota'));
+        $this->db->delete($this->table('ghostfrog_ebay_api_usage'));
         $this->db->delete($this->table(Listing::TABLE));
         $this->db->delete($this->table('core_config_data'), ['path IN (?)' => [
             'ghostfrog_ebay/general/enabled', 'ghostfrog_ebay/heartbeat/gf_heartbeat_enable_close',
             'ghostfrog_ebay/ebay_api/gf_allow_ebay_api', 'ghostfrog_ebay/comps/target_profit',
+            'ghostfrog_ebay/ebay_api/ebay_app_id', 'ghostfrog_ebay/ebay_api/ebay_cert_id',
+            'ghostfrog_ebay/slack/slack_webhook_url', 'ghostfrog_ebay/opportunity_monitoring/notifications_enabled',
+            'ghostfrog_ebay/opportunity_monitoring/refresh_batch', 'ghostfrog_ebay/opportunity_monitoring/auction_60_minutes',
         ]]);
+        $cache = self::$objects->get(CacheInterface::class);
+        foreach (['ghostfrog_ebay_price_refresh_pause', 'ghostfrog_ebay_opportunity_slack_throttle',
+            'ghostfrog_ebay_browse_token_' . hash('sha256', 'issue9-fixture-app')] as $key) {
+            $cache->remove($key);
+        }
         self::$objects->get(ReinitableConfigInterface::class)->reinit();
         $this->indexers->get(CompsIndex::ID)->reindexAll();
         $this->indexers->get(Index::ID)->reindexAll();
@@ -299,6 +323,425 @@ final class OpportunityIndexingTest extends TestCase
         self::$objects->get(RefreshComps::class)->execute();
         self::assertTrue($this->indexers->get(CompsIndex::ID)->isInvalid());
         self::assertTrue($this->indexers->get(Index::ID)->isInvalid());
+    }
+
+    public function testOnlyDueIndexedListingsAreQueuedWithUrgentAuctionPriority(): void
+    {
+        $this->sales(5);
+        $now = time();
+        $recent = ['last_price_checked_at' => $this->date($now - 125)];
+        $near = $this->listing($recent + ['end_time' => $this->date($now + 500)]);
+        $bin = $this->listing(['sale_type' => 'bin', 'end_time' => null, 'last_seen_at' => $this->date($now - 3600)]);
+        $both = $this->listing($recent + ['sale_type' => 'both', 'end_time' => $this->date($now + 570)]);
+        $hour = $this->listing(['end_time' => $this->date($now + 1800), 'last_price_checked_at' => $this->date($now - 310)]);
+        $day = $this->listing(['end_time' => $this->date($now + 7200), 'last_price_checked_at' => $this->date($now - 1810)]);
+        $notYet = $this->listing($recent + ['end_time' => $this->date($now + 1800)]);
+        $this->listing($recent + ['end_time' => $this->date($now + 7200)]);
+        $this->listing(['end_time' => $this->date($now + 90000)]);
+        $this->listing(['end_time' => $this->date($now - 60)]);
+        $this->listing(['sale_type' => 'bin', 'end_time' => null, 'price_current' => 400]);
+        $this->updateViews();
+
+        $queue = self::$objects->get(PriceQueue::class);
+        self::assertCount(1, $this->cronJobs());
+        self::assertSame('* * * * *', $this->cronJobs()['ghostfrog_ebay_monitor_opportunities']['schedule']);
+        self::assertSame(2, $queue->enqueueDue(2, 1));
+        self::assertSame([$near, $bin], array_map('intval', array_column($queue->due(2, 1), 'listing_id')));
+        self::assertSame(3, $queue->enqueueDue(10, 1));
+        self::assertSame(0, $queue->enqueueDue(10, 1));
+        self::assertSame($near, (int)$queue->due(1, 1)[0]['listing_id']);
+        self::assertSame($bin, (int)$queue->due(1, 4)[0]['listing_id']);
+        $ids = array_map('intval', array_column($queue->due(10, 1), 'listing_id'));
+        self::assertEqualsCanonicalizing([$near, $bin, $both, $hour, $day], $ids);
+
+        $this->setMonitoringConfig(['auction_60_minutes' => '2']);
+        self::assertSame(1, $queue->enqueueDue(10, 1));
+        self::assertNotFalse($this->stored(PriceQueue::TABLE, 'listing_id', $notYet));
+
+        $this->change($near, ['end_time' => $this->date($now - 1)]);
+        self::assertSame(1, $queue->discardObsolete(10));
+        self::assertNotContains($near, array_map('intval', array_column($queue->due(10, 1), 'listing_id')));
+    }
+
+    public function testCombinedRefreshPreservesEvidenceAndReindexesOnlyItsListing(): void
+    {
+        $this->sales(5);
+        $external = 'v1|950000001337|9001';
+        $evidence = '{"Model":"SM-G991B","Trading condition":"Used"}';
+        $id = $this->listing(['external_id' => $external, 'sale_type' => 'both', 'raw_attrs' => $evidence]);
+        $other = $this->listing();
+        $this->updateViews();
+        $previousOther = $this->opportunity($other);
+        $this->change($other, ['price_current' => '105.00']);
+        $item = [
+            'itemId' => $external, 'buyingOptions' => ['FIXED_PRICE', 'AUCTION'],
+            'price' => ['value' => '140.29', 'currency' => 'GBP'],
+            'currentBidPrice' => ['value' => '102.13', 'currency' => 'GBP'],
+            'bidCount' => 4, 'itemEndDate' => gmdate(DATE_ATOM, time() + 3700),
+        ];
+        $worker = $this->browseWorker(function (string $url) use (&$item): array {
+            self::assertStringEndsWith('/item/v1%7C950000001337%7C9001', $url);
+            return [200, $item, []];
+        });
+        $this->setMonitoringConfig(['refresh_batch' => '1']);
+        $worker->execute();
+
+        $row = $this->stored(Listing::TABLE, 'id', $id);
+        self::assertSame('102.13', $row['price_current']);
+        self::assertSame('102.13', $row['price_bid_current']);
+        self::assertSame('140.29', $row['price_bin_current']);
+        self::assertSame(4, (int)$row['bids_count']);
+        self::assertSame($row['last_seen_at'], $row['last_price_checked_at']);
+        self::assertNotNull($row['last_price_checked_at']);
+        self::assertSame(json_decode($evidence, true), json_decode($row['raw_attrs'], true));
+        self::assertSame($this->modelKey(self::PHONE), $row['model_key']);
+        self::assertSame('B', $row['condition_grade']);
+        self::assertSame('102.13', $this->opportunity($id)['current_price']);
+        self::assertSame('140.29', $this->opportunity($id)['bin_price']);
+        self::assertSame($previousOther, $this->opportunity($other));
+        $history = $this->stored('ghostfrog_ebay_auction_price_history', 'external_id', $external);
+        self::assertSame('102.13', $history['price']);
+        self::assertSame('140.29', $history['bin_price']);
+
+        $item['price']['value'] = '220';
+        $item['currentBidPrice']['value'] = '210';
+        self::$objects->get(PriceQueue::class)->request($id);
+        $worker->execute();
+        self::assertFalse($this->opportunity($id));
+        self::assertSame($previousOther, $this->opportunity($other));
+    }
+
+    public function testConcurrentObservationAndDbFailureLeaveNoPartialPriceOrAlert(): void
+    {
+        $this->sales(5);
+        $id = $this->listing(['sale_type' => 'bin', 'end_time' => null]);
+        $external = $this->stored(Listing::TABLE, 'id', $id)['external_id'];
+        $this->updateViews();
+        $this->enableAlerts();
+        $overlap = true;
+        $worker = $this->browseWorker(function () use ($id, $external, &$overlap): array {
+            if ($overlap) {
+                $this->change($id, ['price_current' => '125.00', 'last_seen_at' => $this->date(time())]);
+            }
+            return [200, $this->binItem($external, '110.00'), []];
+        });
+        $worker->execute();
+        self::assertSame('125.00', $this->stored(Listing::TABLE, 'id', $id)['price_current']);
+        self::assertFalse($this->stored('ghostfrog_ebay_auction_price_history', 'external_id', $external));
+        self::assertFalse($this->stored(NotificationQueue::TABLE, 'listing_id', $id));
+
+        $overlap = false;
+        $trigger = $this->db->quoteIdentifier($this->table('gf_test_alert_write_failure'));
+        $table = $this->db->quoteIdentifier($this->table(NotificationQueue::TABLE));
+        $this->db->query("CREATE TRIGGER $trigger BEFORE INSERT ON $table FOR EACH ROW "
+            . "SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'fixture alert write failure'");
+        try {
+            $worker->execute();
+            $row = $this->stored(Listing::TABLE, 'id', $id);
+            self::assertSame('125.00', $row['price_current']);
+            self::assertNull($row['last_price_checked_at']);
+            self::assertFalse($this->stored('ghostfrog_ebay_auction_price_history', 'external_id', $external));
+            self::assertSame('100.00', $this->opportunity($id)['current_price']);
+            self::assertSame(1, (int)$this->stored(PriceQueue::TABLE, 'listing_id', $id)['attempts']);
+        } finally {
+            $this->db->query("DROP TRIGGER $trigger");
+        }
+
+        $this->makeDue(PriceQueue::TABLE, $id);
+        $worker->execute();
+        self::assertSame('110.00', $this->opportunity($id)['current_price']);
+        self::assertSame('pending', $this->stored(NotificationQueue::TABLE, 'listing_id', $id)['status']);
+        self::assertFalse($this->stored(PriceQueue::TABLE, 'listing_id', $id));
+    }
+
+    public function testBrowseReserveThrottleBackoffAndMissingListingRecovery(): void
+    {
+        $this->sales(5);
+        $id = $this->listing(['sale_type' => 'bin', 'end_time' => null]);
+        $this->updateViews();
+        $calls = 0;
+        $status = 429;
+        $worker = $this->browseWorker(function (string $url) use (&$calls, &$status): array {
+            ++$calls;
+            self::assertStringContainsString('/item/get_item_by_legacy_id?legacy_item_id=', $url);
+            return [$status, [], ['Retry-After' => '120']];
+        }, 20);
+        $this->enableAlerts();
+        $worker->execute();
+        self::assertSame(0, $calls);
+        self::assertSame(0, (int)$this->stored(PriceQueue::TABLE, 'listing_id', $id)['attempts']);
+        $usage = self::$objects->get(Usage::class);
+        $usage->reserve(Usage::CATEGORY_SEARCH);
+        self::assertSame(19, $usage->remaining(Usage::BROWSE));
+
+        $this->seedBrowseQuota(100);
+        $cache = self::$objects->get(CacheInterface::class);
+        $cache->remove('ghostfrog_ebay_price_refresh_pause');
+        $worker->execute();
+        self::assertSame(1, $calls);
+        self::assertGreaterThanOrEqual(time() + 118, $usage->quota(Usage::BROWSE)['retry_at']);
+        self::assertSame(0, (int)$this->stored(PriceQueue::TABLE, 'listing_id', $id)['attempts']);
+        $worker->execute();
+        self::assertSame(1, $calls);
+        self::assertFalse($this->stored(NotificationQueue::TABLE, 'listing_id', $id));
+
+        $this->db->update($this->table('ghostfrog_ebay_api_quota'), ['blocked_until' => 0], ['bucket = ?' => Usage::BROWSE]);
+        $cache->remove('ghostfrog_ebay_price_refresh_pause');
+        $status = 503;
+        $worker->execute();
+        self::assertSame(2, $calls);
+        self::assertSame(1, (int)$this->stored(PriceQueue::TABLE, 'listing_id', $id)['attempts']);
+        $worker->execute();
+        self::assertSame(2, $calls);
+
+        $status = 404;
+        $this->makeDue(PriceQueue::TABLE, $id);
+        $worker->execute();
+        self::assertSame(3, $calls);
+        $row = $this->stored(Listing::TABLE, 'id', $id);
+        self::assertSame('unknown', $row['status']);
+        self::assertNull($row['final_price']);
+        self::assertNull($row['last_price_checked_at']);
+        self::assertFalse($this->opportunity($id));
+        self::assertFalse($this->stored(PriceQueue::TABLE, 'listing_id', $id));
+    }
+
+    public function testBinDeliveryDeduplicatesAndRevalidatesThePurchasePrice(): void
+    {
+        $this->sales(5);
+        $id = $this->listing(['sale_type' => 'bin', 'end_time' => null]);
+        $external = $this->stored(Listing::TABLE, 'id', $id)['external_id'];
+        $this->updateViews();
+        $price = '111.09';
+        $refresh = $this->browseWorker(fn (): array => [200, $this->binItem($external, $price), []]);
+        $this->setMonitoringConfig(['notifications_enabled' => '1']);
+        $refresh->execute();
+        self::assertFalse($this->stored(NotificationQueue::TABLE, 'listing_id', $id));
+
+        $this->enableAlerts();
+        $queue = self::$objects->get(PriceQueue::class);
+        $queue->request($id);
+        $refresh->execute();
+        $calls = 0;
+        $alerts = $this->alertWorker(function (array $payload) use (&$calls, $external): array {
+            ++$calls;
+            foreach ([self::PHONE, "/itm/$external", 'Buy It Now', '£111.09', '£194.00',
+                '£132.91', 'Comparable sales 5', 'Last price checked', 'End time'] as $field) {
+                self::assertStringContainsString($field, $payload['text']);
+            }
+            return [200, []];
+        });
+        $alerts->execute();
+        self::assertSame(1, $calls);
+        $this->assertPriceFreshness($id, 'Fresh');
+        $queue->request($id);
+        $refresh->execute();
+        $alerts->execute();
+        self::assertSame(1, $calls);
+
+        $this->change($id, ['price_current' => '250.00', 'price_bin_current' => '250.00']);
+        self::$objects->get(NotificationQueue::class)->observe($id);
+        $this->change($id, ['price_current' => '100.00']);
+        $queue->request($id);
+        $refresh->execute();
+        self::assertSame('pending', $this->stored(NotificationQueue::TABLE, 'listing_id', $id)['status']);
+
+        $this->change($id, ['price_current' => '250.00', 'price_bin_current' => '250.00']);
+        $alerts->execute();
+        self::assertSame(1, $calls);
+        self::assertSame('inactive', $this->stored(NotificationQueue::TABLE, 'listing_id', $id)['status']);
+    }
+
+    public function testAuctionAlertsWaitForFreshnessHonourRetriesAndSuppressExpiry(): void
+    {
+        $this->sales(5);
+        $now = time();
+        $end = $now + 240;
+        $id = $this->listing(['end_time' => $this->date($end)]);
+        $external = $this->stored(Listing::TABLE, 'id', $id)['external_id'];
+        $this->updateViews();
+        $this->enableAlerts();
+        $refresh = $this->browseWorker(static fn (): array => [200, [
+            'itemId' => "v1|$external|0", 'buyingOptions' => ['AUCTION'],
+            'currentBidPrice' => ['value' => '105.00', 'currency' => 'GBP'],
+            'bidCount' => 2, 'itemEndDate' => gmdate(DATE_ATOM, $end),
+        ], []]);
+        $refresh->execute();
+        $calls = 0;
+        $status = 429;
+        $alerts = $this->alertWorker(function (array $payload) use (&$calls, &$status): array {
+            ++$calls;
+            self::assertStringContainsString('Auction (indicative', $payload['text']);
+            return [$status, ['retry-after' => '90']];
+        });
+        $this->change($id, ['last_price_checked_at' => $this->date($now - 100), 'last_seen_at' => $this->date($now - 100)]);
+        $alerts->execute();
+        self::assertSame(0, $calls);
+        self::assertNotFalse($this->stored(PriceQueue::TABLE, 'listing_id', $id));
+
+        $refresh->execute();
+        $this->makeDue(NotificationQueue::TABLE, $id);
+        $alerts->execute();
+        self::assertSame(1, $calls);
+        $job = $this->stored(NotificationQueue::TABLE, 'listing_id', $id);
+        self::assertSame('pending', $job['status']);
+        self::assertSame(1, (int)$job['attempts']);
+        self::assertGreaterThanOrEqual($this->date(time() + 88), $job['available_at']);
+        $alerts->execute();
+        self::assertSame(1, $calls);
+
+        self::$objects->get(CacheInterface::class)->remove('ghostfrog_ebay_opportunity_slack_throttle');
+        $this->makeDue(NotificationQueue::TABLE, $id);
+        $status = 200;
+        $alerts->execute();
+        self::assertSame(2, $calls);
+        self::assertSame('sent', $this->stored(NotificationQueue::TABLE, 'listing_id', $id)['status']);
+
+        $table = $this->table(NotificationQueue::TABLE);
+        $this->db->update($table, ['status' => 'sending'], ['listing_id = ?' => $id]);
+        $alerts->execute();
+        self::assertSame(2, $calls);
+        self::assertSame('uncertain', $this->stored(NotificationQueue::TABLE, 'listing_id', $id)['status']);
+
+        $this->db->update($table, ['status' => 'pending'], ['listing_id = ?' => $id]);
+        $this->change($id, ['end_time' => $this->date(time() - 1)]);
+        $alerts->execute();
+        self::assertSame(2, $calls);
+        self::assertSame('inactive', $this->stored(NotificationQueue::TABLE, 'listing_id', $id)['status']);
+        $this->db->query('SET timestamp = ' . ($end + 1));
+        self::$objects->get(Index::class)->expire();
+        self::assertFalse($this->opportunity($id));
+    }
+
+    public function testOverlappingWorkerRespectsTheDatabaseLock(): void
+    {
+        $this->sales(5);
+        $this->listing(['sale_type' => 'bin', 'end_time' => null]);
+        $this->updateViews();
+        $worker = $this->browseWorker(static fn (): array => self::fail('An overlapping worker called Browse.'));
+        $other = self::$objects->get(ConnectionFactory::class)->create($this->db->getConfig());
+        $lock = $this->db->fetchOne('SELECT DATABASE()') . '|ghostfrog_ebay_price_refresh';
+        self::assertSame(1, (int)$other->fetchOne('SELECT GET_LOCK(?, 0)', [$lock]));
+        try {
+            $worker->execute();
+            self::assertSame(0, (int)self::$objects->get(PriceQueue::class)->metrics()['depth']);
+        } finally {
+            $other->fetchOne('SELECT RELEASE_LOCK(?)', [$lock]);
+            $other->closeConnection();
+        }
+    }
+
+    private function cronJobs(): array
+    {
+        return self::$objects->get(CronConfig::class)->getJobs()['ghostfrog_ebay_monitoring'];
+    }
+
+    private function assertPriceFreshness(int $id, string $expected): void
+    {
+        $admin = self::$objects->get(UserFactory::class)->create()->getCollection()->getFirstItem();
+        self::$objects->get(Session::class)->setUser($admin);
+        $grid = $this->grid();
+        $filter = self::$objects->create(FilterBuilder::class)->setField('listing_id')->setValue($id)->create();
+        $grid->getContext()->getDataProvider()->addFilter($filter);
+        $data = json_decode($grid->render('json'), true, flags: JSON_THROW_ON_ERROR);
+        self::assertNotEmpty($data['items'][0]['last_price_checked_at']);
+        self::assertSame($expected, $data['items'][0]['price_freshness']);
+    }
+
+    private function browseWorker(callable $response, int $remaining = 100): RefreshWorker
+    {
+        $encryptor = self::$objects->get(EncryptorInterface::class);
+        $this->setWorkerConfig('ghostfrog_ebay/general/enabled', '1');
+        $this->setWorkerConfig('ghostfrog_ebay/ebay_api/gf_allow_ebay_api', '1');
+        $this->setWorkerConfig('ghostfrog_ebay/ebay_api/ebay_app_id', 'issue9-fixture-app');
+        $this->setWorkerConfig('ghostfrog_ebay/ebay_api/ebay_cert_id', $encryptor->encrypt('fixture-cert'));
+        self::$objects->get(ReinitableConfigInterface::class)->reinit();
+        self::$objects->get(CacheInterface::class)->save(
+            $encryptor->encrypt('fixture-token'),
+            'ghostfrog_ebay_browse_token_' . hash('sha256', 'issue9-fixture-app')
+        );
+        $this->seedBrowseQuota($remaining);
+        $status = 0;
+        $body = [];
+        $headers = [];
+        $curl = $this->createMock(Curl::class);
+        $curl->method('get')->willReturnCallback(function (string $url) use ($response, &$status, &$body, &$headers): void {
+            [$status, $body, $headers] = $response($url);
+        });
+        $curl->expects(self::never())->method('post');
+        $curl->method('getStatus')->willReturnCallback(static function () use (&$status): int { return $status; });
+        $curl->method('getBody')->willReturnCallback(static function () use (&$body): string { return json_encode($body); });
+        $curl->method('getHeaders')->willReturnCallback(static function () use (&$headers): array { return $headers; });
+        $factory = $this->createMock(CurlFactory::class);
+        $factory->method('create')->willReturn($curl);
+        $browse = self::$objects->create(BrowseClient::class, ['curlFactory' => $factory]);
+        return self::$objects->create(RefreshWorker::class, ['browse' => $browse]);
+    }
+
+    private function alertWorker(callable $response): NotificationWorker
+    {
+        $status = 0;
+        $headers = [];
+        $curl = $this->createMock(Curl::class);
+        $curl->method('post')->willReturnCallback(function (string $url, string $body) use ($response, &$status, &$headers): void {
+            self::assertSame('https://hooks.slack.com/services/FIXTURE/CHANNEL/TEST', $url);
+            [$status, $headers] = $response(json_decode($body, true, flags: JSON_THROW_ON_ERROR));
+        });
+        $curl->method('getStatus')->willReturnCallback(static function () use (&$status): int { return $status; });
+        $curl->method('getHeaders')->willReturnCallback(static function () use (&$headers): array { return $headers; });
+        $factory = $this->createMock(CurlFactory::class);
+        $factory->method('create')->willReturn($curl);
+        $slack = self::$objects->create(Slack::class, ['clients' => $factory]);
+        return self::$objects->create(NotificationWorker::class, ['slack' => $slack]);
+    }
+
+    private function seedBrowseQuota(int $remaining): void
+    {
+        $this->db->delete($this->table('ghostfrog_ebay_api_quota'));
+        $this->db->insert($this->table('ghostfrog_ebay_api_quota'), ['bucket' => Usage::ANALYTICS]);
+        $now = time();
+        $rate = ['limit' => 100, 'remaining' => $remaining, 'reported_remaining' => $remaining, 'reset_at' => $now + 300];
+        self::$objects->get(Usage::class)->saveDailyRates([Usage::BROWSE => $rate, Usage::TRADING => $rate], $now);
+    }
+
+    private function enableAlerts(): void
+    {
+        $this->setWorkerConfig('ghostfrog_ebay/general/enabled', '1');
+        $this->setWorkerConfig('ghostfrog_ebay/slack/slack_webhook_url', self::$objects->get(EncryptorInterface::class)
+            ->encrypt('https://hooks.slack.com/services/FIXTURE/CHANNEL/TEST'));
+        $this->setMonitoringConfig(['notifications_enabled' => '1']);
+    }
+
+    private function setMonitoringConfig(array $fields): void
+    {
+        foreach ($fields as $key => $value) {
+            $this->setWorkerConfig('ghostfrog_ebay/opportunity_monitoring/' . $key, $value);
+        }
+        self::$objects->get(ReinitableConfigInterface::class)->reinit();
+    }
+
+    private function binItem(string $id, string $price): array
+    {
+        return [
+            'itemId' => "v1|$id|0", 'buyingOptions' => ['FIXED_PRICE'],
+            'price' => ['value' => $price, 'currency' => 'GBP'],
+            'estimatedAvailabilities' => [['estimatedAvailabilityStatus' => 'IN_STOCK']],
+        ];
+    }
+
+    private function makeDue(string $table, int $id): void
+    {
+        $this->db->update($this->table($table), ['available_at' => $this->date(time() - 1)], ['listing_id = ?' => $id]);
+    }
+
+    private function stored(string $table, string $field, int|string $id): array|false
+    {
+        return $this->db->fetchRow($this->db->select()->from($this->table($table))->where("$field = ?", $id));
+    }
+
+    private function date(int $timestamp): string
+    {
+        return gmdate('Y-m-d H:i:s', $timestamp);
     }
 
     private function assertWriteFailure(callable $write): void

@@ -88,6 +88,7 @@ final class MysqlListings
                     $db->insert($history, [
                         'external_id' => $externalId,
                         'price' => $row['price_current'],
+                        'bin_price' => $row['price_bin_current'],
                         'bids_count' => $row['bids_count'],
                         'timestamp' => $seen,
                         'recorded_at' => $seen,

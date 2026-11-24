@@ -295,6 +295,47 @@
                     <validate>required-entry validate-digits validate-number-range number-range-1-2</validate>
                 </field>
             </group>
+            <group id="opportunity_monitoring" translate="label" sortOrder="57" showInDefault="1">
+                <label>Opportunity Price Refresh and Alerts</label>
+                <field id="auction_24_hours" translate="label comment" type="text" sortOrder="10" showInDefault="1">
+                    <label>Auction Within 24 Hours (Minutes)</label>
+                    <validate>required-entry validate-digits validate-number-range number-range-1-1440</validate>
+                    <comment>Longer auctions follow normal collection.</comment>
+                </field>
+                <field id="auction_60_minutes" translate="label comment" type="text" sortOrder="20" showInDefault="1">
+                    <label>Auction Within 60 Minutes (Minutes)</label>
+                    <validate>required-entry validate-digits validate-number-range number-range-1-1440</validate>
+                </field>
+                <field id="auction_10_minutes" translate="label comment" type="text" sortOrder="30" showInDefault="1">
+                    <label>Auction Within 10 Minutes (Minutes)</label>
+                    <validate>required-entry validate-digits validate-number-range number-range-1-1440</validate>
+                </field>
+                <field id="bin_minutes" translate="label comment" type="text" sortOrder="40" showInDefault="1">
+                    <label>Buy It Now Interval (Minutes)</label>
+                    <validate>required-entry validate-digits validate-number-range number-range-1-1440</validate>
+                    <comment>Combined listings use the shorter applicable interval.</comment>
+                </field>
+                <field id="refresh_batch" translate="label comment" type="text" sortOrder="50" showInDefault="1">
+                    <label>Maximum Refreshes per Cron Run</label>
+                    <validate>required-entry validate-digits validate-number-range number-range-1-100</validate>
+                    <comment>1 to 100 items. Requests run one at a time and preserve a share of the Browse allowance for collection.</comment>
+                </field>
+                <field id="notification_batch" translate="label comment" type="text" sortOrder="60" showInDefault="1">
+                    <label>Maximum Notifications per Cron Run</label>
+                    <validate>required-entry validate-digits validate-number-range number-range-1-100</validate>
+                    <comment>1 to 100 alerts. Delivery runs one alert at a time.</comment>
+                </field>
+                <field id="auction_alert_age" translate="label comment" type="text" sortOrder="70" showInDefault="1">
+                    <label>Maximum Auction Alert Price Age (Seconds)</label>
+                    <validate>required-entry validate-digits validate-number-range number-range-1-300</validate>
+                    <comment>1 to 300 seconds. Alerts are evaluated within five minutes of the auction ending.</comment>
+                </field>
+                <field id="notifications_enabled" translate="label comment" type="select" sortOrder="80" showInDefault="1">
+                    <label>Send Opportunity Alerts to Slack</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>Requires a Slack Webhook URL in the Slack configuration below. Alerts are disabled by default.</comment>
+                </field>
+            </group>
             <group id="comps" translate="label" sortOrder="56" showInDefault="1">
                 <label>Comps and Pricing</label>
                 <field id="target_profit" translate="label" type="text" sortOrder="10" showInDefault="1">

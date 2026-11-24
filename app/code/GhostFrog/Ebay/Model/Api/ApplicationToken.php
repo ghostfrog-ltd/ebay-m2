@@ -66,7 +66,7 @@ final class ApplicationToken
             throw $this->usage->recordThrottle(Usage::OAUTH, $client->getHeaders());
         }
         if ($status !== 200) {
-            throw new RuntimeException(sprintf('eBay OAuth returned HTTP %d.', $status));
+            throw new RuntimeException(sprintf('eBay OAuth returned HTTP %d.', $status), $status);
         }
 
         $payload = json_decode($client->getBody(), true, 512, JSON_THROW_ON_ERROR);

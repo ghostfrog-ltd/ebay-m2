@@ -23,6 +23,7 @@ final class Usage
     public const ATTRIBUTES = 'ebay_attributes_v1';
     public const CATEGORY_SEARCH = 'ebay_base_fetch_category_items_v1';
     public const SELLER_SEARCH = 'ebay_base_seller_items_v1';
+    public const ITEM_REFRESH = 'ebay_base_fetch_items_by_id_v1';
     public const TOKEN = 'ebay_auth_v1';
     public const RATE_LIMITS = 'ebay_developer_analytics_v1';
 
@@ -31,7 +32,7 @@ final class Usage
         'ebay_ended_v1' => self::TRADING,
         self::CATEGORY_SEARCH => self::BROWSE,
         self::SELLER_SEARCH => self::BROWSE,
-        'ebay_base_fetch_items_by_id_v1' => self::BROWSE,
+        self::ITEM_REFRESH => self::BROWSE,
         self::TOKEN => self::OAUTH,
         self::RATE_LIMITS => self::ANALYTICS,
     ];
@@ -69,7 +70,12 @@ final class Usage
             }
             $this->lockBucket($db, $bucket);
             $now = time();
-            $this->check($bucket, $this->state($db, $bucket, $now));
+            $state = $this->state($db, $bucket, $now);
+            $this->check($bucket, $state);
+            // Leave one fifth of the verified daily allowance available to search.
+            if ($service === self::ITEM_REFRESH && $state['remaining'] <= ceil($state['limit'] / 5)) {
+                throw new QuotaUnavailable($bucket, $state['reset_at']);
+            }
             if ($this->usesLiveQuota($bucket)) {
                 $snapshot = $this->snapshot($db);
                 --$snapshot['rates'][$bucket]['remaining'];

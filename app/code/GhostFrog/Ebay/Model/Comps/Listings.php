@@ -93,9 +93,14 @@ final class Listings
             ->columns([
                 'sale_type' => 'a.sale_type',
                 'url' => 'a.url',
+                'price_bid_current' => 'a.price_bid_current',
+                'price_bin_current' => 'a.price_bin_current',
+                'last_seen_at' => 'a.last_seen_at',
+                'last_price_checked_at' => 'a.last_price_checked_at',
                 'eligible_until' => new Expression("LEAST(COALESCE(a.end_time, $freshUntil), $freshUntil)"),
             ])
             ->where('a.status = ?', 'live')
+            ->where('COALESCE(a.finalized, 0) = 0 AND COALESCE(a.final_price, 0) <= 0')
             ->where('(a.end_time > UTC_TIMESTAMP() OR (a.end_time IS NULL AND a.sale_type = ?))', 'bin')
             ->where('a.price_current > 0')
             ->where('COALESCE(a.last_seen_at, a.first_seen) >= UTC_TIMESTAMP() - INTERVAL 24 HOUR');

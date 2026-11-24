@@ -31,6 +31,16 @@
                 <selling_fee_percent>13.00</selling_fee_percent>
                 <shipping>12.00</shipping>
             </comps>
+            <opportunity_monitoring>
+                <auction_24_hours>30</auction_24_hours>
+                <auction_60_minutes>5</auction_60_minutes>
+                <auction_10_minutes>1</auction_10_minutes>
+                <bin_minutes>5</bin_minutes>
+                <refresh_batch>10</refresh_batch>
+                <notification_batch>10</notification_batch>
+                <auction_alert_age>60</auction_alert_age>
+                <notifications_enabled>0</notifications_enabled>
+            </opportunity_monitoring>
             <email>
                 <alert_smtp_pass backend_model="Magento\Config\Model\Config\Backend\Encrypted"/>
             </email>

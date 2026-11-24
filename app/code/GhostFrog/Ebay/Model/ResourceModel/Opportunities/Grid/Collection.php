@@ -8,6 +8,13 @@ use Magento\Framework\View\Element\UiComponent\DataProvider\SearchResult;
 
 class Collection extends SearchResult
 {
+    protected function _initSelect()
+    {
+        parent::_initSelect();
+        $this->getSelect()->where('main_table.eligible_until > UTC_TIMESTAMP()');
+        return $this;
+    }
+
     protected function _renderOrders()
     {
         if ($this->_orders === []) {

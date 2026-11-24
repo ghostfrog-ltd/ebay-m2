@@ -89,6 +89,8 @@
         <column xsi:type="varchar" name="external_id" nullable="false" length="255" comment="External ID"/>
         <column xsi:type="longtext" name="title" nullable="true" comment="Title"/>
         <column xsi:type="decimal" name="price_current" nullable="true" precision="21" scale="2" comment="Current price in GBP"/>
+        <column xsi:type="decimal" name="price_bin_current" nullable="true" precision="21" scale="2" comment="Buy It Now price in GBP"/>
+        <column xsi:type="datetime" name="last_price_checked_at" nullable="true" on_update="false" comment="Last successful Browse price check in UTC"/>
         <column xsi:type="int" name="bids_count" nullable="true" comment="Bids count"/>
         <column xsi:type="datetime" name="end_time" nullable="true" on_update="false" comment="End time"/>
         <column xsi:type="varchar" name="status" nullable="false" length="64" default="live" comment="Status"/>
@@ -188,6 +190,7 @@
         <column xsi:type="datetime" name="timestamp" nullable="true" on_update="false" default="CURRENT_TIMESTAMP" comment="Timestamp"/>
         <column xsi:type="varchar" name="external_id" nullable="true" length="255" comment="External ID"/>
         <column xsi:type="datetime" name="recorded_at" nullable="false" on_update="false" default="CURRENT_TIMESTAMP" comment="Recorded at"/>
+        <column xsi:type="decimal" name="bin_price" nullable="true" precision="21" scale="2" comment="Buy It Now price in GBP"/>
         <constraint xsi:type="primary" referenceId="PRIMARY">
             <column name="id"/>
         </constraint>
@@ -259,6 +262,10 @@
         <column xsi:type="varchar" name="model_key" nullable="false" length="255" comment="Model key"/>
         <column xsi:type="varchar" name="condition_grade" nullable="false" length="16" comment="Effective condition grade"/>
         <column xsi:type="decimal" name="current_price" nullable="false" precision="21" scale="2" comment="Current price or bid in GBP"/>
+        <column xsi:type="decimal" name="bid_price" nullable="true" precision="21" scale="2" comment="Current auction price in GBP"/>
+        <column xsi:type="decimal" name="bin_price" nullable="true" precision="21" scale="2" comment="Buy It Now price in GBP"/>
+        <column xsi:type="datetime" name="last_seen_at" nullable="true" on_update="false" comment="Observation time for the indexed price"/>
+        <column xsi:type="datetime" name="last_price_checked_at" nullable="true" on_update="false" comment="Last successful Browse price check in UTC"/>
         <column xsi:type="decimal" name="sold_median" nullable="false" precision="24" scale="3" comment="Median sold price in GBP"/>
         <column xsi:type="int" name="comp_count" nullable="false" comment="Comparable sales count"/>
         <column xsi:type="decimal" name="max_safe_buy" nullable="false" precision="21" scale="2" comment="Maximum safe purchase price in GBP"/>
@@ -345,6 +352,41 @@
         <constraint xsi:type="primary" referenceId="PRIMARY">
             <column name="status"/>
         </constraint>
+    </table>
+
+    <table name="ghostfrog_ebay_price_refresh_queue" resource="default" engine="innodb" comment="Opportunity price refresh queue">
+        <column xsi:type="bigint" name="listing_id" nullable="false" comment="Listing ID"/>
+        <column xsi:type="datetime" name="due_at" nullable="false" on_update="false" comment="Original due time UTC"/>
+        <column xsi:type="datetime" name="available_at" nullable="false" on_update="false" comment="Next attempt UTC"/>
+        <column xsi:type="smallint" name="attempts" nullable="false" unsigned="true" default="0" comment="Retry attempts"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="listing_id"/>
+        </constraint>
+        <constraint xsi:type="foreign" referenceId="GHOSTFROG_EBAY_PRICE_REFRESH_QUEUE_LISTING_ID"
+                    table="ghostfrog_ebay_price_refresh_queue" column="listing_id"
+                    referenceTable="ghostfrog_ebay_auction_listings" referenceColumn="id" onDelete="CASCADE"/>
+        <index referenceId="GHOSTFROG_EBAY_PRICE_REFRESH_QUEUE_AVAILABLE_AT" indexType="btree">
+            <column name="available_at"/>
+        </index>
+    </table>
+
+    <table name="ghostfrog_ebay_opportunity_notification_queue" resource="default" engine="innodb" comment="Opportunity notification queue and delivery state">
+        <column xsi:type="bigint" name="listing_id" nullable="false" comment="Listing ID"/>
+        <column xsi:type="varchar" name="sale_type" nullable="false" length="16" comment="Purchase option"/>
+        <column xsi:type="varchar" name="status" nullable="false" length="16" comment="Actionable episode delivery status"/>
+        <column xsi:type="datetime" name="available_at" nullable="false" on_update="false" comment="Next attempt UTC"/>
+        <column xsi:type="smallint" name="attempts" nullable="false" unsigned="true" default="0" comment="Retry attempts"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="listing_id"/>
+            <column name="sale_type"/>
+        </constraint>
+        <constraint xsi:type="foreign" referenceId="GHOSTFROG_EBAY_OPPORTUNITY_NOTIFICATION_QUEUE_LISTING_ID"
+                    table="ghostfrog_ebay_opportunity_notification_queue" column="listing_id"
+                    referenceTable="ghostfrog_ebay_auction_listings" referenceColumn="id" onDelete="CASCADE"/>
+        <index referenceId="GHOSTFROG_EBAY_OPPORTUNITY_NOTIFICATION_QUEUE_DUE" indexType="btree">
+            <column name="status"/>
+            <column name="available_at"/>
+        </index>
     </table>
 
     <table name="ghostfrog_ebay_final_price_queue" resource="default" engine="innodb" comment="Final price check queue">

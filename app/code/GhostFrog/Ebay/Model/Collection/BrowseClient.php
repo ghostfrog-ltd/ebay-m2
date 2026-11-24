@@ -14,6 +14,7 @@ use RuntimeException;
 final class BrowseClient
 {
     private const API = 'https://api.ebay.com';
+    private const BROWSE = '/buy/browse/v1/';
     private const PAGE_SIZE = 50;
 
     public function __construct(
@@ -116,7 +117,27 @@ final class BrowseClient
         }
     }
 
-    private function get(array $params, string $service, bool $allowNarrowerWindow = false): ?array
+    public function getItem(string $externalId): ?array
+    {
+        if (preg_match('/\A[0-9]{1,20}\z/', $externalId)) {
+            return $this->get(
+                ['legacy_item_id' => $externalId],
+                Usage::ITEM_REFRESH,
+                path: 'item/get_item_by_legacy_id'
+            );
+        }
+        if (!preg_match('/\Av[12]\|[0-9]{1,20}\|[0-9]{1,20}\z/', $externalId)) {
+            throw new RuntimeException('Unsupported eBay item identity.');
+        }
+        return $this->get([], Usage::ITEM_REFRESH, path: 'item/' . rawurlencode($externalId));
+    }
+
+    private function get(
+        array $params,
+        string $service,
+        bool $allowNarrowerWindow = false,
+        string $path = 'item_summary/search'
+    ): ?array
     {
         $this->quota->refreshIfDue();
         $this->usage->requireAvailable(Usage::BROWSE);
@@ -130,16 +151,19 @@ final class BrowseClient
         ]);
         $query = http_build_query($params, '', '&', PHP_QUERY_RFC3986);
         $this->usage->reserve($service);
-        $client->get(self::API . '/buy/browse/v1/item_summary/search?' . $query);
+        $client->get(self::API . self::BROWSE . $path . ($query === '' ? '' : '?' . $query));
         $status = (int)$client->getStatus();
         if ($status === 429) {
             throw $this->usage->recordThrottle(Usage::BROWSE, $client->getHeaders());
+        }
+        if ($status === 404 && $service === Usage::ITEM_REFRESH) {
+            return null;
         }
         if ($allowNarrowerWindow && $status === 400 && preg_match('/too (?:large|many)/i', $client->getBody())) {
             return null;
         }
         if ($status !== 200) {
-            throw new RuntimeException(sprintf('eBay Browse returned HTTP %d.', $status));
+            throw new RuntimeException(sprintf('eBay Browse returned HTTP %d.', $status), $status);
         }
 
         return $this->decode($client->getBody());
