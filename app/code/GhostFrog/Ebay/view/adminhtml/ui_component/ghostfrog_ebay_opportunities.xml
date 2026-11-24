@@ -34,10 +34,16 @@
         </settings>
         <bookmark name="bookmarks"/>
         <columnsControls name="columns_controls"/>
+        <exportButton name="export_button"/>
         <filters name="listing_filters"/>
         <paging name="listing_paging"/>
     </listingToolbar>
     <columns name="opportunity_columns">
+        <selectionsColumn name="ids" sortOrder="0">
+            <settings>
+                <indexField>listing_id</indexField>
+            </settings>
+        </selectionsColumn>
         <column name="listing_id" sortOrder="10">
             <settings>
                 <filter>textRange</filter>
@@ -48,6 +54,17 @@
             <settings>
                 <filter>text</filter>
                 <label translate="true">Title</label>
+            </settings>
+        </column>
+        <column name="ebay_listing_url" component="Magento_Ui/js/grid/columns/link" sortOrder="25">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="link" xsi:type="string">ebay_listing_url</item>
+                </item>
+            </argument>
+            <settings>
+                <sortable>false</sortable>
+                <label translate="true">eBay Listing URL</label>
             </settings>
         </column>
         <column name="source" component="Magento_Ui/js/grid/columns/select" sortOrder="30">
@@ -76,6 +93,22 @@
             <settings>
                 <filter>text</filter>
                 <label translate="true">Condition Grade</label>
+            </settings>
+        </column>
+        <column name="llm_graded_text" component="Magento_Ui/js/grid/columns/select" sortOrder="61">
+            <settings>
+                <options class="Magento\Config\Model\Config\Source\Yesno"/>
+                <filter>select</filter>
+                <dataType>select</dataType>
+                <label translate="true">LLM Graded Text</label>
+            </settings>
+        </column>
+        <column name="llm_graded_visual" component="Magento_Ui/js/grid/columns/select" sortOrder="62">
+            <settings>
+                <options class="Magento\Config\Model\Config\Source\Yesno"/>
+                <filter>select</filter>
+                <dataType>select</dataType>
+                <label translate="true">LLM Graded Images</label>
             </settings>
         </column>
         <column name="current_price" sortOrder="70">

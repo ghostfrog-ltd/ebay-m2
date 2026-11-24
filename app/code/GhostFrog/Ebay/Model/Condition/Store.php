@@ -21,24 +21,30 @@ final class Store
     ) {
     }
 
-    public function listing(string $id, Stage $stage): ?array
+    public function listing(string $id, Stage $stage, bool $backfill = false): ?array
     {
-        $listing = $this->find($this->resource->getConnection(), $id, false);
-        return $this->needsCheck($listing, $stage) ? $listing : null;
+        $listing = $this->find($this->resource->getConnection(), $id, $stage, $backfill, false);
+        return $this->needsCheck($listing, $stage, $backfill) ? $listing : null;
     }
 
     /**
      * Record the assessment, publish its successor, and acknowledge the message
      * together. A disabled stage advances without marking it as checked.
      */
-    public function complete(Stage $stage, int $delivery, string $id, ?array $evidence, ?array $assessment): bool
-    {
+    public function complete(
+        Stage $stage,
+        int $delivery,
+        string $id,
+        ?array $evidence,
+        ?array $assessment,
+        bool $backfill = false
+    ): bool {
         $db = $this->resource->getConnection();
         $table = $this->resource->getTableName('ghostfrog_ebay_auction_listings');
         $db->beginTransaction();
         try {
-            $listing = $this->find($db, $id, true);
-            $needed = $this->needsCheck($listing, $stage);
+            $listing = $this->find($db, $id, $stage, $backfill, true);
+            $needed = $this->needsCheck($listing, $stage, $backfill);
             if ($needed) {
                 if ($assessment !== null && ($evidence === null || $listing['title'] !== $evidence['title']
                     || $listing['raw_attrs'] !== $evidence['raw_attrs'])
@@ -57,14 +63,20 @@ final class Store
                     $attrs[$this->skippedMarker($stage)] = true;
                 }
 
-                $next = $this->settings->next($stage);
+                $next = $backfill ? null : $this->settings->next($stage, $listing);
                 if ($next === null) {
-                    $attrs[Queue::COMPLETED_KEY] = gmdate('Y-m-d\TH:i:s\Z');
                     $update['condition_grade'] = Assessment::effective($listing['condition_grade'], $this->checks($db, $id));
                 }
-                $update['raw_attrs'] = json_encode((object)$attrs, JSON_THROW_ON_ERROR);
+                if (!$backfill) {
+                    if ($next === null) {
+                        $attrs[Queue::COMPLETED_KEY] = gmdate('Y-m-d\TH:i:s\Z');
+                    }
+                    $update['raw_attrs'] = json_encode((object)$attrs, JSON_THROW_ON_ERROR);
+                }
                 $db->update($table, $update, ['id = ?' => $id]);
-                $this->queue->enqueue($id, $next?->queue() ?? Queue::MODEL_KEY_QUEUE);
+                if (!$backfill) {
+                    $this->queue->enqueue($id, $next?->queue() ?? Queue::MODEL_KEY_QUEUE);
+                }
             }
             $this->queue->acknowledge($delivery);
             $db->commit();
@@ -97,13 +109,26 @@ final class Store
         return ['waiting' => (int)$row['waiting'], 'oldest_wait_seconds' => (int)$row['oldest_wait_seconds']];
     }
 
-    private function find(AdapterInterface $db, string $id, bool $lock): ?array
-    {
+    private function find(
+        AdapterInterface $db,
+        string $id,
+        Stage $stage,
+        bool $backfill,
+        bool $lock
+    ): ?array {
         $table = $this->resource->getTableName('ghostfrog_ebay_auction_listings');
-        $select = $db->select()->from($table, [
+        $select = $db->select()->from(['listing' => $table], [
             'id', 'external_id', 'title', 'raw_attrs', 'condition_grade',
             'text_condition_checked', 'visual_condition_checked',
         ])->where('id = ?', $id);
+        if ($backfill) {
+            $select->columns(['llm_graded' => Assessment::modelResultExists(
+                $db,
+                $this->resource->getTableName($stage->assessmentTable()),
+                $stage,
+                'listing.id'
+            )]);
+        }
         if ($lock) {
             $select->forUpdate();
         }
@@ -111,9 +136,15 @@ final class Store
         return $row ?: null;
     }
 
-    private function needsCheck(?array $listing, Stage $stage): bool
+    private function needsCheck(?array $listing, Stage $stage, bool $backfill): bool
     {
-        if ($listing === null || $listing[$stage->value . '_condition_checked']) {
+        if ($listing === null) {
+            return false;
+        }
+        if ($backfill) {
+            return !$listing['llm_graded'];
+        }
+        if ($listing[$stage->value . '_condition_checked']) {
             return false;
         }
         $attrs = $this->attrs($listing);
@@ -168,6 +199,6 @@ final class Store
 
     private function assessmentTable(Stage $stage): string
     {
-        return $this->resource->getTableName('ghostfrog_ebay_listing_' . $stage->value . '_conditions');
+        return $this->resource->getTableName($stage->assessmentTable());
     }
 }

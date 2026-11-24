@@ -14,6 +14,16 @@ enum Stage: string
         return 'ghostfrog.ebay.condition_' . $this->value;
     }
 
+    public function backfillQueue(): string
+    {
+        return $this->queue() . '_backfill';
+    }
+
+    public function assessmentTable(): string
+    {
+        return 'ghostfrog_ebay_listing_' . $this->value . '_conditions';
+    }
+
     public function gradeField(): string
     {
         return $this->value . '_grade';

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace GhostFrog\Ebay\Ui\Component\Opportunities\Column;
 
 use GhostFrog\Ebay\Controller\Adminhtml\Listing\Index;
-use GhostFrog\Ebay\Model\Comps\Listings;
+use GhostFrog\Ebay\Model\Opportunities\ListingUrl;
 use Magento\Framework\AuthorizationInterface;
 use Magento\Framework\UrlInterface;
 use Magento\Framework\View\Element\UiComponent\ContextInterface;
@@ -37,26 +37,12 @@ class Actions extends Column
                     'label' => __('Edit Listing'),
                 ];
             }
-            $url = $this->ebayUrl($item);
+            $url = ListingUrl::resolve($item['url'] ?? null, (string)$item['external_id']);
             if ($url !== null) {
                 $actions['ebay'] = ['href' => $url, 'label' => __('View on eBay'), 'target' => '_blank'];
             }
             $dataSource['data']['items'][$index][$name] = $actions;
         }
         return $dataSource;
-    }
-
-    private function ebayUrl(array $item): ?string
-    {
-        $url = (string)$item['url'];
-        $parts = parse_url($url);
-        if (($parts['scheme'] ?? null) === 'https' && !isset($parts['user'])
-            && preg_match('/(?:^|\.)ebay\.(?:co\.uk|com)$/iD', $parts['host'] ?? '')
-        ) {
-            return $url;
-        }
-
-        $id = Listings::itemId($item['external_id']);
-        return ctype_digit($id) ? "https://www.ebay.co.uk/itm/$id" : null;
     }
 }
