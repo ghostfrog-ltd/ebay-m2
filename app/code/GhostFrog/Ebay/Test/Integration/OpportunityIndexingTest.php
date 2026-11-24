@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace GhostFrog\Ebay\Test\Integration;
 
 use GhostFrog\Ebay\Cron\RefreshComps;
+use GhostFrog\Ebay\Model\Api\DailyQuota;
 use GhostFrog\Ebay\Model\Api\Usage;
 use GhostFrog\Ebay\Model\Collection\BrowseClient;
 use GhostFrog\Ebay\Model\Comps\Index as CompsIndex;
@@ -16,6 +17,7 @@ use GhostFrog\Ebay\Model\Notification\Slack;
 use GhostFrog\Ebay\Model\Notification\Worker as NotificationWorker;
 use GhostFrog\Ebay\Model\Opportunities\Index;
 use GhostFrog\Ebay\Model\Opportunities\Rows;
+use GhostFrog\Ebay\Model\PriceRefresh\Pause;
 use GhostFrog\Ebay\Model\PriceRefresh\Queue as PriceQueue;
 use GhostFrog\Ebay\Model\PriceRefresh\Worker as RefreshWorker;
 use GhostFrog\Ebay\Model\ResourceModel\Listing;
@@ -26,6 +28,7 @@ use Magento\Framework\Api\FilterBuilder;
 use Magento\Framework\App\Area;
 use Magento\Framework\App\Bootstrap;
 use Magento\Framework\App\CacheInterface;
+use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Framework\App\Config\ReinitableConfigInterface;
 use Magento\Framework\App\ObjectManager\ConfigLoader;
 use Magento\Framework\App\ResourceConnection;
@@ -469,6 +472,7 @@ final class OpportunityIndexingTest extends TestCase
         $this->enableAlerts();
         $worker->execute();
         self::assertSame(0, $calls);
+        self::assertSame('discovery_reserve', self::$objects->get(Usage::class)->quota(Usage::BROWSE)['refresh_pause_reason']);
         self::assertSame(0, (int)$this->stored(PriceQueue::TABLE, 'listing_id', $id)['attempts']);
         $usage = self::$objects->get(Usage::class);
         $usage->reserve(Usage::CATEGORY_SEARCH);
@@ -480,6 +484,7 @@ final class OpportunityIndexingTest extends TestCase
         $worker->execute();
         self::assertSame(1, $calls);
         self::assertGreaterThanOrEqual(time() + 118, $usage->quota(Usage::BROWSE)['retry_at']);
+        self::assertSame('provider_throttle', $usage->quota(Usage::BROWSE)['refresh_pause_reason']);
         self::assertSame(0, (int)$this->stored(PriceQueue::TABLE, 'listing_id', $id)['attempts']);
         $worker->execute();
         self::assertSame(1, $calls);
@@ -504,6 +509,208 @@ final class OpportunityIndexingTest extends TestCase
         self::assertNull($row['last_price_checked_at']);
         self::assertFalse($this->opportunity($id));
         self::assertFalse($this->stored(PriceQueue::TABLE, 'listing_id', $id));
+    }
+
+    public function testReconciliationDeductsOutstandingAndLaterReservationsAndRejectsReplays(): void
+    {
+        $this->seedBrowseQuota(100);
+        $usage = self::$objects->get(Usage::class);
+        $otherResource = self::$objects->create(ResourceConnection::class);
+        self::assertNotSame(
+            $this->db->fetchOne('SELECT CONNECTION_ID()'),
+            $otherResource->getConnection()->fetchOne('SELECT CONNECTION_ID()')
+        );
+        $other = new Usage($otherResource, self::$objects->get(ScopeConfigInterface::class));
+        $reset = $usage->quota(Usage::BROWSE)['reset_at'];
+        try {
+            $usage->send(Usage::CATEGORY_SEARCH, function () use ($usage, $other, $reset): void {
+                $lookup = $usage->beginLookup();
+                $other->send(Usage::CATEGORY_SEARCH, static fn () => null);
+                $rates = [Usage::BROWSE => $this->dailyRate(80, $reset)];
+                $usage->saveDailyRates($rates, time(), $lookup);
+                self::assertSame(78, $usage->remaining(Usage::BROWSE));
+                self::assertSame([], $usage->saveDailyRates($rates, time(), $lookup));
+            });
+            $other->send(Usage::CATEGORY_SEARCH, static fn () => null);
+            $duplicate = $usage->beginLookup();
+            $usage->saveDailyRates([Usage::BROWSE => $this->dailyRate(80, $reset)], time(), $duplicate);
+            self::assertSame(77, $usage->remaining(Usage::BROWSE));
+
+            $stale = $other->beginLookup();
+            $current = $usage->beginLookup();
+            $usage->saveDailyRates([Usage::BROWSE => $this->dailyRate(76, $reset)], time(), $current);
+            self::assertSame([], $other->saveDailyRates([Usage::BROWSE => $this->dailyRate(10, $reset)], time(), $stale));
+            $regression = $usage->beginLookup();
+            $usage->saveDailyRates([Usage::BROWSE => $this->dailyRate(90, $reset)], time(), $regression);
+            self::assertSame(90, $usage->quota(Usage::BROWSE)['reported_remaining']);
+            self::assertSame(76, $usage->remaining(Usage::BROWSE));
+        } finally {
+            $otherResource->closeConnection();
+        }
+    }
+
+    public function testQuotaResetRejectsExpiredRatesAndKeepsCrossingReservations(): void
+    {
+        $this->seedBrowseQuota(100);
+        $usage = self::$objects->get(Usage::class);
+        $usage->send(Usage::CATEGORY_SEARCH, function () use ($usage): void {
+            $expiredReset = time() - 1;
+            $this->setQuotaSnapshotField('$.rates.browse.reset_at', $expiredReset);
+            $this->setQuotaSnapshotField('$.refresh_at', $expiredReset);
+            self::assertTrue($usage->lookupIsDue(Usage::BROWSE));
+            $observation = $usage->beginLookup();
+            self::assertSame([], $usage->saveDailyRates(
+                [Usage::BROWSE => $this->dailyRate(99, $expiredReset)], time(), $observation
+            ));
+            $nextReset = time() + 86400;
+            $nextWindow = $usage->beginLookup();
+            $usage->saveDailyRates(
+                [Usage::BROWSE => $this->dailyRate(99, $nextReset)], time(), $nextWindow
+            );
+            self::assertSame(98, $usage->remaining(Usage::BROWSE));
+            self::assertSame($nextReset, $usage->quota(Usage::BROWSE)['reset_at']);
+        });
+    }
+
+    public function testRefreshRecoversAfterSameWindowReconciliationWithoutDuplicateWork(): void
+    {
+        $this->sales(5);
+        $id = $this->listing(['sale_type' => 'bin', 'end_time' => null]);
+        $external = $this->stored(Listing::TABLE, 'id', $id)['external_id'];
+        $this->updateViews();
+        $itemCalls = 0;
+        $analyticsCalls = 0;
+        $worker = $this->browseWorker(function () use (&$itemCalls, $external): array {
+            ++$itemCalls;
+            return [200, $this->binItem($external, '111.09'), []];
+        }, 99, function () use (&$analyticsCalls): array {
+            ++$analyticsCalls;
+            return $this->analyticsResponse(60);
+        });
+        $usage = self::$objects->get(Usage::class);
+        $this->setQuotaSnapshotField('$.rates.browse.remaining', 20);
+        $worker->execute();
+        self::assertSame(0, $itemCalls);
+        self::assertSame(0, $analyticsCalls);
+        self::assertSame(0, (int)$this->stored(PriceQueue::TABLE, 'listing_id', $id)['attempts']);
+        self::assertSame(20, $usage->remaining(Usage::BROWSE));
+        self::assertSame(0, $usage->quota(Usage::BROWSE)['refresh_remaining']);
+
+        $this->ageQuotaLookup();
+        $worker->execute();
+        $worker->execute();
+        self::assertSame(1, $analyticsCalls);
+        self::assertSame(1, $itemCalls);
+        $listing = $this->stored(Listing::TABLE, 'id', $id);
+        self::assertSame('111.09', $listing['price_current']);
+        self::assertNotNull($listing['last_price_checked_at']);
+        self::assertFalse($this->stored(PriceQueue::TABLE, 'listing_id', $id));
+        self::assertSame(1, (int)$this->db->fetchOne(
+            'SELECT COUNT(*) FROM ' . $this->table('ghostfrog_ebay_auction_price_history') . ' WHERE external_id = ?',
+            [$external]
+        ));
+        self::assertSame(39, $usage->quota(Usage::BROWSE)['refresh_remaining']);
+    }
+
+    public function testProviderExhaustionAndReserveOnlyEvidenceAvoidRepeatedLookups(): void
+    {
+        $this->sales(5);
+        $id = $this->listing(['sale_type' => 'bin', 'end_time' => null]);
+        $this->updateViews();
+        $itemCalls = 0;
+        $analyticsCalls = 0;
+        $reported = 20;
+        $worker = $this->browseWorker(function () use (&$itemCalls): array {
+            ++$itemCalls;
+            return [404, [], []];
+        }, 99, function () use (&$analyticsCalls, &$reported): array {
+            ++$analyticsCalls;
+            return $this->analyticsResponse($reported);
+        });
+        $usage = self::$objects->get(Usage::class);
+        $this->setQuotaSnapshotField('$.rates.browse.remaining', 20);
+        $this->ageQuotaLookup();
+        $worker->execute();
+        $this->ageQuotaLookup();
+        $worker->execute();
+        $browse = $usage->quota(Usage::BROWSE);
+        self::assertSame(1, $analyticsCalls);
+        self::assertSame(20, $browse['remaining']);
+        self::assertSame('discovery_reserve', $browse['refresh_pause_reason']);
+        self::assertSame($browse['reset_at'], $browse['refresh_retry_at']);
+
+        $this->seedBrowseQuota(99);
+        $this->setQuotaSnapshotField('$.rates.browse.remaining', 0);
+        $this->ageQuotaLookup();
+        $reported = 0;
+        $worker->execute();
+        $this->ageQuotaLookup();
+        $worker->execute();
+        $browse = $usage->quota(Usage::BROWSE);
+        self::assertSame(2, $analyticsCalls);
+        self::assertSame(0, $itemCalls);
+        self::assertSame(0, $browse['remaining']);
+        self::assertSame('provider_exhausted', $browse['pause_reason']);
+        self::assertSame($browse['reset_at'], $browse['retry_at']);
+        self::assertSame(0, (int)$this->stored(PriceQueue::TABLE, 'listing_id', $id)['attempts']);
+    }
+
+    public function testQuotaEvidenceCannotLiftAuthenticationOrProviderThrottlePause(): void
+    {
+        $this->sales(5);
+        $id = $this->listing(['sale_type' => 'bin', 'end_time' => null]);
+        $this->updateViews();
+        $calls = 0;
+        $worker = $this->browseWorker(function () use (&$calls): array {
+            ++$calls;
+            return [403, [], []];
+        });
+        $worker->execute();
+        $usage = self::$objects->get(Usage::class);
+        $reset = $usage->quota(Usage::BROWSE)['reset_at'];
+        $lookup = $usage->beginLookup();
+        $usage->saveDailyRates([Usage::BROWSE => $this->dailyRate(95, $reset)], time(), $lookup);
+        $worker->execute();
+        self::assertSame(1, $calls);
+        self::assertSame(Pause::AUTHENTICATION, self::$objects->get(Pause::class)->state()['reason']);
+
+        $throttle = $usage->recordThrottle(Usage::BROWSE, ['Retry-After' => '120']);
+        $lookup = $usage->beginLookup();
+        $usage->saveDailyRates([Usage::BROWSE => $this->dailyRate(90, $reset)], time(), $lookup);
+        $browse = $usage->quota(Usage::BROWSE);
+        self::assertSame(90, $browse['reported_remaining']);
+        self::assertSame('provider_throttle', $browse['refresh_pause_reason']);
+        self::assertSame($throttle->retryAt, $browse['refresh_retry_at']);
+        self::assertSame(0, $browse['refresh_remaining']);
+        self::assertSame(0, (int)$this->stored(PriceQueue::TABLE, 'listing_id', $id)['attempts']);
+    }
+
+    public function testCachedAnalyticsResponseCannotRestoreCredits(): void
+    {
+        $this->sales(5);
+        $this->listing(['sale_type' => 'bin', 'end_time' => null]);
+        $this->updateViews();
+        $itemCalls = 0;
+        $analyticsCalls = 0;
+        $worker = $this->browseWorker(function () use (&$itemCalls): array {
+            ++$itemCalls;
+            return [404, [], []];
+        }, 99, function () use (&$analyticsCalls): array {
+            ++$analyticsCalls;
+            [$status, $body] = $this->analyticsResponse(60);
+            return [$status, $body, ['Age' => '120']];
+        });
+        $this->setQuotaSnapshotField('$.rates.browse.remaining', 0);
+        $this->ageQuotaLookup();
+        $worker->execute();
+        $this->ageQuotaLookup();
+        $worker->execute();
+        $usage = self::$objects->get(Usage::class);
+        self::assertSame(1, $analyticsCalls);
+        self::assertSame(0, $itemCalls);
+        self::assertSame(99, $usage->quota(Usage::BROWSE)['reported_remaining']);
+        self::assertSame('local_exhausted', $usage->quota(Usage::BROWSE)['pause_reason']);
+        self::assertSame('analytics_retry', $usage->quota(Usage::ANALYTICS)['pause_reason']);
     }
 
     public function testBinDeliveryDeduplicatesAndRevalidatesThePurchasePrice(): void
@@ -648,7 +855,7 @@ final class OpportunityIndexingTest extends TestCase
         self::assertSame($expected, $data['items'][0]['price_freshness']);
     }
 
-    private function browseWorker(callable $response, int $remaining = 100): RefreshWorker
+    private function browseWorker(callable $response, int $remaining = 100, ?callable $analytics = null): RefreshWorker
     {
         $encryptor = self::$objects->get(EncryptorInterface::class);
         $this->setWorkerConfig('ghostfrog_ebay/general/enabled', '1');
@@ -665,8 +872,10 @@ final class OpportunityIndexingTest extends TestCase
         $body = [];
         $headers = [];
         $curl = $this->createMock(Curl::class);
-        $curl->method('get')->willReturnCallback(function (string $url) use ($response, &$status, &$body, &$headers): void {
-            [$status, $body, $headers] = $response($url);
+        $curl->method('get')->willReturnCallback(function (string $url) use ($response, $analytics, &$status, &$body, &$headers): void {
+            [$status, $body, $headers] = str_contains($url, '/developer/analytics/')
+                ? ($analytics ?? static fn () => self::fail('An unexpected Analytics lookup ran.'))()
+                : $response($url);
         });
         $curl->expects(self::never())->method('post');
         $curl->method('getStatus')->willReturnCallback(static function () use (&$status): int { return $status; });
@@ -674,7 +883,8 @@ final class OpportunityIndexingTest extends TestCase
         $curl->method('getHeaders')->willReturnCallback(static function () use (&$headers): array { return $headers; });
         $factory = $this->createMock(CurlFactory::class);
         $factory->method('create')->willReturn($curl);
-        $browse = self::$objects->create(BrowseClient::class, ['curlFactory' => $factory]);
+        $quota = self::$objects->create(DailyQuota::class, ['curlFactory' => $factory]);
+        $browse = self::$objects->create(BrowseClient::class, ['curlFactory' => $factory, 'quota' => $quota]);
         return self::$objects->create(RefreshWorker::class, ['browse' => $browse]);
     }
 
@@ -698,10 +908,49 @@ final class OpportunityIndexingTest extends TestCase
     private function seedBrowseQuota(int $remaining): void
     {
         $this->db->delete($this->table('ghostfrog_ebay_api_quota'));
-        $this->db->insert($this->table('ghostfrog_ebay_api_quota'), ['bucket' => Usage::ANALYTICS]);
+        $usage = self::$objects->get(Usage::class);
+        $lookup = $usage->beginLookup();
         $now = time();
-        $rate = ['limit' => 100, 'remaining' => $remaining, 'reported_remaining' => $remaining, 'reset_at' => $now + 300];
-        self::$objects->get(Usage::class)->saveDailyRates([Usage::BROWSE => $rate, Usage::TRADING => $rate], $now);
+        $rate = $this->dailyRate($remaining, $now + 300);
+        $usage->saveDailyRates([Usage::BROWSE => $rate, Usage::TRADING => $rate], $now, $lookup);
+    }
+
+    private function dailyRate(int $remaining, int $reset): array
+    {
+        return ['limit' => 100, 'remaining' => $remaining, 'reported_remaining' => $remaining, 'reset_at' => $reset];
+    }
+
+    private function analyticsResponse(int $browseRemaining): array
+    {
+        $usage = self::$objects->get(Usage::class);
+        $rates = [];
+        foreach (['Buy' => [Usage::BROWSE, 'Browse', 'buy.browse'],
+            'Trading' => [Usage::TRADING, 'TradingAPI', 'GetItem']] as $context => [$bucket, $api, $resource]) {
+            $state = $usage->quota($bucket);
+            $rates[] = ['apiContext' => $context, 'apiName' => $api, 'resources' => [
+                ['name' => $resource, 'rates' => [[
+                    'limit' => 100,
+                    'remaining' => $bucket === Usage::BROWSE ? $browseRemaining : $state['reported_remaining'],
+                    'reset' => gmdate(DATE_ATOM, $state['reset_at']),
+                    'timeWindow' => 86400,
+                ]]],
+            ]];
+        }
+        return [200, ['rateLimits' => $rates], []];
+    }
+
+    private function ageQuotaLookup(): void
+    {
+        $this->setQuotaSnapshotField('$.lookup_started_at', time() - Usage::RECONCILE_SECONDS - 1);
+    }
+
+    private function setQuotaSnapshotField(string $path, int $value): void
+    {
+        $table = $this->db->quoteIdentifier($this->table('ghostfrog_ebay_api_quota'));
+        $this->db->query(
+            "UPDATE $table SET daily_snapshot = JSON_SET(daily_snapshot, ?, CAST(? AS UNSIGNED)) WHERE bucket = ?",
+            [$path, $value, Usage::ANALYTICS]
+        );
     }
 
     private function enableAlerts(): void

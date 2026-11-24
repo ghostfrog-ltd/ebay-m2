@@ -139,8 +139,9 @@ final class BrowseClient
         string $path = 'item_summary/search'
     ): ?array
     {
-        $this->quota->refreshIfDue();
-        $this->usage->requireAvailable(Usage::BROWSE);
+        $itemRefresh = $service === Usage::ITEM_REFRESH;
+        $this->quota->refreshIfDue(Usage::BROWSE, $itemRefresh);
+        $this->usage->requireAvailable(Usage::BROWSE, $itemRefresh);
         $token = $this->token->get();
         $client = $this->curlFactory->create();
         $client->setTimeout(10);
@@ -150,8 +151,8 @@ final class BrowseClient
             'X-EBAY-C-MARKETPLACE-ID' => 'EBAY_GB',
         ]);
         $query = http_build_query($params, '', '&', PHP_QUERY_RFC3986);
-        $this->usage->reserve($service);
-        $client->get(self::API . self::BROWSE . $path . ($query === '' ? '' : '?' . $query));
+        $url = self::API . self::BROWSE . $path . ($query === '' ? '' : '?' . $query);
+        $this->usage->send($service, static fn () => $client->get($url));
         $status = (int)$client->getStatus();
         if ($status === 429) {
             throw $this->usage->recordThrottle(Usage::BROWSE, $client->getHeaders());

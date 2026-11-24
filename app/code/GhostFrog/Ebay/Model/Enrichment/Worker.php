@@ -46,7 +46,7 @@ final class Worker
 
         $unprocessed = [];
         try {
-            $this->quota->refreshIfDue();
+            $this->quota->refreshIfDue(Usage::TRADING);
             $batchSize = (int)($this->config->getValue('ghostfrog_ebay/listings/gf_attr_backfill_limit') ?? 20);
             $limit = min($batchSize, $this->usage->remaining(Usage::TRADING));
             if ($limit <= 0) {
