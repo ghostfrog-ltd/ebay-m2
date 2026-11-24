@@ -138,7 +138,7 @@ final class Usage
                 continue;
             }
             $floor = $itemRefresh && $candidate === self::BROWSE ? self::discoveryReserve($rate['limit']) : 0;
-            if ($rate['remaining'] <= $floor && $rate['reported_remaining'] > $floor) {
+            if ($this->needsPressureLookup($rate, $floor)) {
                 return true;
             }
         }
@@ -243,13 +243,13 @@ final class Usage
         $used = $rate['limit'] - $rate['reported_remaining'];
         if ($sameWindow) {
             $previousUsed = $old['provider_used_high_water'] ?? ($old['limit'] - $old['reported_remaining']);
-            if ($used <= $previousUsed) {
-                // Cached or regressing provider counts cannot restore spent credits.
-                $remaining = min($old['remaining'], $remaining);
-            }
             $used = max($used, $previousUsed);
+            // An advancing aggregate count does not acknowledge completed local requests.
+            // Keep every committed debit until a different reset window is verified.
+            $remaining = min($old['remaining'], $remaining, max(0, $rate['limit'] - $used));
         }
         $rate['remaining'] = $remaining;
+        $rate['checked_remaining'] = $remaining;
         $rate['provider_used_high_water'] = $used;
         $rate['checked_at'] = $checkedAt;
         return $rate;
@@ -358,8 +358,8 @@ final class Usage
                     $this->lookupBlockedUntil($db, $snapshot)
                 ));
                 if ($remaining === 0 && $reason === null) {
-                    $reason = $reportedRemaining === 0 ? 'provider_exhausted' : 'local_exhausted';
-                    $retryAt = $reportedRemaining === 0 ? $resetAt : $nextLookup;
+                    $reason = $this->providerBalance($rate) === 0 ? 'provider_exhausted' : 'local_exhausted';
+                    $retryAt = $this->needsPressureLookup($rate, 0) ? $nextLookup : $resetAt;
                 }
             } else {
                 $lookupBlocked = $this->lookupBlockedUntil($db, $snapshot);
@@ -386,7 +386,7 @@ final class Usage
         $refreshRetry = $bucket === self::BROWSE ? $retryAt : 0;
         if ($reserve !== null && $remaining <= $reserve && $reason === null) {
             $refreshReason = 'discovery_reserve';
-            $refreshRetry = $reportedRemaining <= $reserve ? $resetAt : $nextLookup;
+            $refreshRetry = $this->needsPressureLookup($rate, $reserve) ? $nextLookup : $resetAt;
         }
 
         return [
@@ -445,6 +445,19 @@ final class Usage
     private function reconcileAt(?array $snapshot): int
     {
         return ($snapshot['lookup_started_at'] ?? $snapshot['checked_at'] ?? 0) + self::RECONCILE_SECONDS;
+    }
+
+    private function needsPressureLookup(array $rate, int $floor): bool
+    {
+        $observed = $this->providerBalance($rate);
+        return $rate['remaining'] <= $floor && $observed > $floor
+            && ($rate['checked_remaining'] ?? $observed) > $floor;
+    }
+
+    private function providerBalance(array $rate): int
+    {
+        $highWater = $rate['provider_used_high_water'] ?? 0;
+        return min($rate['reported_remaining'], max(0, $rate['limit'] - $highWater));
     }
 
     private static function discoveryReserve(int $limit): int
