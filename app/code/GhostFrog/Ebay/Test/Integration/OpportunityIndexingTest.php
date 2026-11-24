@@ -549,6 +549,61 @@ final class OpportunityIndexingTest extends TestCase
         }
     }
 
+    public function testLaggingAdvancingProviderCountsKeepCompletedLocalDebits(): void
+    {
+        $this->seedBrowseQuota(100);
+        $usage = self::$objects->get(Usage::class);
+        $reset = $usage->quota(Usage::BROWSE)['reset_at'];
+        for ($call = 0; $call < 80; ++$call) {
+            $usage->send(Usage::CATEGORY_SEARCH, static fn () => null);
+        }
+        self::assertSame(20, $usage->remaining(Usage::BROWSE));
+
+        foreach ([99, 98, 97, 96] as $reported) {
+            $lookup = $usage->beginLookup();
+            self::assertSame(0, $lookup['outstanding'][Usage::BROWSE]);
+            $usage->saveDailyRates([Usage::BROWSE => $this->dailyRate($reported, $reset)], time(), $lookup);
+            $browse = $usage->quota(Usage::BROWSE);
+            self::assertSame($reported, $browse['reported_remaining']);
+            self::assertSame(20, $browse['remaining']);
+            self::assertSame(0, $browse['refresh_remaining']);
+        }
+
+        $usage->send(Usage::CATEGORY_SEARCH, static fn () => null);
+        $lookup = $usage->beginLookup();
+        $usage->saveDailyRates([Usage::BROWSE => $this->dailyRate(95, $reset)], time(), $lookup);
+        self::assertSame(19, $usage->remaining(Usage::BROWSE));
+
+        $lookup = $usage->beginLookup();
+        $usage->saveDailyRates([Usage::BROWSE => $this->dailyRate(18, $reset)], time(), $lookup);
+        self::assertSame(18, $usage->remaining(Usage::BROWSE));
+    }
+
+    public function testHistoricalBrowseDiscrepancyCannotGrantSameWindowCredits(): void
+    {
+        $this->seedBrowseQuota(100);
+        $usage = self::$objects->get(Usage::class);
+        $reset = $usage->quota(Usage::BROWSE)['reset_at'];
+        $this->setQuotaSnapshotField('$.rates.browse.limit', 5000);
+        $this->setQuotaSnapshotField('$.rates.browse.reported_remaining', 4990);
+        $this->setQuotaSnapshotField('$.rates.browse.provider_used_high_water', 10);
+        $this->setQuotaSnapshotField('$.rates.browse.checked_remaining', 4990);
+        $this->setQuotaSnapshotField('$.rates.browse.remaining', 0);
+        $this->ageQuotaLookup();
+        self::assertTrue($usage->lookupIsDue(Usage::BROWSE, itemRefresh: true));
+
+        $lookup = $usage->beginLookup();
+        $usage->saveDailyRates([Usage::BROWSE => $this->dailyRate(2110, $reset, 5000)], time(), $lookup);
+        $browse = $usage->quota(Usage::BROWSE);
+        self::assertSame(2110, $browse['reported_remaining']);
+        self::assertSame(0, $browse['remaining']);
+        self::assertSame(0, $browse['refresh_remaining']);
+        self::assertSame('local_exhausted', $browse['pause_reason']);
+        self::assertSame($reset, $browse['retry_at']);
+        $this->ageQuotaLookup();
+        self::assertFalse($usage->lookupIsDue(Usage::BROWSE, itemRefresh: true));
+    }
+
     public function testQuotaResetRejectsExpiredRatesAndKeepsCrossingReservations(): void
     {
         $this->seedBrowseQuota(100);
@@ -572,7 +627,7 @@ final class OpportunityIndexingTest extends TestCase
         });
     }
 
-    public function testRefreshRecoversAfterSameWindowReconciliationWithoutDuplicateWork(): void
+    public function testRefreshRecoversAtVerifiedResetWithoutDuplicateWork(): void
     {
         $this->sales(5);
         $id = $this->listing(['sale_type' => 'bin', 'end_time' => null]);
@@ -580,12 +635,13 @@ final class OpportunityIndexingTest extends TestCase
         $this->updateViews();
         $itemCalls = 0;
         $analyticsCalls = 0;
+        $nextReset = null;
         $worker = $this->browseWorker(function () use (&$itemCalls, $external): array {
             ++$itemCalls;
             return [200, $this->binItem($external, '111.09'), []];
-        }, 99, function () use (&$analyticsCalls): array {
+        }, 99, function () use (&$analyticsCalls, &$nextReset): array {
             ++$analyticsCalls;
-            return $this->analyticsResponse(60);
+            return $this->analyticsResponse(60, $nextReset);
         });
         $usage = self::$objects->get(Usage::class);
         $this->setQuotaSnapshotField('$.rates.browse.remaining', 20);
@@ -598,8 +654,20 @@ final class OpportunityIndexingTest extends TestCase
 
         $this->ageQuotaLookup();
         $worker->execute();
+        $this->ageQuotaLookup();
         $worker->execute();
         self::assertSame(1, $analyticsCalls);
+        self::assertSame(0, $itemCalls);
+        self::assertSame(20, $usage->remaining(Usage::BROWSE));
+        self::assertSame(60, $usage->quota(Usage::BROWSE)['reported_remaining']);
+
+        $expiredReset = time() - 1;
+        $this->setQuotaSnapshotField('$.rates.browse.reset_at', $expiredReset);
+        $this->setQuotaSnapshotField('$.refresh_at', $expiredReset);
+        $nextReset = time() + 86400;
+        $worker->execute();
+        $worker->execute();
+        self::assertSame(2, $analyticsCalls);
         self::assertSame(1, $itemCalls);
         $listing = $this->stored(Listing::TABLE, 'id', $id);
         self::assertSame('111.09', $listing['price_current']);
@@ -915,12 +983,12 @@ final class OpportunityIndexingTest extends TestCase
         $usage->saveDailyRates([Usage::BROWSE => $rate, Usage::TRADING => $rate], $now, $lookup);
     }
 
-    private function dailyRate(int $remaining, int $reset): array
+    private function dailyRate(int $remaining, int $reset, int $limit = 100): array
     {
-        return ['limit' => 100, 'remaining' => $remaining, 'reported_remaining' => $remaining, 'reset_at' => $reset];
+        return ['limit' => $limit, 'remaining' => $remaining, 'reported_remaining' => $remaining, 'reset_at' => $reset];
     }
 
-    private function analyticsResponse(int $browseRemaining): array
+    private function analyticsResponse(int $browseRemaining, ?int $browseReset = null): array
     {
         $usage = self::$objects->get(Usage::class);
         $rates = [];
@@ -931,7 +999,7 @@ final class OpportunityIndexingTest extends TestCase
                 ['name' => $resource, 'rates' => [[
                     'limit' => 100,
                     'remaining' => $bucket === Usage::BROWSE ? $browseRemaining : $state['reported_remaining'],
-                    'reset' => gmdate(DATE_ATOM, $state['reset_at']),
+                    'reset' => gmdate(DATE_ATOM, $bucket === Usage::BROWSE ? ($browseReset ?? $state['reset_at']) : $state['reset_at']),
                     'timeWindow' => 86400,
                 ]]],
             ]];

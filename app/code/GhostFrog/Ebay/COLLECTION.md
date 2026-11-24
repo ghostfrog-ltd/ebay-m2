@@ -41,17 +41,25 @@ The first Trading or Browse job in each eBay quota window requests the current
 limits and remaining calls from Developer Analytics. Magento saves each
 observation in MySQL and reserves a credit before sending a request. If
 Magento exhausts its balance or refresh reaches the discovery reserve while
-the latest eBay observation indicated more capacity, the next due job can
-trigger a reconciliation. Reconciliation runs at most once every 15 minutes
-under that condition. If eBay confirms exhaustion or reports only the discovery
-reserve, the affected jobs wait until reset.
+the latest eBay observation indicated more capacity, a due job can trigger an
+Analytics lookup. Pressure-triggered lookups are at least 15 minutes apart.
+Once a lookup has recorded the balance at that threshold, affected jobs wait
+until the provider reset. Discovery can continue using its reserved credits.
 
 Magento deducts calls outstanding when the Analytics request starts and any
 reservations made while it is running. A timeout with an uncertain outcome is
-also held against the allowance. Duplicate or regressing provider counts cannot
-restore credits. eBay reports aggregate usage, so other clients sharing the
-application can still consume calls between observations. Magento counts
-attempts by UTC date, while eBay counts against its own reset window.
+also held against the allowance. eBay documents aggregate application usage
+without a freshness guarantee or per-request acknowledgement. Even an advancing
+count can lag completed local calls. Within the same provider reset window, an
+observation can lower the local balance. Only a verified new window can provide
+fresh credits. Magento counts attempts by UTC date, while eBay counts against
+its own reset window.
+
+The issue #10 observation of 2,110 Browse calls remaining at eBay with zero
+local credits cannot safely grant a top-up. Magento can show that discrepancy
+and resume with the next verified window. A system that ran the earlier
+reconciliation build should take this correction at a verified reset because
+the stored balance cannot identify credits that build already restored.
 
 If eBay throttles a client, Magento honours `Retry-After` when supplied and
 otherwise uses the saved reset. A failed or partial lookup is retried after a
