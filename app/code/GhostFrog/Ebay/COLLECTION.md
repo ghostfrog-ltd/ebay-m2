@@ -269,3 +269,28 @@ opportunities, quota pauses and alert outcomes in `var/log/system.log`.
 Run the monitoring cron group in DDEV to check registration and execution.
 
     ddev exec php bin/magento cron:run --group=ghostfrog_ebay_monitoring
+
+### Stale Apple auction checks
+
+The optional **Check Stale Near-Close Apple Auctions** setting defaults to
+off. After `setup:upgrade`, the same monitoring cron can check stale Apple
+auctions missing from the active Opportunities index. It uses the current
+eligibility rules, effective grade, sold comps and configured profit target.
+Combined listings need a stored auction bid. Candidates are ranked within a
+bounded, rotating scan by time remaining and indicative profit at that bid.
+Only the usual indexer and alert rules act on the fresh observation.
+
+The pilot defaults to a 24-hour window, five candidates per run and 100
+Browse attempts per verified eBay quota window. Due opportunities go first.
+Candidate checks preserve the discovery reserve plus one regular refresh
+batch of headroom. A listing gets one candidate dispatch. Quota and
+authentication deferrals leave it eligible for a later check, while any HTTP
+request sent still counts against the Browse budget. A staged observation can
+retry a failed index transaction without another request. Once indexed, the
+listing follows regular opportunity monitoring.
+
+Preview the next selection and see the exclusion counts and current quota
+without enqueuing work or contacting eBay. The preview works with the feature
+disabled. Batch outcomes and Browse attempt counts appear in `var/log/system.log`.
+
+    ddev exec php bin/magento ghostfrog:ebay:opportunities:preview-auctions

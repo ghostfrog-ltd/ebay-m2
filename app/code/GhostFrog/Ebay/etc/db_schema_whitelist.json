@@ -117,7 +117,8 @@
             "text_condition_checked": true,
             "text_condition_checked_at": true,
             "price_bin_current": true,
-            "last_price_checked_at": true
+            "last_price_checked_at": true,
+            "candidate_attempted_at": true
         },
         "index": {
             "GHOSTFROG_EBAY_AUCTION_LISTINGS_SOURCE_ID": true,
@@ -596,7 +597,9 @@
             "listing_id": true,
             "due_at": true,
             "available_at": true,
-            "attempts": true
+            "attempts": true,
+            "candidate_profit": true,
+            "candidate_observation": true
         },
         "index": {
             "GHOSTFROG_EBAY_PRICE_REFRESH_QUEUE_AVAILABLE_AT": true

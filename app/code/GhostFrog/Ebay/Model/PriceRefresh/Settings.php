@@ -54,6 +54,26 @@ final class Settings
         return $this->number('refresh_batch', 10, 100);
     }
 
+    public function prequalificationEnabled(): bool
+    {
+        return $this->config->isSetFlag(self::PREFIX . 'prequalification_enabled');
+    }
+
+    public function candidateHours(): int
+    {
+        return $this->number('prequalification_hours', 24, 24);
+    }
+
+    public function candidateBatch(): int
+    {
+        return $this->number('prequalification_batch', 5, 5);
+    }
+
+    public function candidateBudget(): int
+    {
+        return $this->number('prequalification_budget', 100, 100);
+    }
+
     public function notificationBatch(): int
     {
         return $this->number('notification_batch', 10, 100);

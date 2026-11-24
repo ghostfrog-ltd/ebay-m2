@@ -26,6 +26,7 @@ final class Usage
     public const CATEGORY_SEARCH = 'ebay_base_fetch_category_items_v1';
     public const SELLER_SEARCH = 'ebay_base_seller_items_v1';
     public const ITEM_REFRESH = 'ebay_base_fetch_items_by_id_v1';
+    public const CANDIDATE_REFRESH = 'ebay_auction_prequalification_v1';
     public const TOKEN = 'ebay_auth_v1';
     public const RATE_LIMITS = 'ebay_developer_analytics_v1';
 
@@ -35,6 +36,7 @@ final class Usage
         self::CATEGORY_SEARCH => self::BROWSE,
         self::SELLER_SEARCH => self::BROWSE,
         self::ITEM_REFRESH => self::BROWSE,
+        self::CANDIDATE_REFRESH => self::BROWSE,
         self::TOKEN => self::OAUTH,
         self::RATE_LIMITS => self::ANALYTICS,
     ];
@@ -60,9 +62,21 @@ final class Usage
         return $this->state($this->resource->getConnection(), $bucket, time());
     }
 
-    public function send(string $service, callable $request): void
+    public function requireCandidateAvailable(int $budget, int $headroom): void
     {
-        $reservation = $this->reserve($service);
+        $state = $this->quota(self::BROWSE);
+        $this->check(self::BROWSE, $state, true);
+        $this->checkCandidate($state, $budget, $headroom);
+    }
+
+    public function send(
+        string $service,
+        callable $request,
+        int $candidateBudget = 0,
+        int $refreshHeadroom = 0,
+        ?callable $onReservation = null
+    ): void {
+        $reservation = $this->reserve($service, $candidateBudget, $refreshHeadroom, $onReservation);
         $answered = false;
         try {
             $request();
@@ -74,8 +88,12 @@ final class Usage
         }
     }
 
-    public function reserve(string $service): ?string
-    {
+    public function reserve(
+        string $service,
+        int $candidateBudget = 0,
+        int $refreshHeadroom = 0,
+        ?callable $onReservation = null
+    ): ?string {
         $bucket = self::SERVICES[$service];
         $db = $this->resource->getConnection();
         $db->beginTransaction();
@@ -87,7 +105,14 @@ final class Usage
             $this->lockBucket($db, $bucket);
             $now = time();
             $state = $this->state($db, $bucket, $now);
-            $this->check($bucket, $state, $service === self::ITEM_REFRESH);
+            $isCandidate = $service === self::CANDIDATE_REFRESH;
+            $this->check($bucket, $state, $service === self::ITEM_REFRESH || $isCandidate);
+            if ($isCandidate) {
+                $this->checkCandidate($state, $candidateBudget, $refreshHeadroom);
+                if ($onReservation !== null) {
+                    $onReservation();
+                }
+            }
             $reservation = null;
             if ($this->usesLiveQuota($bucket)) {
                 $snapshot = $this->snapshot($db);
@@ -97,6 +122,9 @@ final class Usage
                 $pending = $snapshot['pending'][$bucket] ?? [];
                 $snapshot['pending'][$bucket] = array_filter($pending, static fn (int $until): bool => $until > $now);
                 $snapshot['pending'][$bucket][$reservation] = $state['reset_at'] + self::REQUEST_SETTLE_SECONDS;
+                if ($isCandidate) {
+                    $snapshot['candidate_refresh'] = ['reset_at' => $state['reset_at'], 'calls' => $state['candidate_calls'] + 1];
+                }
                 $this->writeSnapshot($db, $snapshot);
             }
             $db->insertOnDuplicate(
@@ -342,6 +370,7 @@ final class Usage
         $checkedAt = null;
         $reportedRemaining = null;
         $nextLookup = null;
+        $candidateCalls = 0;
 
         if ($this->usesLiveQuota($bucket)) {
             $snapshot = $this->snapshot($db);
@@ -351,6 +380,9 @@ final class Usage
                 $remaining = $rate['remaining'];
                 $reportedRemaining = $rate['reported_remaining'];
                 $resetAt = $rate['reset_at'];
+                if ($bucket === self::BROWSE && ($snapshot['candidate_refresh']['reset_at'] ?? null) === $resetAt) {
+                    $candidateCalls = (int)$snapshot['candidate_refresh']['calls'];
+                }
                 $checkedAt = $rate['checked_at'] ?? $snapshot['checked_at'];
                 $nextLookup = min($resetAt, max(
                     $now + 1,
@@ -402,6 +434,7 @@ final class Usage
             'refresh_remaining' => $reserve === null ? null : ($refreshReason === null ? $remaining - $reserve : 0),
             'refresh_retry_at' => $refreshRetry,
             'refresh_pause_reason' => $refreshReason,
+            'candidate_calls' => $candidateCalls,
             'services' => $services,
         ];
     }
@@ -412,6 +445,16 @@ final class Usage
         if ($retryAt > 0) {
             $reason = $itemRefresh ? $state['refresh_pause_reason'] : $state['pause_reason'];
             throw new QuotaUnavailable($bucket, $retryAt, $reason);
+        }
+    }
+
+    private function checkCandidate(array $state, int $budget, int $headroom): void
+    {
+        if ($state['candidate_calls'] >= $budget) {
+            throw new QuotaUnavailable(self::BROWSE, $state['reset_at'], 'prequalification_budget');
+        }
+        if ($state['refresh_remaining'] <= $headroom) {
+            throw new QuotaUnavailable(self::BROWSE, $state['reset_at'], 'opportunity_headroom');
         }
     }
 

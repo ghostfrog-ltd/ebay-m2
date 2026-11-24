@@ -40,6 +40,10 @@
                 <notification_batch>10</notification_batch>
                 <auction_alert_age>60</auction_alert_age>
                 <notifications_enabled>0</notifications_enabled>
+                <prequalification_enabled>0</prequalification_enabled>
+                <prequalification_hours>24</prequalification_hours>
+                <prequalification_batch>5</prequalification_batch>
+                <prequalification_budget>100</prequalification_budget>
             </opportunity_monitoring>
             <email>
                 <alert_smtp_pass backend_model="Magento\Config\Model\Config\Backend\Encrypted"/>

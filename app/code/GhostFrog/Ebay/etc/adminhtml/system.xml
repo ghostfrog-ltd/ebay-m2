@@ -335,6 +335,23 @@
                     <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
                     <comment>Requires a Slack Webhook URL in the Slack configuration below. Alerts are disabled by default.</comment>
                 </field>
+                <field id="prequalification_enabled" translate="label comment" type="select" sortOrder="90" showInDefault="1">
+                    <label>Check Stale Near-Close Apple Auctions</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>Disabled by default. Uses stored bids to select listings for a one-time Browse price check.</comment>
+                </field>
+                <field id="prequalification_hours" translate="label" type="text" sortOrder="100" showInDefault="1">
+                    <label>Apple Auction Window (Hours)</label>
+                    <validate>required-entry validate-digits validate-number-range number-range-1-24</validate>
+                </field>
+                <field id="prequalification_batch" translate="label" type="text" sortOrder="110" showInDefault="1">
+                    <label>Maximum Candidate Checks per Cron Run</label>
+                    <validate>required-entry validate-digits validate-number-range number-range-1-5</validate>
+                </field>
+                <field id="prequalification_budget" translate="label" type="text" sortOrder="120" showInDefault="1">
+                    <label>Maximum Candidate Browse Calls per eBay Quota Window</label>
+                    <validate>required-entry validate-digits validate-number-range number-range-1-100</validate>
+                </field>
             </group>
             <group id="comps" translate="label" sortOrder="56" showInDefault="1">
                 <label>Comps and Pricing</label>

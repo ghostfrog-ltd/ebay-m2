@@ -12,6 +12,8 @@ use Magento\Framework\DB\Sql\Expression;
 
 final class Listings
 {
+    public const FRESH_OBSERVATION = 'COALESCE(a.last_seen_at, a.first_seen) >= UTC_TIMESTAMP() - INTERVAL 24 HOUR';
+
     public function __construct(private readonly ResourceConnection $resource)
     {
     }
@@ -86,10 +88,10 @@ final class Listings
         yield from $this->batches($select);
     }
 
-    private function liveSelect(): Select
+    public function liveSelect(bool $requireFresh = true): Select
     {
         $freshUntil = 'DATE_ADD(COALESCE(a.last_seen_at, a.first_seen), INTERVAL 24 HOUR)';
-        return $this->select()
+        $select = $this->select()
             ->columns([
                 'sale_type' => 'a.sale_type',
                 'url' => 'a.url',
@@ -102,8 +104,8 @@ final class Listings
             ->where('a.status = ?', 'live')
             ->where('COALESCE(a.finalized, 0) = 0 AND COALESCE(a.final_price, 0) <= 0')
             ->where('(a.end_time > UTC_TIMESTAMP() OR (a.end_time IS NULL AND a.sale_type = ?))', 'bin')
-            ->where('a.price_current > 0')
-            ->where('COALESCE(a.last_seen_at, a.first_seen) >= UTC_TIMESTAMP() - INTERVAL 24 HOUR');
+            ->where('a.price_current > 0');
+        return $requireFresh ? $select->where(self::FRESH_OBSERVATION) : $select;
     }
 
     private function batches(Select $select): iterable
