@@ -8,7 +8,6 @@ use DateTimeImmutable;
 use DateTimeZone;
 use GhostFrog\Ebay\Model\Api\QuotaUnavailable;
 use GhostFrog\Ebay\Model\Collection\BrowseClient;
-use Magento\Framework\App\CacheInterface;
 use Magento\Framework\Lock\LockManagerInterface;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
@@ -17,7 +16,6 @@ use Throwable;
 final class Worker
 {
     private const LOCK = 'ghostfrog_ebay_price_refresh';
-    private const PAUSE = 'ghostfrog_ebay_price_refresh_pause';
 
     public function __construct(
         private readonly Settings $settings,
@@ -25,7 +23,7 @@ final class Worker
         private readonly BrowseClient $browse,
         private readonly Observation $observation,
         private readonly LockManagerInterface $lock,
-        private readonly CacheInterface $cache,
+        private readonly Pause $pause,
         private readonly LoggerInterface $logger
     ) {
     }
@@ -40,7 +38,8 @@ final class Worker
             $minute = intdiv(time(), 60);
             $counts = ['updated' => 0, 'unavailable' => 0, 'discarded' => $this->queue->discardObsolete($limit), 'retry' => 0];
             $queued = $this->queue->enqueueDue($limit, $minute);
-            if (!$this->cache->load(self::PAUSE)) {
+            $paused = $this->pause->state();
+            if ($paused === null) {
                 $deadline = hrtime(true) + 25_000_000_000;
                 foreach ($this->queue->due($limit, $minute) as $job) {
                     if (hrtime(true) >= $deadline) {
@@ -49,12 +48,11 @@ final class Worker
                     try {
                         ++$counts[$this->refresh((int)$job['listing_id'])];
                     } catch (QuotaUnavailable $exception) {
-                        $this->pause($exception->retryAt);
-                        $this->logger->info($exception->getMessage());
+                        $paused = ['reason' => $exception->reason, 'retry_at' => $exception->retryAt];
                         break;
                     } catch (Throwable $exception) {
                         if ($exception instanceof RuntimeException && in_array($exception->getCode(), [401, 403], true)) {
-                            $this->pause(time() + 3600);
+                            $paused = $this->pause->holdAuthentication();
                             $this->logger->warning('GhostFrog price refresh paused after eBay authentication failure.');
                             break;
                         }
@@ -68,7 +66,10 @@ final class Worker
             }
             $metrics = $this->queue->metrics();
             if ($queued || array_sum($counts) || (int)$metrics['depth'] || (int)$metrics['stale']) {
-                $this->logger->info('GhostFrog price refresh batch.', ['queued' => $queued] + $counts + $metrics);
+                $this->logger->info('GhostFrog price refresh batch.', ['queued' => $queued] + $counts + $metrics + [
+                    'pause_reason' => $paused['reason'] ?? null,
+                    'retry_at' => isset($paused['retry_at']) ? gmdate(DATE_ATOM, $paused['retry_at']) : null,
+                ]);
             }
         } finally {
             $this->lock->unlock(self::LOCK);
@@ -93,10 +94,5 @@ final class Worker
             return 'discarded';
         }
         return $fields['status'] === 'live' ? 'updated' : 'unavailable';
-    }
-
-    private function pause(int $until): void
-    {
-        $this->cache->save('1', self::PAUSE, [], max(1, $until - time()));
     }
 }

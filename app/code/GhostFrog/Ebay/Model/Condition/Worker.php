@@ -54,15 +54,26 @@ final class Worker
         $counts = ['claimed' => 0, 'assessed' => 0, 'skipped' => 0, 'stale' => 0, 'failed' => 0, 'deferred' => 0];
         $pending = [];
         $failures = [];
+        $normalExhausted = false;
+        $backfillTried = false;
         try {
             do {
                 $size = min($waveSize, $limit - $counts['claimed']);
-                $messages = $this->queue->claim($size, $stage->queue());
+                // Give ordinary jobs the first wave, then allow backfill to progress under load.
+                $backfill = $enabled && ($normalExhausted || (!$backfillTried && $counts['claimed'] > 0));
+                $messages = $this->queue->claim($size, $backfill ? $stage->backfillQueue() : $stage->queue());
+                if ($backfill) {
+                    $backfillTried = true;
+                } else {
+                    $normalExhausted = count($messages) < $size;
+                }
                 $counts['claimed'] += count($messages);
                 $pending += array_column($messages, null, QueueManagement::MESSAGE_QUEUE_RELATION_ID);
-                $this->processWave($stage, $enabled, $messages, $pending, $failures, $counts);
-            } while (count($messages) === $size && $counts['claimed'] < $limit && $counts['deferred'] === 0
-                && hrtime(true) - $started < self::START_WAVES_FOR_SECONDS * 1_000_000_000);
+                $this->processWave($stage, $enabled, $backfill, $messages, $pending, $failures, $counts);
+            } while ((!$normalExhausted || ($enabled && (!$backfill || count($messages) === $size)))
+                && $counts['claimed'] < $limit && $counts['deferred'] === 0
+                && (($enabled && !$backfillTried)
+                    || hrtime(true) - $started < self::START_WAVES_FOR_SECONDS * 1_000_000_000));
         } finally {
             try {
                 foreach ($failures as $delivery => $message) {
@@ -89,6 +100,7 @@ final class Worker
     private function processWave(
         Stage $stage,
         bool $enabled,
+        bool $backfill,
         array $messages,
         array &$pending,
         array &$failures,
@@ -106,7 +118,7 @@ final class Worker
                 if (!$enabled) {
                     $completed = $this->store->complete($stage, $delivery, $id, null, null);
                     ++$counts[$completed ? 'skipped' : 'stale'];
-                } elseif (($listing = $this->store->listing($id, $stage)) === null) {
+                } elseif (($listing = $this->store->listing($id, $stage, $backfill)) === null) {
                     $this->queue->acknowledge($delivery);
                     ++$counts['stale'];
                 } else {
@@ -138,12 +150,13 @@ final class Worker
                     throw $assessment;
                 }
                 $result = ['model' => $this->settings->model($stage), 'assessment' => $assessment];
+                $result['assessment']['model_called'] = !isset($job['missing']);
                 if ($stage === Stage::Visual) {
                     $result['assessment']['image_count'] = count($job['images']);
                     $result['urls'] = $job['urls'];
                 }
                 $listing = $listings[$delivery];
-                $completed = $this->store->complete($stage, $delivery, (string)$listing['id'], $listing, $result);
+                $completed = $this->store->complete($stage, $delivery, (string)$listing['id'], $listing, $result, $backfill);
                 ++$counts[$completed ? 'assessed' : 'stale'];
                 unset($pending[$delivery]);
             } catch (OllamaUnavailable $error) {
@@ -176,7 +189,7 @@ final class Worker
             $captured = $this->textEvidence($attrs);
             $job = ['evidence' => ['title' => $title, 'captured_text' => $captured], 'images' => []];
             if ($title === '' && $captured === []) {
-                $job['missing'] = Assessment::missing($stage, 'No listing text available.');
+                $job['missing'] = Assessment::missing($stage, Assessment::NO_TEXT);
             }
             return $job;
         }

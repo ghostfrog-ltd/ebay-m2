@@ -64,10 +64,12 @@ final class TradingClient
                 <IncludeItemSpecifics>true</IncludeItemSpecifics>
             </GetItemRequest>
             XML;
-        $this->quota->refreshIfDue();
+        $this->quota->refreshIfDue(Usage::TRADING);
         // A timeout can still consume a provider call, so count each attempt before sending it.
-        $this->usage->reserve($saleOutcome ? 'ebay_ended_v1' : Usage::ATTRIBUTES);
-        $client->post('https://api.ebay.com/ws/api.dll', $body);
+        $this->usage->send(
+            $saleOutcome ? 'ebay_ended_v1' : Usage::ATTRIBUTES,
+            static fn () => $client->post('https://api.ebay.com/ws/api.dll', $body)
+        );
         $status = (int)$client->getStatus();
         if ($status === 429) {
             throw $this->usage->recordThrottle(Usage::TRADING, $client->getHeaders());

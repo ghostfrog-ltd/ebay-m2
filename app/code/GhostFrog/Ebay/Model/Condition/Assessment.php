@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace GhostFrog\Ebay\Model\Condition;
 
+use Magento\Framework\DB\Adapter\AdapterInterface;
+use Magento\Framework\DB\Sql\Expression;
 use RuntimeException;
 
 final class Assessment
 {
     public const GRADES = ['A', 'B', 'C', 'D', 'unknown'];
+    public const NO_TEXT = 'No listing text available.';
     private const TEXT_SEVERE = [
         'accessory_only', 'functional_fault', 'locked_device', 'missing_major_part',
         'parts_or_repair', 'vague_or_untested', 'water_damage',
@@ -90,6 +93,28 @@ final class Assessment
             'review_required' => true,
             'notes' => $notes,
         ]);
+    }
+
+    /** The listing ID expression comes from the caller's SQL, never from request input. */
+    public static function modelResultExists(
+        AdapterInterface $db,
+        string $table,
+        Stage $stage,
+        string $listingId
+    ): Expression {
+        $result = $db->select()->from($table, [new Expression('1')])
+            ->where("listing_id = $listingId")
+            ->where(self::modelResultCondition($db, $stage));
+        return new Expression("EXISTS ($result)");
+    }
+
+    public static function modelResultCondition(AdapterInterface $db, Stage $stage): string
+    {
+        $legacyResult = $stage === Stage::Visual
+            ? 'JSON_LENGTH(image_urls) > 0'
+            : $db->quoteInto("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(assessment, '$.notes')), '') <> ?", self::NO_TEXT);
+        return "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(assessment, '$.model_called')), "
+            . "IF($legacyResult, 'true', 'false')) = 'true'";
     }
 
     /**

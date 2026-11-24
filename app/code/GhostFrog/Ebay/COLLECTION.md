@@ -37,22 +37,36 @@ Run Magento's `setup:upgrade` to apply the quota schema. Under **GhostFrog
 Search fields show eBay's daily limit, the balance at lookup, Magento's
 available balance, and the eBay reset time.
 
-The first Trading or Browse job in each eBay quota day requests the current
-limits and remaining calls from Developer Analytics. Magento saves the
-response in MySQL and deducts its own attempts before sending requests.
-Other clients using the same application can consume calls between daily
-lookups. If eBay throttles a client, Magento honors `Retry-After` when supplied
-and otherwise uses the saved reset. If the lookup fails or a quota is missing,
-the affected job waits for verified limits. A failed or partial lookup is
-retried after a five-minute cooldown, subject to eBay's throttle. A partial
-response preserves previously verified balances until their reset. An
-interrupted collection source keeps its previous successful scrape time.
+The first Trading or Browse job in each eBay quota window requests the current
+limits and remaining calls from Developer Analytics. Magento saves each
+observation in MySQL and reserves a credit before sending a request. If
+Magento exhausts its balance or refresh reaches the discovery reserve while
+the latest eBay observation indicated more capacity, the next due job can
+trigger a reconciliation. Reconciliation runs at most once every 15 minutes
+under that condition. If eBay confirms exhaustion or reports only the discovery
+reserve, the affected jobs wait until reset.
+
+Magento deducts calls outstanding when the Analytics request starts and any
+reservations made while it is running. A timeout with an uncertain outcome is
+also held against the allowance. Duplicate or regressing provider counts cannot
+restore credits. eBay reports aggregate usage, so other clients sharing the
+application can still consume calls between observations. Magento counts
+attempts by UTC date, while eBay counts against its own reset window.
+
+If eBay throttles a client, Magento honours `Retry-After` when supplied and
+otherwise uses the saved reset. A failed or partial lookup is retried after a
+five-minute cooldown, subject to eBay's throttle. A partial response preserves
+previously verified balances until their reset. An interrupted collection source
+keeps its previous successful scrape time. Refresh authentication failures keep
+their own one-hour cooldown.
 
 Developer Analytics does not provide the OAuth token allowance here. Magento
 logs token requests and applies the configured OAuth client-credentials budget.
 
-The following command reads the saved quota and usage. Add `--live-ebay` to
-refresh the quota if due and eBay API calls are enabled.
+The following command shows the provider balance and observation time,
+Magento's available balance, the discovery reserve, the refresh-usable
+balance, and the separate pause and retry reasons. Add `--live-ebay` to request
+an eligible reconciliation when API calls are enabled.
 
     ddev php bin/magento ghostfrog:ebay:api-health
 

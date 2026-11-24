@@ -80,7 +80,9 @@ final class Queue
         $db->beginTransaction();
         try {
             if ($result !== null) {
-                $row = $db->fetchRow($db->select()->from($table, ['raw_attrs'])
+                $row = $db->fetchRow($db->select()->from($table, [
+                    'raw_attrs', 'text_condition_checked', 'visual_condition_checked',
+                ])
                     ->where('id = ?', $listingId)->forUpdate());
                 if ($row && !$this->isComplete($row['raw_attrs'])) {
                     $existing = json_decode((string)$row['raw_attrs']);
@@ -90,7 +92,7 @@ final class Queue
                         '_trading_enriched_at' => gmdate('Y-m-d\TH:i:s\Z'),
                     ]);
                     $success = in_array($result['status'], ['ok', 'no_attrs'], true);
-                    $next = $success ? $this->condition->next() : null;
+                    $next = $success ? $this->condition->next(null, $row) : null;
                     if ($success && $next === null) {
                         $raw[self::COMPLETED_KEY] = gmdate('Y-m-d\TH:i:s\Z');
                     }

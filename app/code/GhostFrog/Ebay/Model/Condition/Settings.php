@@ -21,12 +21,12 @@ final class Settings
         return $this->config->isSetFlag(self::CONFIG . $stage->value . '_enabled');
     }
 
-    public function next(?Stage $after = null): ?Stage
+    public function next(?Stage $after = null, array $listing = []): ?Stage
     {
-        if ($after === null && $this->enabled(Stage::Text)) {
+        if ($after === null && empty($listing['text_condition_checked']) && $this->enabled(Stage::Text)) {
             return Stage::Text;
         }
-        if ($after !== Stage::Visual && $this->enabled(Stage::Visual)) {
+        if ($after !== Stage::Visual && empty($listing['visual_condition_checked']) && $this->enabled(Stage::Visual)) {
             return Stage::Visual;
         }
         return null;

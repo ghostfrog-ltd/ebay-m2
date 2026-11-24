@@ -26,16 +26,16 @@ final class DailyQuota
     ) {
     }
 
-    public function refreshIfDue(): void
+    public function refreshIfDue(?string $bucket = null, bool $itemRefresh = false): void
     {
-        if (!$this->usage->dailyLookupIsDue()
+        if (!$this->usage->lookupIsDue($bucket, $itemRefresh)
             || !$this->config->isSetFlag('ghostfrog_ebay/ebay_api/gf_allow_ebay_api')
             || !$this->lock->lock(self::LOCK, 0)
         ) {
             return;
         }
         try {
-            if ($this->usage->dailyLookupIsDue()) {
+            if ($this->usage->lookupIsDue($bucket, $itemRefresh)) {
                 $this->lookup();
             }
         } catch (QuotaUnavailable $exception) {
@@ -63,6 +63,7 @@ final class DailyQuota
             'Accept' => 'application/json',
         ]);
         $this->usage->reserve(Usage::RATE_LIMITS);
+        $lookup = $this->usage->beginLookup();
         $client->get(self::URL);
         $status = (int)$client->getStatus();
         if ($status === 429) {
@@ -72,13 +73,43 @@ final class DailyQuota
             throw new RuntimeException('eBay quota lookup failed.', $status);
         }
 
-        $payload = json_decode($client->getBody(), true, 512, JSON_THROW_ON_ERROR);
         $checkedAt = time();
+        $headers = array_change_key_case($client->getHeaders());
+        $responseDate = isset($headers['date']) ? strtotime((string)$headers['date']) : false;
+        if ((int)($headers['age'] ?? 0) > 0
+            || ($responseDate !== false && ($responseDate < $lookup['started_at'] - 5 || $responseDate > $checkedAt + 5))
+        ) {
+            $this->logger->warning('GhostFrog ignored an eBay quota response with a stale HTTP date or cache age.');
+            $this->usage->postponeLookup($checkedAt + Usage::LOOKUP_RETRY_SECONDS);
+            return;
+        }
+        $payload = json_decode($client->getBody(), true, 512, JSON_THROW_ON_ERROR);
         $rates = $this->dailyRates($payload['rateLimits'] ?? [], $checkedAt);
         if ($rates === []) {
             throw new RuntimeException('eBay returned no current daily quota for Trading GetItem or Browse search.');
         }
-        $this->usage->saveDailyRates($rates, $checkedAt);
+        $accepted = $this->usage->saveDailyRates($rates, $checkedAt, $lookup);
+        if (count($accepted) < 2) {
+            $this->logger->info('GhostFrog received a partial or stale eBay quota observation.', [
+                'accepted_buckets' => array_keys($accepted),
+            ]);
+        }
+        foreach ($accepted as $bucket => $rate) {
+            $state = $this->usage->quota($bucket);
+            $this->logger->info('GhostFrog reconciled eBay quota.', [
+                'bucket' => $bucket,
+                'reported_remaining' => $rate['reported_remaining'],
+                'observed_at' => gmdate(DATE_ATOM, $checkedAt),
+                'effective_remaining' => $state['remaining'],
+                'reset_at' => gmdate(DATE_ATOM, $rate['reset_at']),
+                'discovery_reserve' => $state['discovery_reserve'],
+                'refresh_remaining' => $state['refresh_remaining'],
+                'pause_reason' => $state['pause_reason'],
+                'refresh_pause_reason' => $state['refresh_pause_reason'],
+                'retry_at' => $state['retry_at'] ? gmdate(DATE_ATOM, $state['retry_at']) : null,
+                'refresh_retry_at' => $state['refresh_retry_at'] ? gmdate(DATE_ATOM, $state['refresh_retry_at']) : null,
+            ]);
+        }
     }
 
     private function dailyRates(array $apis, int $checkedAt): array
