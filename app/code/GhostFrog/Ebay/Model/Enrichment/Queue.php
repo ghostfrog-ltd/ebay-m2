@@ -97,6 +97,57 @@ final class Queue
         return $claimed;
     }
 
+    /**
+     * Queue unenriched listings that have no open delivery, up to $buffer waiting for active sources.
+     * Only new listings are enqueued on save, so this picks up imported history and the listings of
+     * a source that was switched back on. Sold listings come first because comps use them, then live
+     * ones; unsold endings are skipped. eBay only returns items for about 90 days after they end.
+     */
+    public function topUp(int $buffer): int
+    {
+        $db = $this->resource->getConnection();
+        $open = $db->select()
+            ->from(['m' => $this->resource->getTableName('queue_message')], [
+                'listing_id' => new \Magento\Framework\DB\Sql\Expression('CAST(m.body AS UNSIGNED)'),
+            ])
+            ->join(['s' => $this->resource->getTableName('queue_message_status')], 's.message_id = m.id', [])
+            ->join(['q' => $this->resource->getTableName('queue')], 'q.id = s.queue_id', [])
+            ->where('q.name = ?', self::NAME)
+            ->where('s.status IN (?)', [
+                QueueManagement::MESSAGE_STATUS_NEW,
+                QueueManagement::MESSAGE_STATUS_IN_PROGRESS,
+                QueueManagement::MESSAGE_STATUS_RETRY_REQUIRED,
+            ]);
+        $waiting = (int)$db->fetchOne($db->select()
+            ->from(['o' => $open], new \Magento\Framework\DB\Sql\Expression('COUNT(*)'))
+            ->join(['listing' => $this->listingTable()], 'listing.id = o.listing_id', [])
+            ->where(Source::activeListing($this->resource, 'listing')));
+        if ($waiting >= $buffer) {
+            return 0;
+        }
+
+        $ids = $db->fetchCol($db->select()
+            ->from(['a' => $this->listingTable()], 'id')
+            ->joinLeft(['o' => $open], 'o.listing_id = a.id', [])
+            ->where('o.listing_id IS NULL')
+            ->where("JSON_EXTRACT(a.raw_attrs, '$." . self::STATUS_KEY . "') IS NULL")
+            ->where("a.status IN ('sold', 'live', 'unknown')")
+            ->where("a.external_id REGEXP '^([0-9]{1,20}|v[12][|][0-9]{1,20}[|]0)$'")
+            ->where('COALESCE(a.end_time, a.last_seen_at) >= UTC_TIMESTAMP() - INTERVAL 90 DAY')
+            ->where(Source::activeListing($this->resource))
+            ->order([
+                new \Magento\Framework\DB\Sql\Expression("a.status = 'sold' DESC"),
+                new \Magento\Framework\DB\Sql\Expression("a.status = 'live' DESC"),
+                new \Magento\Framework\DB\Sql\Expression('COALESCE(a.end_time, a.last_seen_at) ASC'),
+                'a.id ASC',
+            ])
+            ->limit($buffer - $waiting));
+        foreach ($ids as $id) {
+            $this->enqueue((string)$id);
+        }
+        return count($ids);
+    }
+
     public function acknowledge(int $relationId): void
     {
         $this->queue->changeStatus([$relationId], QueueManagement::MESSAGE_STATUS_COMPLETE);

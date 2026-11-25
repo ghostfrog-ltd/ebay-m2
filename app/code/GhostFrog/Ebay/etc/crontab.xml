@@ -8,6 +8,9 @@
         <job name="ghostfrog_ebay_enrich_listings" instance="GhostFrog\Ebay\Model\Enrichment\Worker" method="execute">
             <schedule>*/5 * * * *</schedule>
         </job>
+        <job name="ghostfrog_ebay_enqueue_enrichment" instance="GhostFrog\Ebay\Model\Enrichment\Worker" method="enqueue">
+            <schedule>*/5 * * * *</schedule>
+        </job>
         <job name="ghostfrog_ebay_generate_model_keys" instance="GhostFrog\Ebay\Model\ModelKey\Worker" method="execute">
             <schedule>*/5 * * * *</schedule>
         </job>

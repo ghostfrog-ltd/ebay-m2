@@ -86,6 +86,12 @@ an eligible reconciliation when API calls are enabled.
 New listings enqueue their MySQL listing ID in Magento's
 `ghostfrog.ebay.enrichment` queue in the same transaction that saves the listing.
 A refresh of an existing listing uses the same ID and enqueues no second job.
+Every five minutes a top-up job also queues unenriched listings that have no
+open delivery, keeping five batches waiting for active sources. This covers
+imported history and the listings of a source that is switched back on, with
+no manual requeue. Sold listings go first because comps use them, then live
+ones. Unsold endings, paused sources and items more than 90 days past their
+end or last sighting are skipped.
 
 Magento cron checks the queue every five minutes. To let it process jobs,
 enable **Enable Attribute Backfill** and **Allow eBay API Calls**, and configure
@@ -215,8 +221,15 @@ The extension must also be enabled. The worker needs **Allow eBay API Calls**
 and a Trading API token.
 
 The enqueue cron checks every five minutes for unpriced listings between
-30 minutes and 90 days past their stored end time. A separate worker handles up
-to 20 due jobs every five minutes with the existing Trading API quota. It
+30 minutes and 90 days past their stored end time. Search results carry no end
+time for Good 'Til Cancelled Buy It Now listings, so a listing without one
+qualifies once it has been missing from search for two days and was last seen
+within 90 days. Listings with a known end time are queued first. The
+no-end-time backlog follows, oldest first, so items nearest eBay's 90-day
+cutoff are checked before they expire. The queue is a buffer: running out of
+quota leaves jobs in place, and each enqueue run re-adds any eligible listing
+that is not queued. A separate worker handles up to 100 due jobs every five
+minutes with the existing Trading API quota. It
 restores active listings only when eBay returns a future end time. Temporary
 errors retry with backoff. An inaccessible item keeps its local evidence and
 has an unconfirmed outcome unless it was already marked ended.

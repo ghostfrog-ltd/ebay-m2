@@ -32,6 +32,27 @@ final class Worker
     ) {
     }
 
+    /** Keeps five batches waiting so imported and re-enabled listings are enriched without manual requeues. */
+    public function enqueue(): void
+    {
+        if (!$this->config->isSetFlag('ghostfrog_ebay/general/enabled')
+            || !$this->config->isSetFlag('ghostfrog_ebay/heartbeat/gf_heartbeat_enable_attrs')
+            || !$this->lock->lock(self::LOCK . '_enqueue', 0)
+        ) {
+            return;
+        }
+        try {
+            $this->queue->topUp(5 * $this->batchSize());
+        } finally {
+            $this->lock->unlock(self::LOCK . '_enqueue');
+        }
+    }
+
+    private function batchSize(): int
+    {
+        return max(1, (int)($this->config->getValue('ghostfrog_ebay/listings/gf_attr_backfill_limit') ?? 20));
+    }
+
     public function execute(): void
     {
         if (!$this->config->isSetFlag('ghostfrog_ebay/general/enabled')
@@ -47,8 +68,7 @@ final class Worker
         $unprocessed = [];
         try {
             $this->quota->refreshIfDue(Usage::TRADING);
-            $batchSize = (int)($this->config->getValue('ghostfrog_ebay/listings/gf_attr_backfill_limit') ?? 20);
-            $limit = min($batchSize, $this->usage->remaining(Usage::TRADING));
+            $limit = min($this->batchSize(),$this->usage->remaining(Usage::TRADING));
             if ($limit <= 0) {
                 return;
             }
@@ -75,7 +95,10 @@ final class Worker
                         break;
                     }
                     $this->queue->failOrRetry($message);
-                    $this->logger->warning('GhostFrog Trading enrichment failed for delivery {id}.', ['id' => $id]);
+                    $this->logger->warning('GhostFrog Trading enrichment failed for delivery {id}: {error}', [
+                        'id' => $id,
+                        'error' => $e->getMessage(),
+                    ]);
                 }
                 unset($unprocessed[$id]);
             }

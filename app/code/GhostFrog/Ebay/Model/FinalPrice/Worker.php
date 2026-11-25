@@ -18,7 +18,8 @@ final class Worker
 {
     private const LOCK = 'ghostfrog_ebay_final_price';
     private const AUTH_COOLDOWN = 'ghostfrog_ebay_final_price_auth';
-    private const BATCH_SIZE = 20;
+    /** 100 checks every five minutes is up to 28,800 Trading calls a day; the quota guard stops it sooner. */
+    private const BATCH_SIZE = 100;
 
     public function __construct(
         private readonly ScopeConfigInterface $config,

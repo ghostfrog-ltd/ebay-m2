@@ -32,7 +32,15 @@ final class Queue
         $select = $this->eligible()->reset(Select::COLUMNS)->columns(['listing_id' => 'id'], 'a')
             ->columns(['available_at' => new Expression('UTC_TIMESTAMP()')])
             ->joinLeft(['q' => $table], 'q.listing_id = a.id', [])
-            ->where('q.listing_id IS NULL')->order(['a.end_time ASC', 'a.id ASC'])->limit($buffer - $ready);
+            // Listings with a known end time come first so fresh sales reach comps quickly. The
+            // no-end-time backlog follows, oldest first, so items nearest eBay's cutoff are not lost.
+            ->where('q.listing_id IS NULL')
+            ->order([
+                new Expression('a.end_time IS NULL'),
+                new Expression('COALESCE(a.end_time, a.last_seen_at) ASC'),
+                'a.id ASC',
+            ])
+            ->limit($buffer - $ready);
         $rows = $db->fetchAll($select);
         if ($rows !== []) {
             $db->insertOnDuplicate($table, $rows, ['listing_id']);
@@ -120,7 +128,12 @@ final class Queue
             ->from(['a' => $this->resource->getTableName(Listing::TABLE)], [
                 'id', 'external_id', 'status', 'end_time', 'last_seen_at', 'backfill_check_count',
             ])
-            ->where('a.end_time BETWEEN UTC_TIMESTAMP() - INTERVAL 90 DAY AND UTC_TIMESTAMP() - INTERVAL 30 MINUTE')
+            // Search results carry no end time for Good 'Til Cancelled listings, so one that has dropped
+            // out of search for two days is checked as if it ended when it was last seen. eBay keeps
+            // ended items for about 90 days, which bounds both cases.
+            ->where('(a.end_time BETWEEN UTC_TIMESTAMP() - INTERVAL 90 DAY AND UTC_TIMESTAMP() - INTERVAL 30 MINUTE
+                OR a.end_time IS NULL
+                    AND a.last_seen_at BETWEEN UTC_TIMESTAMP() - INTERVAL 90 DAY AND UTC_TIMESTAMP() - INTERVAL 2 DAY)')
             ->where('(a.final_price IS NULL OR a.final_price <= 0)')
             ->where("(a.status IN ('live', 'active', 'open', 'ending', 'ending_soon', 'unknown') AND COALESCE(a.finalized, 0) = 0
                 OR a.status = 'parse_failed' OR (a.status = 'ended' AND a.backfill_checked_at IS NULL))")
