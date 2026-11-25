@@ -20,6 +20,9 @@ final class Usage
     public const ANALYTICS = 'analytics';
     public const LOOKUP_RETRY_SECONDS = 300;
     public const RECONCILE_SECONDS = 900;
+    // Analytics can report the previous window's usage just after a reset.
+    public const RESET_GRACE_SECONDS = 300;
+    public const CHECK_INTERVAL_SECONDS = 3600;
     private const REQUEST_SETTLE_SECONDS = 60;
 
     public const ATTRIBUTES = 'ebay_attributes_v1';
@@ -226,7 +229,8 @@ final class Usage
             foreach ($rates as $bucket => $rate) {
                 $old = $snapshot['rates'][$bucket] ?? null;
                 if ($rate['reset_at'] <= $checkedAt || ($old !== null
-                    && ($rate['reset_at'] < $old['reset_at'] || ($rate['reset_at'] !== $old['reset_at'] && $old['reset_at'] > $checkedAt)))
+                    && ($rate['reset_at'] < $old['reset_at'] || ($rate['reset_at'] !== $old['reset_at']
+                        && $old['reset_at'] + self::RESET_GRACE_SECONDS > $checkedAt)))
                 ) {
                     continue;
                 }
@@ -234,7 +238,11 @@ final class Usage
                 $snapshot['rates'][$bucket] = $accepted[$bucket] = $rate;
             }
             $currentRates = array_filter($snapshot['rates'] ?? [], static fn (array $rate): bool => $rate['reset_at'] > $checkedAt);
-            $refreshAt = min(array_column($currentRates, 'reset_at') ?: [PHP_INT_MAX]);
+            $refreshAt = min(
+                min(array_column($currentRates, 'reset_at') ?: [PHP_INT_MAX - self::RESET_GRACE_SECONDS])
+                    + self::RESET_GRACE_SECONDS,
+                $checkedAt + self::CHECK_INTERVAL_SECONDS
+            );
             if (!isset($accepted[self::TRADING], $accepted[self::BROWSE])) {
                 $refreshAt = min($refreshAt, $checkedAt + self::LOOKUP_RETRY_SECONDS);
             }
@@ -266,19 +274,19 @@ final class Usage
         }
         // A call outstanding when the lookup started may already be counted by eBay.
         // Deduct it anyway because the response has no per-call acknowledgement.
-        $unconfirmed = $lookup['outstanding'][$bucket] + $sinceStart;
-        $remaining = max(0, $rate['reported_remaining'] - $unconfirmed);
-        $used = $rate['limit'] - $rate['reported_remaining'];
+        $unseen = $lookup['outstanding'][$bucket];
         if ($sameWindow) {
-            $previousUsed = $old['provider_used_high_water'] ?? ($old['limit'] - $old['reported_remaining']);
-            $used = max($used, $previousUsed);
-            // An advancing aggregate count does not acknowledge completed local requests.
-            // Keep every committed debit until a different reset window is verified.
-            $remaining = min($old['remaining'], $remaining, max(0, $rate['limit'] - $used));
+            // eBay's aggregate count can trail recent requests, so calls made since
+            // the previous reading stay debited. Older calls are taken as counted,
+            // which lets credits eBay reports later in the window be used.
+            $sincePrevious = isset($old['sequence_at_check'])
+                ? ($lookup['sequence'][$bucket] ?? 0) - $old['sequence_at_check']
+                : ($old['checked_remaining'] ?? $old['remaining']) - $old['remaining'];
+            $unseen = max($unseen, $sincePrevious);
         }
-        $rate['remaining'] = $remaining;
-        $rate['checked_remaining'] = $remaining;
-        $rate['provider_used_high_water'] = $used;
+        $rate['remaining'] = max(0, $rate['reported_remaining'] - $unseen - $sinceStart);
+        $rate['checked_remaining'] = $rate['remaining'];
+        $rate['sequence_at_check'] = $lookup['sequence'][$bucket] ?? 0;
         $rate['checked_at'] = $checkedAt;
         return $rate;
     }
@@ -370,6 +378,7 @@ final class Usage
         $checkedAt = null;
         $reportedRemaining = null;
         $nextLookup = null;
+        $nextCheck = null;
         $candidateCalls = 0;
 
         if ($this->usesLiveQuota($bucket)) {
@@ -389,9 +398,14 @@ final class Usage
                     $this->reconcileAt($snapshot),
                     $this->lookupBlockedUntil($db, $snapshot)
                 ));
+                $nextCheck = min($resetAt, max(
+                    $now + 1,
+                    $this->refreshAt($snapshot),
+                    $this->lookupBlockedUntil($db, $snapshot)
+                ));
                 if ($remaining === 0 && $reason === null) {
-                    $reason = $this->providerBalance($rate) === 0 ? 'provider_exhausted' : 'local_exhausted';
-                    $retryAt = $this->needsPressureLookup($rate, 0) ? $nextLookup : $resetAt;
+                    $reason = $rate['reported_remaining'] === 0 ? 'provider_exhausted' : 'local_exhausted';
+                    $retryAt = $this->needsPressureLookup($rate, 0) ? $nextLookup : $nextCheck;
                 }
             } else {
                 $lookupBlocked = $this->lookupBlockedUntil($db, $snapshot);
@@ -418,7 +432,7 @@ final class Usage
         $refreshRetry = $bucket === self::BROWSE ? $retryAt : 0;
         if ($reserve !== null && $remaining <= $reserve && $reason === null) {
             $refreshReason = 'discovery_reserve';
-            $refreshRetry = $this->needsPressureLookup($rate, $reserve) ? $nextLookup : $resetAt;
+            $refreshRetry = $this->needsPressureLookup($rate, $reserve) ? $nextLookup : $nextCheck;
         }
 
         return [
@@ -478,7 +492,8 @@ final class Usage
 
     private function refreshAt(?array $snapshot): int
     {
-        $scheduled = $snapshot['refresh_at'] ?? 0;
+        // Re-read eBay's balance periodically so credits it reports later in the window are used.
+        $scheduled = min($snapshot['refresh_at'] ?? 0, ($snapshot['checked_at'] ?? 0) + self::CHECK_INTERVAL_SECONDS);
         // Older snapshots scheduled partial responses for the next eBay reset.
         return isset($snapshot['rates'][self::TRADING], $snapshot['rates'][self::BROWSE])
             ? $scheduled
@@ -492,15 +507,9 @@ final class Usage
 
     private function needsPressureLookup(array $rate, int $floor): bool
     {
-        $observed = $this->providerBalance($rate);
+        $observed = $rate['reported_remaining'];
         return $rate['remaining'] <= $floor && $observed > $floor
             && ($rate['checked_remaining'] ?? $observed) > $floor;
-    }
-
-    private function providerBalance(array $rate): int
-    {
-        $highWater = $rate['provider_used_high_water'] ?? 0;
-        return min($rate['reported_remaining'], max(0, $rate['limit'] - $highWater));
     }
 
     private static function discoveryReserve(int $limit): int

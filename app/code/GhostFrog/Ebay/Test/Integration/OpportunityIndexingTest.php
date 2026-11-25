@@ -540,22 +540,23 @@ final class OpportunityIndexingTest extends TestCase
             $other->send(Usage::CATEGORY_SEARCH, static fn () => null);
             $duplicate = $usage->beginLookup();
             $usage->saveDailyRates([Usage::BROWSE => $this->dailyRate(80, $reset)], time(), $duplicate);
-            self::assertSame(77, $usage->remaining(Usage::BROWSE));
+            // Both calls by the other client since the previous reading stay debited.
+            self::assertSame(78, $usage->remaining(Usage::BROWSE));
 
             $stale = $other->beginLookup();
             $current = $usage->beginLookup();
             $usage->saveDailyRates([Usage::BROWSE => $this->dailyRate(76, $reset)], time(), $current);
             self::assertSame([], $other->saveDailyRates([Usage::BROWSE => $this->dailyRate(10, $reset)], time(), $stale));
-            $regression = $usage->beginLookup();
-            $usage->saveDailyRates([Usage::BROWSE => $this->dailyRate(90, $reset)], time(), $regression);
+            $credit = $usage->beginLookup();
+            $usage->saveDailyRates([Usage::BROWSE => $this->dailyRate(90, $reset)], time(), $credit);
             self::assertSame(90, $usage->quota(Usage::BROWSE)['reported_remaining']);
-            self::assertSame(76, $usage->remaining(Usage::BROWSE));
+            self::assertSame(90, $usage->remaining(Usage::BROWSE));
         } finally {
             $otherResource->closeConnection();
         }
     }
 
-    public function testLaggingAdvancingProviderCountsKeepCompletedLocalDebits(): void
+    public function testSameWindowReadingsKeepCallsSincePreviousReadingDebited(): void
     {
         $this->seedBrowseQuota(100);
         $usage = self::$objects->get(Usage::class);
@@ -565,49 +566,57 @@ final class OpportunityIndexingTest extends TestCase
         }
         self::assertSame(20, $usage->remaining(Usage::BROWSE));
 
-        foreach ([99, 98, 97, 96] as $reported) {
-            $lookup = $usage->beginLookup();
-            self::assertSame(0, $lookup['outstanding'][Usage::BROWSE]);
-            $usage->saveDailyRates([Usage::BROWSE => $this->dailyRate($reported, $reset)], time(), $lookup);
-            $browse = $usage->quota(Usage::BROWSE);
-            self::assertSame($reported, $browse['reported_remaining']);
-            self::assertSame(20, $browse['remaining']);
-            self::assertSame(0, $browse['refresh_remaining']);
-        }
+        $lookup = $usage->beginLookup();
+        self::assertSame(0, $lookup['outstanding'][Usage::BROWSE]);
+        $usage->saveDailyRates([Usage::BROWSE => $this->dailyRate(99, $reset)], time(), $lookup);
+        $browse = $usage->quota(Usage::BROWSE);
+        self::assertSame(99, $browse['reported_remaining']);
+        self::assertSame(19, $browse['remaining']);
+        self::assertSame(0, $browse['refresh_remaining']);
 
         $usage->send(Usage::CATEGORY_SEARCH, static fn () => null);
         $lookup = $usage->beginLookup();
         $usage->saveDailyRates([Usage::BROWSE => $this->dailyRate(95, $reset)], time(), $lookup);
-        self::assertSame(19, $usage->remaining(Usage::BROWSE));
+        self::assertSame(94, $usage->remaining(Usage::BROWSE));
 
         $lookup = $usage->beginLookup();
         $usage->saveDailyRates([Usage::BROWSE => $this->dailyRate(18, $reset)], time(), $lookup);
         self::assertSame(18, $usage->remaining(Usage::BROWSE));
     }
 
-    public function testHistoricalBrowseDiscrepancyCannotGrantSameWindowCredits(): void
+    public function testSameWindowCreditsReportedByEbayAreUsedAfterHourlyCheck(): void
     {
         $this->seedBrowseQuota(100);
         $usage = self::$objects->get(Usage::class);
-        $reset = $usage->quota(Usage::BROWSE)['reset_at'];
+        $reset = time() + 7200;
+        $this->setQuotaSnapshotField('$.rates.browse.reset_at', $reset);
+        $this->setQuotaSnapshotField('$.rates.trading.reset_at', $reset);
+        $this->setQuotaSnapshotField('$.refresh_at', $reset + Usage::RESET_GRACE_SECONDS);
+        // A legacy snapshot that capped local credits at a stale provider high-water mark.
         $this->setQuotaSnapshotField('$.rates.browse.limit', 5000);
-        $this->setQuotaSnapshotField('$.rates.browse.reported_remaining', 4990);
-        $this->setQuotaSnapshotField('$.rates.browse.provider_used_high_water', 10);
-        $this->setQuotaSnapshotField('$.rates.browse.checked_remaining', 4990);
+        $this->setQuotaSnapshotField('$.rates.browse.reported_remaining', 4510);
+        $this->setQuotaSnapshotField('$.rates.browse.provider_used_high_water', 4260);
+        $this->setQuotaSnapshotField('$.rates.browse.checked_remaining', 0);
         $this->setQuotaSnapshotField('$.rates.browse.remaining', 0);
+        $this->removeQuotaSnapshotField('$.rates.browse.sequence_at_check');
+        $checkedAt = time() - 600;
+        $this->setQuotaSnapshotField('$.checked_at', $checkedAt);
+        $this->setQuotaSnapshotField('$.rates.browse.checked_at', $checkedAt);
         $this->ageQuotaLookup();
-        self::assertTrue($usage->lookupIsDue(Usage::BROWSE, itemRefresh: true));
 
-        $lookup = $usage->beginLookup();
-        $usage->saveDailyRates([Usage::BROWSE => $this->dailyRate(2110, $reset, 5000)], time(), $lookup);
         $browse = $usage->quota(Usage::BROWSE);
-        self::assertSame(2110, $browse['reported_remaining']);
-        self::assertSame(0, $browse['remaining']);
-        self::assertSame(0, $browse['refresh_remaining']);
         self::assertSame('local_exhausted', $browse['pause_reason']);
-        self::assertSame($reset, $browse['retry_at']);
-        $this->ageQuotaLookup();
-        self::assertFalse($usage->lookupIsDue(Usage::BROWSE, itemRefresh: true));
+        self::assertSame($checkedAt + Usage::CHECK_INTERVAL_SECONDS, $browse['retry_at']);
+        self::assertFalse($usage->lookupIsDue(Usage::BROWSE));
+
+        $this->setQuotaSnapshotField('$.checked_at', time() - Usage::CHECK_INTERVAL_SECONDS - 1);
+        self::assertTrue($usage->lookupIsDue(Usage::BROWSE));
+        $lookup = $usage->beginLookup();
+        $usage->saveDailyRates([Usage::BROWSE => $this->dailyRate(4510, $reset, 5000)], time(), $lookup);
+        $browse = $usage->quota(Usage::BROWSE);
+        self::assertSame(4510, $browse['remaining']);
+        self::assertNull($browse['pause_reason']);
+        self::assertSame(4510 - 1000, $browse['refresh_remaining']);
     }
 
     public function testQuotaResetRejectsExpiredRatesAndKeepsCrossingReservations(): void
@@ -624,6 +633,13 @@ final class OpportunityIndexingTest extends TestCase
                 [Usage::BROWSE => $this->dailyRate(99, $expiredReset)], time(), $observation
             ));
             $nextReset = time() + 86400;
+            // eBay can still report the previous window's usage just after a reset.
+            $early = $usage->beginLookup();
+            self::assertSame([], $usage->saveDailyRates(
+                [Usage::BROWSE => $this->dailyRate(10, $nextReset)], time(), $early
+            ));
+            $expiredReset = time() - Usage::RESET_GRACE_SECONDS;
+            $this->setQuotaSnapshotField('$.rates.browse.reset_at', $expiredReset);
             $nextWindow = $usage->beginLookup();
             $usage->saveDailyRates(
                 [Usage::BROWSE => $this->dailyRate(99, $nextReset)], time(), $nextWindow
@@ -667,7 +683,7 @@ final class OpportunityIndexingTest extends TestCase
         self::assertSame(20, $usage->remaining(Usage::BROWSE));
         self::assertSame(60, $usage->quota(Usage::BROWSE)['reported_remaining']);
 
-        $expiredReset = time() - 1;
+        $expiredReset = time() - Usage::RESET_GRACE_SECONDS;
         $this->setQuotaSnapshotField('$.rates.browse.reset_at', $expiredReset);
         $this->setQuotaSnapshotField('$.refresh_at', $expiredReset);
         $nextReset = time() + 86400;
@@ -1031,7 +1047,7 @@ final class OpportunityIndexingTest extends TestCase
         $usage = self::$objects->get(Usage::class);
         self::assertSame(1, $usage->quota(Usage::BROWSE)['candidate_calls']);
 
-        $expired = time() - 1;
+        $expired = time() - Usage::RESET_GRACE_SECONDS;
         $this->setQuotaSnapshotField('$.rates.browse.reset_at', $expired);
         $this->setQuotaSnapshotField('$.refresh_at', $expired);
         $lookup = $usage->beginLookup();
@@ -1277,6 +1293,15 @@ final class OpportunityIndexingTest extends TestCase
     private function ageQuotaLookup(): void
     {
         $this->setQuotaSnapshotField('$.lookup_started_at', time() - Usage::RECONCILE_SECONDS - 1);
+    }
+
+    private function removeQuotaSnapshotField(string $path): void
+    {
+        $table = $this->db->quoteIdentifier($this->table('ghostfrog_ebay_api_quota'));
+        $this->db->query(
+            "UPDATE $table SET daily_snapshot = JSON_REMOVE(daily_snapshot, ?) WHERE bucket = ?",
+            [$path, Usage::ANALYTICS]
+        );
     }
 
     private function setQuotaSnapshotField(string $path, int $value): void

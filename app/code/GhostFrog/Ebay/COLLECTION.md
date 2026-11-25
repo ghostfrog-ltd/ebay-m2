@@ -44,22 +44,25 @@ Magento exhausts its balance or refresh reaches the discovery reserve while
 the latest eBay observation indicated more capacity, a due job can trigger an
 Analytics lookup. Pressure-triggered lookups are at least 15 minutes apart.
 Once a lookup has recorded the balance at that threshold, affected jobs wait
-until the provider reset. Discovery can continue using its reserved credits.
+for the next hourly check or the provider reset, whichever comes first. Discovery can continue using its reserved credits.
 
 Magento deducts calls outstanding when the Analytics request starts and any
 reservations made while it is running. A timeout with an uncertain outcome is
 also held against the allowance. eBay documents aggregate application usage
-without a freshness guarantee or per-request acknowledgement. Even an advancing
-count can lag completed local calls. Within the same provider reset window, an
-observation can lower the local balance. Only a verified new window can provide
-fresh credits. Magento counts attempts by UTC date, while eBay counts against
-its own reset window.
+without a freshness guarantee or per-request acknowledgement, so within the
+same reset window Magento also keeps every call made since the previous
+reading debited. Older calls are taken as counted by eBay. A later reading can
+therefore raise the local balance when eBay reports more capacity, for
+example after a stale reading. Magento counts attempts by UTC date, while
+eBay counts against its own reset window.
 
-The issue #10 observation of 2,110 Browse calls remaining at eBay with zero
-local credits cannot safely grant a top-up. Magento can show that discrepancy
-and resume with the next verified window. A system that ran the earlier
-reconciliation build should take this correction at a verified reset because
-the stored balance cannot identify credits that build already restored.
+Magento re-reads the balance at least once an hour, so a Browse or Trading
+pause for a used-up local allowance lifts at the next hourly check when eBay
+still reports capacity. Readings for a new window taken within five minutes
+of the previous reset are ignored and retried, because Analytics can still
+report the previous window's usage then. On 2026-11-25 a reading two seconds
+after the reset reported 740 Browse calls remaining and paused Browse until
+the next reset under the earlier rule that never restored same-window credits.
 
 If eBay throttles a client, Magento honours `Retry-After` when supplied and
 otherwise uses the saved reset. A failed or partial lookup is retried after a
