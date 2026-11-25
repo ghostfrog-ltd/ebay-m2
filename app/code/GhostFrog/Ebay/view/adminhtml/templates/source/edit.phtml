@@ -1,0 +1,127 @@
+<?php
+
+use GhostFrog\Ebay\Model\ResourceModel\Source;
+use Magento\Backend\Block\Template;
+use Magento\Framework\Escaper;
+
+/** @var Template $block */
+/** @var Escaper $escaper */
+$source = $block->getData('source');
+$search = $block->getData('search');
+$enabled = (int)$source['enabled'] === 1;
+$seconds = (int)$source['scrape_interval_seconds'];
+$minutes = max(Source::MIN_INTERVAL_MINUTES, (int)round($seconds / 60));
+$details = [
+    'name' => __('Name'),
+    'domain' => __('Domain'),
+    'type' => __('Type'),
+    'niche' => __('Niche'),
+    'last_scraped_at' => __('Last Scraped (UTC)'),
+    'created_at_utc' => __('Created (UTC)'),
+    'updated_at_utc' => __('Updated (UTC)'),
+];
+$url = (string)$source['base_url'];
+?>
+<form class="admin__scope-old"
+      method="post"
+      action="<?= $escaper->escapeUrl($block->getUrl('ghostfrog_ebay/source/save', ['id' => $source['id']])) ?>">
+    <input type="hidden" name="form_key" value="<?= $escaper->escapeHtmlAttr($block->getFormKey()) ?>">
+    <input type="hidden" name="revision" value="<?= $escaper->escapeHtmlAttr($block->getData('revision')) ?>">
+    <div class="page-main-actions">
+        <div class="page-actions">
+            <div class="page-actions-inner">
+                <div class="page-actions-buttons">
+                    <a class="action action-default action-back"
+                       href="<?= $escaper->escapeUrl($block->getUrl('ghostfrog_ebay/source/index')) ?>">
+                        <span><?= $escaper->escapeHtml(__('Back to Sources')) ?></span>
+                    </a>
+                    <button class="action-default" type="submit" name="back" value="edit">
+                        <span><?= $escaper->escapeHtml(__('Save and Continue Edit')) ?></span>
+                    </button>
+                    <button class="action-primary" type="submit">
+                        <span><?= $escaper->escapeHtml(__('Save Source')) ?></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="ghostfrog-listing-edit__sections">
+        <fieldset class="admin__fieldset">
+            <legend class="admin__legend"><span><?= $escaper->escapeHtml(__('Collection')) ?></span></legend>
+            <div class="admin__field admin__field-wide">
+                <label class="admin__field-label" for="source-enabled">
+                    <span><?= $escaper->escapeHtml(__('Enabled')) ?></span>
+                </label>
+                <div class="admin__field-control">
+                    <select class="admin__control-select" id="source-enabled" name="source[enabled]"
+                            aria-describedby="source-enabled-note">
+                        <option value="1" <?= $enabled ? 'selected' : '' ?>><?= $escaper->escapeHtml(__('Yes')) ?></option>
+                        <option value="0" <?= $enabled ? '' : 'selected' ?>><?= $escaper->escapeHtml(__('No')) ?></option>
+                    </select>
+                    <div class="admin__field-note" id="source-enabled-note">
+                        <?= $escaper->escapeHtml(__(
+                            'Disabling pauses all work for this source: eBay searches, Trading enrichment, condition checks, model keys, final-price lookups, opportunities, price checks and alerts. Collected listings stay in Magento, and queued work resumes when the source is enabled again.'
+                        )) ?>
+                    </div>
+                </div>
+            </div>
+            <div class="admin__field admin__field-wide _required">
+                <label class="admin__field-label" for="source-interval">
+                    <span><?= $escaper->escapeHtml(__('Scrape Interval (minutes)')) ?></span>
+                </label>
+                <div class="admin__field-control">
+                    <input class="admin__control-text" type="number" id="source-interval"
+                           name="source[interval_minutes]" required step="1"
+                           min="<?= (int)Source::MIN_INTERVAL_MINUTES ?>"
+                           max="<?= (int)Source::MAX_INTERVAL_MINUTES ?>"
+                           value="<?= (int)$minutes ?>" aria-describedby="source-interval-note">
+                    <div class="admin__field-note" id="source-interval-note">
+                        <?= $escaper->escapeHtml(__(
+                            'Minimum time between searches, within the shared scrape window. Each search uses eBay Browse API calls.'
+                        )) ?>
+                        <?php if ($seconds % 60 !== 0): ?>
+                            <?= $escaper->escapeHtml(__('Currently %1 seconds; saving rounds it to whole minutes.', $seconds)) ?>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+        <table class="admin__table-secondary">
+            <caption><?= $escaper->escapeHtml(__('Source Details')) ?></caption>
+            <tbody>
+                <?php foreach ($details as $field => $label): ?>
+                    <tr>
+                        <th scope="row"><?= $escaper->escapeHtml($label) ?></th>
+                        <td><?= $escaper->escapeHtml((string)($source[$field] ?? '') !== '' ? $source[$field] : '—') ?></td>
+                    </tr>
+                <?php endforeach; ?>
+                <?php if (preg_match('~^https?://~i', $url)): ?>
+                    <tr>
+                        <th scope="row"><?= $escaper->escapeHtml(__('Base URL')) ?></th>
+                        <td>
+                            <a href="<?= $escaper->escapeUrl($url) ?>" target="_blank" rel="noopener noreferrer">
+                                <?= $escaper->escapeHtml($url) ?>
+                            </a>
+                        </td>
+                    </tr>
+                <?php endif; ?>
+                <tr>
+                    <th scope="row"><?= $escaper->escapeHtml(__('eBay Search')) ?></th>
+                    <td>
+                        <?php if ($search === null): ?>
+                            <?= $escaper->escapeHtml(__('No search is defined for this domain, so collection skips it.')) ?>
+                        <?php elseif ($search['seller'] !== null): ?>
+                            <?= $escaper->escapeHtml(__('Seller %1, %2 queries', $search['seller'], $search['queries'])) ?>
+                        <?php else: ?>
+                            <?= $escaper->escapeHtml(__(
+                                '%1 categories, %2 queries',
+                                $search['categories'],
+                                $search['queries']
+                            )) ?>
+                        <?php endif; ?>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</form>

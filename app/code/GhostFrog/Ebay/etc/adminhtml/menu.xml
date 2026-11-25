@@ -32,5 +32,13 @@
              parent="GhostFrog_Ebay::ghostfrog"
              action="ghostfrog_ebay/opportunities/index"
              resource="GhostFrog_Ebay::opportunities"/>
+        <add id="GhostFrog_Ebay::sources"
+             title="Sources"
+             translate="title"
+             module="GhostFrog_Ebay"
+             sortOrder="40"
+             parent="GhostFrog_Ebay::ghostfrog"
+             action="ghostfrog_ebay/source/index"
+             resource="GhostFrog_Ebay::sources"/>
     </menu>
 </config>

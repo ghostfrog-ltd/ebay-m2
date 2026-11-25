@@ -6,6 +6,7 @@
             <argument name="collections" xsi:type="array">
                 <item name="ghostfrog_ebay_listing_data_source" xsi:type="string">GhostFrog\Ebay\Model\ResourceModel\Listing\Grid\Collection</item>
                 <item name="ghostfrog_ebay_opportunities_data_source" xsi:type="string">GhostFrog\Ebay\Model\ResourceModel\Opportunities\Grid\Collection</item>
+                <item name="ghostfrog_ebay_source_data_source" xsi:type="string">GhostFrog\Ebay\Model\ResourceModel\Source\Grid\Collection</item>
             </argument>
         </arguments>
     </type>
@@ -18,6 +19,12 @@
     <type name="GhostFrog\Ebay\Model\ResourceModel\Listing\Grid\Collection">
         <arguments>
             <argument name="mainTable" xsi:type="const">GhostFrog\Ebay\Model\ResourceModel\Listing::TABLE</argument>
+            <argument name="identifierName" xsi:type="string">id</argument>
+        </arguments>
+    </type>
+    <type name="GhostFrog\Ebay\Model\ResourceModel\Source\Grid\Collection">
+        <arguments>
+            <argument name="mainTable" xsi:type="const">GhostFrog\Ebay\Model\ResourceModel\Source::TABLE</argument>
             <argument name="identifierName" xsi:type="string">id</argument>
         </arguments>
     </type>

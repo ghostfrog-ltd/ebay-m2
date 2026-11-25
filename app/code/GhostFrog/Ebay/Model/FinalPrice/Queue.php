@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace GhostFrog\Ebay\Model\FinalPrice;
 
 use GhostFrog\Ebay\Model\ResourceModel\Listing;
+use GhostFrog\Ebay\Model\ResourceModel\Source;
 use Magento\Framework\App\ResourceConnection;
 use Magento\Framework\DB\Select;
 use Magento\Framework\DB\Sql\Expression;
@@ -125,7 +126,9 @@ final class Queue
                 OR a.status = 'parse_failed' OR (a.status = 'ended' AND a.backfill_checked_at IS NULL))")
             ->where("a.external_id REGEXP '^([0-9]{1,20}|v[12][|][0-9]{1,20}[|]0)$'")
             ->where("(COALESCE(a.backfill_last_reason, '') <> 'trading_item_unavailable'
-                OR a.last_seen_at > a.backfill_checked_at)");
+                OR a.last_seen_at > a.backfill_checked_at)")
+            // Queued jobs for a paused source finish without an eBay call and are refilled once re-enabled.
+            ->where(Source::activeListing($this->resource));
     }
 
     private function ensureStatus(string $status, bool $terminal): void

@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace GhostFrog\Ebay\Model\Enrichment;
 
 use GhostFrog\Ebay\Model\Condition\Settings;
+use GhostFrog\Ebay\Model\ResourceModel\Source;
 use Magento\Framework\App\ResourceConnection;
 use Magento\MysqlMq\Model\QueueManagement;
+use Magento\MysqlMq\Model\ResourceModel\Queue as MessageResource;
 use Throwable;
 
 final class Queue
@@ -19,7 +21,8 @@ final class Queue
     public function __construct(
         private readonly ResourceConnection $resource,
         private readonly QueueManagement $queue,
-        private readonly Settings $condition
+        private readonly Settings $condition,
+        private readonly MessageResource $messages
     ) {
     }
 
@@ -35,9 +38,63 @@ final class Queue
         $this->queue->addMessageToQueues($name, $listingId, [$name]);
     }
 
+    /**
+     * QueueManagement::readMessages() with deliveries for paused sources left untouched, so they
+     * neither block the oldest-first queue nor use retries, and resume once the source is enabled.
+     * Bodies that are not a stored listing ID are still claimed so the worker can reject them.
+     */
     public function claim(int $limit, string $name = self::NAME): array
     {
-        return $this->queue->readMessages($name, $limit);
+        $db = $this->resource->getConnection();
+        $select = $db->select()
+            ->from(['queue_message' => $this->resource->getTableName('queue_message')], [
+                QueueManagement::MESSAGE_TOPIC => 'topic_name',
+                QueueManagement::MESSAGE_BODY => 'body',
+            ])
+            ->join(
+                ['queue_message_status' => $this->resource->getTableName('queue_message_status')],
+                'queue_message.id = queue_message_status.message_id',
+                [
+                    QueueManagement::MESSAGE_QUEUE_RELATION_ID => 'id',
+                    QueueManagement::MESSAGE_QUEUE_ID => 'queue_id',
+                    QueueManagement::MESSAGE_ID => 'message_id',
+                    QueueManagement::MESSAGE_STATUS => 'status',
+                    QueueManagement::MESSAGE_UPDATED_AT => 'updated_at',
+                    QueueManagement::MESSAGE_NUMBER_OF_TRIALS => 'number_of_trials',
+                ]
+            )
+            ->join(
+                ['queue' => $this->resource->getTableName('queue')],
+                'queue.id = queue_message_status.queue_id',
+                [QueueManagement::MESSAGE_QUEUE_NAME => 'name']
+            )
+            ->joinLeft(
+                ['listing' => $this->listingTable()],
+                "listing.id = CAST(queue_message.body AS UNSIGNED) AND queue_message.body REGEXP '^[1-9][0-9]{0,18}$'",
+                []
+            )
+            ->where('queue_message_status.status IN (?)', [
+                QueueManagement::MESSAGE_STATUS_NEW,
+                QueueManagement::MESSAGE_STATUS_RETRY_REQUIRED,
+            ])
+            ->where('queue.name = ?', $name)
+            ->where('listing.id IS NULL OR ' . Source::activeListing($this->resource, 'listing'))
+            ->order(['queue_message_status.updated_at ASC', 'queue_message_status.id ASC'])
+            ->limit($limit);
+
+        $selected = $db->fetchAll($select);
+        // Another worker may take a delivery between the read and the update; keep only ours.
+        $taken = array_flip($this->messages->takeMessagesInProgress(
+            array_column($selected, QueueManagement::MESSAGE_QUEUE_RELATION_ID)
+        ));
+        $claimed = [];
+        foreach ($selected as $message) {
+            if (isset($taken[$message[QueueManagement::MESSAGE_QUEUE_RELATION_ID]])) {
+                $message[QueueManagement::MESSAGE_STATUS] = QueueManagement::MESSAGE_STATUS_IN_PROGRESS;
+                $claimed[] = $message;
+            }
+        }
+        return $claimed;
     }
 
     public function acknowledge(int $relationId): void

@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
+    <head>
+        <css src="GhostFrog_Ebay::css/listing-edit.css"/>
+    </head>
+    <body>
+        <referenceContainer name="content">
+            <block class="Magento\Backend\Block\Template" name="ghostfrog.ebay.source.edit"
+                   template="GhostFrog_Ebay::source/edit.phtml"/>
+        </referenceContainer>
+    </body>
+</page>

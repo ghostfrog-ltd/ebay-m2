@@ -104,7 +104,9 @@ final class Listings
             ->where('a.status = ?', 'live')
             ->where('COALESCE(a.finalized, 0) = 0 AND COALESCE(a.final_price, 0) <= 0')
             ->where('(a.end_time > UTC_TIMESTAMP() OR (a.end_time IS NULL AND a.sale_type = ?))', 'bin')
-            ->where('a.price_current > 0');
+            ->where('a.price_current > 0')
+            // Paused sources drop out of opportunities, price checks and alerts.
+            ->where('s.id IS NULL OR COALESCE(s.enabled, 0) = 1');
         return $requireFresh ? $select->where(self::FRESH_OBSERVATION) : $select;
     }
 
