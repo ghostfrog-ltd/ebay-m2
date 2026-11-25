@@ -12,6 +12,7 @@
                                 <resource id="GhostFrog_Ebay::opportunities" title="View eBay Opportunities" translate="title"/>
                                 <resource id="GhostFrog_Ebay::sources" title="Manage eBay Sources" translate="title"/>
                                 <resource id="GhostFrog_Ebay::tasks" title="Manage GhostFrog Tasks" translate="title"/>
+                                <resource id="GhostFrog_Ebay::api_usage" title="View eBay API Usage" translate="title"/>
                             </resource>
                         </resource>
                     </resource>

@@ -48,5 +48,13 @@
              parent="GhostFrog_Ebay::ghostfrog"
              action="ghostfrog_ebay/task/index"
              resource="GhostFrog_Ebay::tasks"/>
+        <add id="GhostFrog_Ebay::api_usage"
+             title="API Usage"
+             translate="title"
+             module="GhostFrog_Ebay"
+             sortOrder="45"
+             parent="GhostFrog_Ebay::ghostfrog"
+             action="ghostfrog_ebay/usage/index"
+             resource="GhostFrog_Ebay::api_usage"/>
     </menu>
 </config>
