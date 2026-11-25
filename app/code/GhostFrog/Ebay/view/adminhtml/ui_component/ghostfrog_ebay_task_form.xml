@@ -1,0 +1,130 @@
+<?xml version="1.0"?>
+<form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Ui:etc/ui_configuration.xsd">
+    <argument name="data" xsi:type="array">
+        <item name="js_config" xsi:type="array">
+            <item name="provider" xsi:type="string">ghostfrog_ebay_task_form.ghostfrog_ebay_task_form_data_source</item>
+        </item>
+        <item name="label" xsi:type="string" translate="true">Task</item>
+        <item name="template" xsi:type="string">templates/form/collapsible</item>
+    </argument>
+    <settings>
+        <buttons>
+            <button name="back" class="GhostFrog\Ebay\Block\Adminhtml\Task\Edit\BackButton"/>
+            <button name="delete" class="GhostFrog\Ebay\Block\Adminhtml\Task\Edit\DeleteButton"/>
+            <button name="save_and_continue" class="GhostFrog\Ebay\Block\Adminhtml\Task\Edit\SaveAndContinueButton"/>
+            <button name="save" class="GhostFrog\Ebay\Block\Adminhtml\Task\Edit\SaveButton"/>
+        </buttons>
+        <namespace>ghostfrog_ebay_task_form</namespace>
+        <dataScope>data</dataScope>
+        <deps>
+            <dep>ghostfrog_ebay_task_form.ghostfrog_ebay_task_form_data_source</dep>
+        </deps>
+    </settings>
+    <dataSource name="ghostfrog_ebay_task_form_data_source">
+        <argument name="data" xsi:type="array">
+            <item name="js_config" xsi:type="array">
+                <item name="component" xsi:type="string">Magento_Ui/js/form/provider</item>
+            </item>
+        </argument>
+        <settings>
+            <submitUrl path="ghostfrog_ebay/task/save"/>
+        </settings>
+        <aclResource>GhostFrog_Ebay::tasks</aclResource>
+        <dataProvider class="GhostFrog\Ebay\Model\Task\DataProvider" name="ghostfrog_ebay_task_form_data_source">
+            <settings>
+                <requestFieldName>task_id</requestFieldName>
+                <primaryFieldName>task_id</primaryFieldName>
+            </settings>
+        </dataProvider>
+    </dataSource>
+    <fieldset name="general">
+        <settings>
+            <label/>
+        </settings>
+        <field name="task_id" formElement="input">
+            <settings>
+                <dataType>text</dataType>
+                <visible>false</visible>
+                <dataScope>task_id</dataScope>
+            </settings>
+        </field>
+        <field name="title" formElement="input" sortOrder="10">
+            <settings>
+                <validation>
+                    <rule name="required-entry" xsi:type="boolean">true</rule>
+                    <rule name="max_text_length" xsi:type="number">255</rule>
+                </validation>
+                <dataType>text</dataType>
+                <label translate="true">Title</label>
+                <dataScope>title</dataScope>
+            </settings>
+        </field>
+        <field name="status" formElement="select" sortOrder="20">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="default" xsi:type="string">open</item>
+                </item>
+            </argument>
+            <settings>
+                <validation>
+                    <rule name="required-entry" xsi:type="boolean">true</rule>
+                </validation>
+                <dataType>text</dataType>
+                <label translate="true">Status</label>
+                <dataScope>status</dataScope>
+            </settings>
+            <formElements>
+                <select>
+                    <settings>
+                        <options class="GhostFrog\Ebay\Model\Task\Status"/>
+                    </settings>
+                </select>
+            </formElements>
+        </field>
+        <field name="category" formElement="select" sortOrder="30">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="default" xsi:type="string">task</item>
+                </item>
+            </argument>
+            <settings>
+                <validation>
+                    <rule name="required-entry" xsi:type="boolean">true</rule>
+                </validation>
+                <dataType>text</dataType>
+                <label translate="true">Category</label>
+                <dataScope>category</dataScope>
+            </settings>
+            <formElements>
+                <select>
+                    <settings>
+                        <options class="GhostFrog\Ebay\Model\Task\Category"/>
+                    </settings>
+                </select>
+            </formElements>
+        </field>
+        <field name="description" formElement="wysiwyg" sortOrder="40">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="source" xsi:type="string">task</item>
+                </item>
+            </argument>
+            <settings>
+                <additionalClasses>
+                    <class name="admin__field-wide">true</class>
+                </additionalClasses>
+                <label translate="true">Description</label>
+                <dataScope>description</dataScope>
+            </settings>
+            <formElements>
+                <wysiwyg>
+                    <settings>
+                        <wysiwyg>true</wysiwyg>
+                        <rows>12</rows>
+                    </settings>
+                </wysiwyg>
+            </formElements>
+        </field>
+    </fieldset>
+</form>

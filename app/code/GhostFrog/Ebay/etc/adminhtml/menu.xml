@@ -40,5 +40,13 @@
              parent="GhostFrog_Ebay::ghostfrog"
              action="ghostfrog_ebay/source/index"
              resource="GhostFrog_Ebay::sources"/>
+        <add id="GhostFrog_Ebay::tasks"
+             title="Tasks"
+             translate="title"
+             module="GhostFrog_Ebay"
+             sortOrder="50"
+             parent="GhostFrog_Ebay::ghostfrog"
+             action="ghostfrog_ebay/task/index"
+             resource="GhostFrog_Ebay::tasks"/>
     </menu>
 </config>

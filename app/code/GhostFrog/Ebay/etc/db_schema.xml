@@ -720,4 +720,27 @@
             <column name="last_scraped_at"/>
         </index>
     </table>
+    <table name="ghostfrog_ebay_tasks" resource="default" engine="innodb" comment="GhostFrog project goals and tasks">
+        <column xsi:type="int" name="task_id" unsigned="true" nullable="false" identity="true" comment="Task ID"/>
+        <column xsi:type="varchar" name="title" nullable="false" length="255" comment="Title"/>
+        <column xsi:type="mediumtext" name="description" nullable="true" comment="Description HTML"/>
+        <column xsi:type="varchar" name="status" nullable="false" length="32" default="open" comment="Status"/>
+        <column xsi:type="varchar" name="category" nullable="false" length="32" default="task" comment="Category"/>
+        <column xsi:type="timestamp" name="created_at" nullable="false" on_update="false" default="CURRENT_TIMESTAMP" comment="Created at"/>
+        <column xsi:type="timestamp" name="updated_at" nullable="false" on_update="true" default="CURRENT_TIMESTAMP" comment="Updated at"/>
+        <column xsi:type="timestamp" name="completed_at" nullable="true" on_update="false" comment="Completed at"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="task_id"/>
+        </constraint>
+        <index referenceId="GHOSTFROG_EBAY_TASKS_STATUS" indexType="btree">
+            <column name="status"/>
+        </index>
+        <index referenceId="GHOSTFROG_EBAY_TASKS_CATEGORY" indexType="btree">
+            <column name="category"/>
+        </index>
+        <index referenceId="GHOSTFROG_EBAY_TASKS_TITLE_DESCRIPTION" indexType="fulltext">
+            <column name="title"/>
+            <column name="description"/>
+        </index>
+    </table>
 </schema>

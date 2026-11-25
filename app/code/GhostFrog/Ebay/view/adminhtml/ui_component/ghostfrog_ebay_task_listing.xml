@@ -1,0 +1,158 @@
+<?xml version="1.0"?>
+<listing xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Ui:etc/ui_configuration.xsd">
+    <argument name="data" xsi:type="array">
+        <item name="js_config" xsi:type="array">
+            <item name="provider" xsi:type="string">ghostfrog_ebay_task_listing.ghostfrog_ebay_task_listing_data_source</item>
+        </item>
+    </argument>
+    <settings>
+        <buttons>
+            <button name="add">
+                <url path="*/*/new"/>
+                <class>primary</class>
+                <label translate="true">Add New Task</label>
+            </button>
+        </buttons>
+        <spinner>task_columns</spinner>
+        <deps>
+            <dep>ghostfrog_ebay_task_listing.ghostfrog_ebay_task_listing_data_source</dep>
+        </deps>
+    </settings>
+    <dataSource name="ghostfrog_ebay_task_listing_data_source" component="Magento_Ui/js/grid/provider">
+        <settings>
+            <storageConfig>
+                <param name="indexField" xsi:type="string">task_id</param>
+            </storageConfig>
+            <updateUrl path="mui/index/render"/>
+        </settings>
+        <aclResource>GhostFrog_Ebay::tasks</aclResource>
+        <dataProvider class="Magento\Framework\View\Element\UiComponent\DataProvider\DataProvider"
+                      name="ghostfrog_ebay_task_listing_data_source">
+            <settings>
+                <requestFieldName>task_id</requestFieldName>
+                <primaryFieldName>task_id</primaryFieldName>
+            </settings>
+        </dataProvider>
+    </dataSource>
+    <listingToolbar name="listing_top">
+        <settings>
+            <sticky>true</sticky>
+        </settings>
+        <bookmark name="bookmarks"/>
+        <columnsControls name="columns_controls"/>
+        <filterSearch name="fulltext"/>
+        <filters name="listing_filters"/>
+        <massaction name="listing_massaction">
+            <action name="status">
+                <settings>
+                    <type>status</type>
+                    <label translate="true">Change Status</label>
+                    <actions>
+                        <action name="open">
+                            <type>open</type>
+                            <label translate="true">Open</label>
+                            <url path="ghostfrog_ebay/task/massStatus">
+                                <param name="status">open</param>
+                            </url>
+                        </action>
+                        <action name="in_progress">
+                            <type>in_progress</type>
+                            <label translate="true">In Progress</label>
+                            <url path="ghostfrog_ebay/task/massStatus">
+                                <param name="status">in_progress</param>
+                            </url>
+                        </action>
+                        <action name="blocked">
+                            <type>blocked</type>
+                            <label translate="true">Blocked</label>
+                            <url path="ghostfrog_ebay/task/massStatus">
+                                <param name="status">blocked</param>
+                            </url>
+                        </action>
+                        <action name="complete">
+                            <type>complete</type>
+                            <label translate="true">Complete</label>
+                            <url path="ghostfrog_ebay/task/massStatus">
+                                <param name="status">complete</param>
+                            </url>
+                        </action>
+                        <action name="wont_do">
+                            <type>wont_do</type>
+                            <label translate="true">Won't Do</label>
+                            <url path="ghostfrog_ebay/task/massStatus">
+                                <param name="status">wont_do</param>
+                            </url>
+                        </action>
+                    </actions>
+                </settings>
+            </action>
+        </massaction>
+        <paging name="listing_paging"/>
+    </listingToolbar>
+    <columns name="task_columns">
+        <selectionsColumn name="ids" sortOrder="5">
+            <settings>
+                <indexField>task_id</indexField>
+            </settings>
+        </selectionsColumn>
+        <column name="task_id" sortOrder="10">
+            <settings>
+                <filter>textRange</filter>
+                <sorting>desc</sorting>
+                <label translate="true">ID</label>
+            </settings>
+        </column>
+        <column name="title" sortOrder="20">
+            <settings>
+                <filter>text</filter>
+                <label translate="true">Title</label>
+            </settings>
+        </column>
+        <column name="category" component="Magento_Ui/js/grid/columns/select" sortOrder="30">
+            <settings>
+                <options class="GhostFrog\Ebay\Model\Task\Category"/>
+                <filter>select</filter>
+                <dataType>select</dataType>
+                <label translate="true">Category</label>
+            </settings>
+        </column>
+        <column name="status" component="Magento_Ui/js/grid/columns/select" sortOrder="40">
+            <settings>
+                <options class="GhostFrog\Ebay\Model\Task\Status"/>
+                <filter>select</filter>
+                <dataType>select</dataType>
+                <label translate="true">Status</label>
+            </settings>
+        </column>
+        <column name="created_at" class="Magento\Ui\Component\Listing\Columns\Date"
+                component="Magento_Ui/js/grid/columns/date" sortOrder="50">
+            <settings>
+                <filter>dateRange</filter>
+                <dataType>date</dataType>
+                <label translate="true">Created</label>
+            </settings>
+        </column>
+        <column name="updated_at" class="Magento\Ui\Component\Listing\Columns\Date"
+                component="Magento_Ui/js/grid/columns/date" sortOrder="60">
+            <settings>
+                <filter>dateRange</filter>
+                <dataType>date</dataType>
+                <label translate="true">Updated</label>
+            </settings>
+        </column>
+        <column name="completed_at" class="Magento\Ui\Component\Listing\Columns\Date"
+                component="Magento_Ui/js/grid/columns/date" sortOrder="70">
+            <settings>
+                <filter>dateRange</filter>
+                <dataType>date</dataType>
+                <label translate="true">Closed</label>
+            </settings>
+        </column>
+        <actionsColumn name="actions" class="GhostFrog\Ebay\Ui\Component\Task\Column\Actions" sortOrder="80">
+            <settings>
+                <indexField>task_id</indexField>
+            </settings>
+        </actionsColumn>
+    </columns>
+</listing>

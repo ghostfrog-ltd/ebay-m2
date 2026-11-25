@@ -262,7 +262,8 @@
         },
         "constraint": {
             "PRIMARY": true,
-            "GHOSTFROG_EBAY_FINAL_PRICE_QUEUE_LISTING_ID": true
+            "GHOSTFROG_EBAY_FINAL_PRICE_QUEUE_LISTING_ID": true,
+            "FK_0EA16FB90D4D9E6D3A06B179AFDC4454": true
         }
     },
     "ghostfrog_ebay_listing_text_condition_queue": {
@@ -623,6 +624,26 @@
         "constraint": {
             "PRIMARY": true,
             "FK_D01E0FFE58D2793BA61F9B93C3EC756C": true
+        }
+    },
+    "ghostfrog_ebay_tasks": {
+        "column": {
+            "task_id": true,
+            "title": true,
+            "description": true,
+            "status": true,
+            "category": true,
+            "created_at": true,
+            "updated_at": true,
+            "completed_at": true
+        },
+        "index": {
+            "GHOSTFROG_EBAY_TASKS_STATUS": true,
+            "GHOSTFROG_EBAY_TASKS_CATEGORY": true,
+            "GHOSTFROG_EBAY_TASKS_TITLE_DESCRIPTION": true
+        },
+        "constraint": {
+            "PRIMARY": true
         }
     }
 }
