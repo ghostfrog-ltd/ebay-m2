@@ -1,0 +1,344 @@
+<?php
+/** @var \GhostFrog\Ebay\Block\Adminhtml\Dashboard $block */
+/** @var \Magento\Framework\Escaper $escaper */
+$s = $block->getStats();
+$l = $s['listings'];
+$t = $l['totals'];
+$c = $s['comps'];
+$q = $s['queues'];
+$o = $s['opportunities'];
+$n = static fn ($v): string => number_format((float)$v);
+$pct = static fn ($part, $whole): string => $whole ? number_format(100 * $part / $whole, 1) . '%' : '–';
+$money = static fn ($v): string => $v === null ? '–' : '£' . number_format((float)$v, 2);
+$cov = $c['live_coverage'];
+$fp = $q['final_price'];
+$enrichment = $q['message'][0];
+$chartData = [
+    'status' => $l['status'],
+    'saleType' => $l['sale_type'],
+    'grade' => $l['grade'],
+    'daily' => $l['daily_new'],
+    'sources' => array_column($l['by_source'], 'total', 'source'),
+    'closePrices' => [
+        'Has close price' => $t['ended_priced'],
+        'Missing, recoverable (≤ 90 days)' => $t['ended_recoverable'],
+        'Missing, older than 90 days' => $t['ended_lost'],
+    ],
+    'compBuckets' => $c['sample_buckets'],
+    'compCoverage' => [
+        'Comp with 5+ sales' => $cov['with_good_comp'],
+        'Comp with < 5 sales' => $cov['with_comp'] - $cov['with_good_comp'],
+        'No comp' => $cov['live'] - $cov['with_comp'],
+    ],
+    'modelKey' => [
+        'Usable model key' => $t['mk_valid'],
+        'Unknown / generic' => $t['mk_unknown'],
+        'Missing' => $t['mk_missing'],
+    ],
+    'roi' => $o['roi_buckets'],
+    'oppSource' => $o['by_source'],
+];
+?>
+<div class="gf-dash">
+    <div class="gf-dash__bar">
+        <span class="gf-dash__meta">
+            <?= $escaper->escapeHtml(__('Data as of %1 UTC (built in %2s, cached 5 min)', $s['generated_at'], $s['build_seconds'])) ?>
+            <?php if (!empty($t['paused_listings'])): ?>
+                <br><?= $escaper->escapeHtml(__(
+                    'Active sources only: %1 listings from %2 paused sources are hidden and not processed.',
+                    $n($t['paused_listings']),
+                    $n($t['paused_sources'])
+                )) ?>
+            <?php endif; ?>
+        </span>
+        <a class="action-default" href="<?= $escaper->escapeUrl($block->getRefreshUrl()) ?>">
+            <?= $escaper->escapeHtml(__('Refresh now')) ?>
+        </a>
+    </div>
+
+    <div class="gf-dash__tiles">
+        <a class="gf-tile" href="<?= $escaper->escapeUrl($block->getLink('ghostfrog_ebay/listing/index')) ?>">
+            <span class="gf-tile__label"><?= $escaper->escapeHtml(__('Listings')) ?></span>
+            <span class="gf-tile__value"><?= $n($t['total']) ?></span>
+            <span class="gf-tile__sub"><?= $escaper->escapeHtml(__('+%1 in last 24h', $n($t['new_24h']))) ?></span>
+        </a>
+        <div class="gf-tile">
+            <span class="gf-tile__label"><?= $escaper->escapeHtml(__('Live now')) ?></span>
+            <span class="gf-tile__value"><?= $n($l['status']['live'] ?? 0) ?></span>
+            <span class="gf-tile__sub"><?= $escaper->escapeHtml(__('%1 ending in 24h', $n($t['ending_24h']))) ?></span>
+        </div>
+        <a class="gf-tile" href="<?= $escaper->escapeUrl($block->getLink('ghostfrog_ebay/opportunities/index')) ?>">
+            <span class="gf-tile__label"><?= $escaper->escapeHtml(__('Opportunities')) ?></span>
+            <span class="gf-tile__value"><?= $n($o['summary']['count']) ?></span>
+            <span class="gf-tile__sub"><?= $escaper->escapeHtml(__('%1 expected profit', $money($o['summary']['profit']))) ?></span>
+        </a>
+        <div class="gf-tile">
+            <span class="gf-tile__label"><?= $escaper->escapeHtml(__('Close-price coverage')) ?></span>
+            <span class="gf-tile__value"><?= $pct($t['ended_priced'], $t['ended']) ?></span>
+            <span class="gf-tile__sub"><?= $escaper->escapeHtml(__('of %1 ended listings', $n($t['ended']))) ?></span>
+        </div>
+        <div class="gf-tile">
+            <span class="gf-tile__label"><?= $escaper->escapeHtml(__('Comp groups')) ?></span>
+            <span class="gf-tile__value"><?= $n($c['summary']['groups']) ?></span>
+            <span class="gf-tile__sub"><?= $escaper->escapeHtml(__('%1 sold comps', $n($c['summary']['sales']))) ?></span>
+        </div>
+        <div class="gf-tile">
+            <span class="gf-tile__label"><?= $escaper->escapeHtml(__('Not yet enriched')) ?></span>
+            <span class="gf-tile__value"><?= $n($t['total'] - $t['enriched']) ?></span>
+            <span class="gf-tile__sub"><?= $escaper->escapeHtml(__('%1 in queue, %2 failed', $n($enrichment['pending'] + $enrichment['retry']), $n($enrichment['failed']))) ?></span>
+        </div>
+    </div>
+
+    <h2 class="gf-dash__h"><?= $escaper->escapeHtml(__('Listings')) ?></h2>
+    <div class="gf-dash__grid">
+        <div class="gf-card gf-card--wide">
+            <h3><?= $escaper->escapeHtml(__('New listings per day (last 14 days, UTC)')) ?></h3>
+            <div class="gf-chart gf-chart--bar"><canvas data-chart="daily"></canvas></div>
+        </div>
+        <div class="gf-card">
+            <h3><?= $escaper->escapeHtml(__('By status')) ?></h3>
+            <div class="gf-chart"><canvas data-chart="status"></canvas></div>
+        </div>
+        <div class="gf-card">
+            <h3><?= $escaper->escapeHtml(__('By sale type')) ?></h3>
+            <div class="gf-chart"><canvas data-chart="saleType"></canvas></div>
+        </div>
+        <div class="gf-card">
+            <h3><?= $escaper->escapeHtml(__('By condition grade')) ?></h3>
+            <div class="gf-chart"><canvas data-chart="grade"></canvas></div>
+        </div>
+        <div class="gf-card gf-card--wide">
+            <h3><?= $escaper->escapeHtml(__('By source')) ?></h3>
+            <table class="gf-table">
+                <thead><tr>
+                    <th><?= $escaper->escapeHtml(__('Source')) ?></th>
+                    <th class="gf-num"><?= $escaper->escapeHtml(__('Listings')) ?></th>
+                    <th class="gf-num"><?= $escaper->escapeHtml(__('Live')) ?></th>
+                    <th class="gf-num"><?= $escaper->escapeHtml(__('With close price')) ?></th>
+                    <th class="gf-bar-col"></th>
+                </tr></thead>
+                <tbody>
+                <?php $max = max(array_column($l['by_source'], 'total') ?: [1]); ?>
+                <?php foreach ($l['by_source'] as $row): ?>
+                    <tr>
+                        <td><?= $escaper->escapeHtml($row['source']) ?></td>
+                        <td class="gf-num"><?= $n($row['total']) ?></td>
+                        <td class="gf-num"><?= $n($row['live']) ?></td>
+                        <td class="gf-num"><?= $n($row['priced']) ?></td>
+                        <td class="gf-bar-col"><span class="gf-inline-bar" style="width: <?= round(100 * $row['total'] / $max, 1) ?>%"></span></td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <h2 class="gf-dash__h"><?= $escaper->escapeHtml(__('Close prices')) ?></h2>
+    <div class="gf-dash__grid">
+        <div class="gf-card">
+            <h3><?= $escaper->escapeHtml(__('Ended listings (past end time)')) ?></h3>
+            <div class="gf-chart"><canvas data-chart="closePrices"></canvas></div>
+        </div>
+        <div class="gf-card">
+            <h3><?= $escaper->escapeHtml(__('Final price recovery')) ?></h3>
+            <dl class="gf-stats">
+                <dt><?= $escaper->escapeHtml(__('Listings with a close price')) ?></dt><dd><?= $n($t['priced']) ?></dd>
+                <dt><?= $escaper->escapeHtml(__('Recoverable, still missing')) ?></dt><dd><?= $n($t['ended_recoverable']) ?></dd>
+                <dt><?= $escaper->escapeHtml(__('Final price queue')) ?></dt><dd><?= $n($fp['queued']) ?></dd>
+                <dt><?= $escaper->escapeHtml(__('Ready to check now')) ?></dt><dd><?= $n($fp['ready']) ?></dd>
+                <dt><?= $escaper->escapeHtml(__('Sold, awaiting comp write')) ?></dt><dd><?= $n($fp['needs_comp']) ?></dd>
+                <dt><?= $escaper->escapeHtml(__('No end time recorded')) ?></dt><dd><?= $n($t['no_end_time']) ?></dd>
+            </dl>
+            <p class="gf-note"><?= $escaper->escapeHtml(__('eBay only returns ended items for about 90 days, so older gaps are unlikely to be filled.')) ?></p>
+        </div>
+    </div>
+
+    <h2 class="gf-dash__h"><?= $escaper->escapeHtml(__('Comps')) ?></h2>
+    <div class="gf-dash__grid">
+        <div class="gf-card">
+            <h3><?= $escaper->escapeHtml(__('Comp groups by sample size')) ?></h3>
+            <div class="gf-chart gf-chart--bar"><canvas data-chart="compBuckets"></canvas></div>
+        </div>
+        <div class="gf-card">
+            <h3><?= $escaper->escapeHtml(__('Live listings with a comp (same model + grade)')) ?></h3>
+            <div class="gf-chart"><canvas data-chart="compCoverage"></canvas></div>
+        </div>
+        <div class="gf-card">
+            <h3><?= $escaper->escapeHtml(__('Comp health')) ?></h3>
+            <dl class="gf-stats">
+                <dt><?= $escaper->escapeHtml(__('Model keys with comps')) ?></dt><dd><?= $n($c['summary']['model_keys']) ?></dd>
+                <dt><?= $escaper->escapeHtml(__('Model + grade groups')) ?></dt><dd><?= $n($c['summary']['groups']) ?></dd>
+                <dt><?= $escaper->escapeHtml(__('Sales behind comps')) ?></dt><dd><?= $n($c['summary']['samples']) ?></dd>
+                <dt><?= $escaper->escapeHtml(__('Groups older than 7 days')) ?></dt><dd><?= $n($c['summary']['stale_7d']) ?></dd>
+                <dt><?= $escaper->escapeHtml(__('Last computed (UTC)')) ?></dt><dd><?= $escaper->escapeHtml($c['summary']['last_computed'] ?? '–') ?></dd>
+                <dt><?= $escaper->escapeHtml(__('Comps index backlog')) ?></dt><dd><?= $c['index_backlog']['comps'] === null ? '–' : $n($c['index_backlog']['comps']) ?></dd>
+                <dt><?= $escaper->escapeHtml(__('Opportunities index backlog')) ?></dt><dd><?= $c['index_backlog']['opportunities'] === null ? '–' : $n($c['index_backlog']['opportunities']) ?></dd>
+            </dl>
+        </div>
+        <div class="gf-card gf-card--wide">
+            <h3><?= $escaper->escapeHtml(__('Best-supported comps')) ?></h3>
+            <table class="gf-table">
+                <thead><tr>
+                    <th><?= $escaper->escapeHtml(__('Model key')) ?></th>
+                    <th><?= $escaper->escapeHtml(__('Grade')) ?></th>
+                    <th class="gf-num"><?= $escaper->escapeHtml(__('Sales')) ?></th>
+                    <th class="gf-num"><?= $escaper->escapeHtml(__('Median sold')) ?></th>
+                </tr></thead>
+                <tbody>
+                <?php foreach ($c['top_models'] as $row): ?>
+                    <tr>
+                        <td><code><?= $escaper->escapeHtml($row['model_key']) ?></code></td>
+                        <td><?= $escaper->escapeHtml($row['condition_grade']) ?></td>
+                        <td class="gf-num"><?= $n($row['samples']) ?></td>
+                        <td class="gf-num"><?= $money($row['median_final_price']) ?></td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <h2 class="gf-dash__h"><?= $escaper->escapeHtml(__('Enrichment pipeline')) ?></h2>
+    <div class="gf-dash__grid">
+        <div class="gf-card">
+            <h3><?= $escaper->escapeHtml(__('Model key coverage')) ?></h3>
+            <div class="gf-chart"><canvas data-chart="modelKey"></canvas></div>
+        </div>
+        <div class="gf-card">
+            <h3><?= $escaper->escapeHtml(__('Stages completed (all listings)')) ?></h3>
+            <?php foreach ([
+                [__('Trading GetItem enrichment'), $t['enriched']],
+                [__('Text condition check'), $t['text_checked']],
+                [__('Image condition check'), $t['visual_checked']],
+                [__('Usable model key'), $t['mk_valid']],
+            ] as [$label, $done]): ?>
+                <div class="gf-meter">
+                    <div class="gf-meter__head">
+                        <span><?= $escaper->escapeHtml($label) ?></span>
+                        <span><?= $n($done) ?> · <?= $pct($done, $t['total']) ?></span>
+                    </div>
+                    <div class="gf-meter__track"><span style="width: <?= $t['total'] ? round(100 * $done / $t['total'], 1) : 0 ?>%"></span></div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+        <div class="gf-card gf-card--wide">
+            <h3><?= $escaper->escapeHtml(__('Work queues')) ?></h3>
+            <table class="gf-table">
+                <thead><tr>
+                    <th><?= $escaper->escapeHtml(__('Queue')) ?></th>
+                    <th class="gf-num"><?= $escaper->escapeHtml(__('Pending')) ?></th>
+                    <th class="gf-num"><?= $escaper->escapeHtml(__('Retry')) ?></th>
+                    <th class="gf-num"><?= $escaper->escapeHtml(__('In progress')) ?></th>
+                    <th class="gf-num"><?= $escaper->escapeHtml(__('Failed')) ?></th>
+                    <th class="gf-num"><?= $escaper->escapeHtml(__('Complete')) ?></th>
+                </tr></thead>
+                <tbody>
+                <?php foreach ($q['message'] as $row): ?>
+                    <tr>
+                        <td><?= $escaper->escapeHtml($row['label']) ?></td>
+                        <td class="gf-num"><?= $n($row['pending']) ?></td>
+                        <td class="gf-num"><?= $n($row['retry']) ?></td>
+                        <td class="gf-num"><?= $n($row['in_progress']) ?></td>
+                        <td class="gf-num<?= $row['failed'] ? ' gf-bad' : '' ?>"><?= $n($row['failed']) ?></td>
+                        <td class="gf-num"><?= $n($row['complete']) ?></td>
+                    </tr>
+                <?php endforeach; ?>
+                    <tr>
+                        <td><?= $escaper->escapeHtml(__('Final price checks')) ?></td>
+                        <td class="gf-num"><?= $n($fp['ready']) ?></td>
+                        <td class="gf-num"><?= $n($fp['queued'] - $fp['ready']) ?></td>
+                        <td class="gf-num">–</td><td class="gf-num">–</td><td class="gf-num">–</td>
+                    </tr>
+                    <tr>
+                        <td><?= $escaper->escapeHtml(__('Opportunity price refresh')) ?></td>
+                        <td class="gf-num"><?= $n($q['price_refresh']['due']) ?></td>
+                        <td class="gf-num"><?= $n($q['price_refresh']['queued'] - $q['price_refresh']['due']) ?></td>
+                        <td class="gf-num">–</td><td class="gf-num">–</td><td class="gf-num">–</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p class="gf-note"><?= $escaper->escapeHtml(__('For final price and price refresh, Retry counts jobs scheduled for later.')) ?></p>
+        </div>
+    </div>
+
+    <h2 class="gf-dash__h"><?= $escaper->escapeHtml(__('Opportunities')) ?></h2>
+    <div class="gf-dash__grid">
+        <div class="gf-card">
+            <h3><?= $escaper->escapeHtml(__('Summary')) ?></h3>
+            <dl class="gf-stats">
+                <dt><?= $escaper->escapeHtml(__('Open opportunities')) ?></dt><dd><?= $n($o['summary']['count']) ?></dd>
+                <dt><?= $escaper->escapeHtml(__('Total expected profit')) ?></dt><dd><?= $money($o['summary']['profit']) ?></dd>
+                <dt><?= $escaper->escapeHtml(__('Median expected ROI')) ?></dt><dd><?= $o['summary']['median_roi'] === null ? '–' : number_format((float)$o['summary']['median_roi'], 1) . '%' ?></dd>
+                <dt><?= $escaper->escapeHtml(__('Ending in 24h')) ?></dt><dd><?= $n($o['summary']['ending_24h']) ?></dd>
+            </dl>
+        </div>
+        <div class="gf-card">
+            <h3><?= $escaper->escapeHtml(__('Expected ROI')) ?></h3>
+            <div class="gf-chart gf-chart--bar"><canvas data-chart="roi"></canvas></div>
+        </div>
+        <div class="gf-card">
+            <h3><?= $escaper->escapeHtml(__('By source')) ?></h3>
+            <div class="gf-chart"><canvas data-chart="oppSource"></canvas></div>
+        </div>
+        <div class="gf-card gf-card--wide">
+            <h3><?= $escaper->escapeHtml(__('Top opportunities by expected profit')) ?></h3>
+            <table class="gf-table">
+                <thead><tr>
+                    <th><?= $escaper->escapeHtml(__('Title')) ?></th>
+                    <th><?= $escaper->escapeHtml(__('Source')) ?></th>
+                    <th><?= $escaper->escapeHtml(__('Type')) ?></th>
+                    <th class="gf-num"><?= $escaper->escapeHtml(__('Price')) ?></th>
+                    <th class="gf-num"><?= $escaper->escapeHtml(__('Sold median')) ?></th>
+                    <th class="gf-num"><?= $escaper->escapeHtml(__('Profit')) ?></th>
+                    <th><?= $escaper->escapeHtml(__('Ends (UTC)')) ?></th>
+                </tr></thead>
+                <tbody>
+                <?php foreach ($o['top'] as $row): ?>
+                    <tr>
+                        <td><a href="<?= $escaper->escapeUrl($row['url']) ?>" target="_blank" rel="noopener"><?= $escaper->escapeHtml($row['title']) ?></a></td>
+                        <td><?= $escaper->escapeHtml($row['source']) ?></td>
+                        <td><?= $escaper->escapeHtml($row['sale_type']) ?></td>
+                        <td class="gf-num"><?= $money($row['current_price']) ?></td>
+                        <td class="gf-num"><?= $money($row['sold_median']) ?></td>
+                        <td class="gf-num"><?= $money($row['expected_profit']) ?></td>
+                        <td><?= $escaper->escapeHtml($row['end_time']) ?></td>
+                    </tr>
+                <?php endforeach; ?>
+                <?php if (!$o['top']): ?>
+                    <tr><td colspan="7"><?= $escaper->escapeHtml(__('No open opportunities.')) ?></td></tr>
+                <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <?php if ($s['api']): ?>
+    <h2 class="gf-dash__h"><?= $escaper->escapeHtml(__('eBay API quota (today)')) ?></h2>
+    <div class="gf-dash__grid">
+        <div class="gf-card gf-card--wide">
+            <?php foreach ($s['api'] as $api): ?>
+                <div class="gf-meter">
+                    <div class="gf-meter__head">
+                        <span><?= $escaper->escapeHtml($api['api_name']) ?> <em class="gf-muted">— <?= $escaper->escapeHtml($api['status']) ?></em></span>
+                        <span>
+                            <?= $n($api['calls_today']) ?> <?= $escaper->escapeHtml(__('calls')) ?>
+                            <?php if ($api['daily_limit']): ?>
+                                · <?= $n($api['remaining']) ?> / <?= $n($api['daily_limit']) ?> <?= $escaper->escapeHtml(__('left')) ?>
+                            <?php endif; ?>
+                        </span>
+                    </div>
+                    <?php if ($api['used_percent'] !== null): ?>
+                        <div class="gf-meter__track<?= $api['used_percent'] >= 90 ? ' gf-meter__track--hot' : '' ?>">
+                            <span style="width: <?= min(100, (float)$api['used_percent']) ?>%"></span>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            <?php endforeach; ?>
+            <p class="gf-note"><a href="<?= $escaper->escapeUrl($block->getLink('ghostfrog_ebay/usage/index')) ?>"><?= $escaper->escapeHtml(__('Full API usage →')) ?></a></p>
+        </div>
+    </div>
+    <?php endif; ?>
+</div>
+<script type="text/x-magento-init">
+<?= /* @noEscape */ json_encode(['.gf-dash' => ['GhostFrog_Ebay/js/dashboard' => ['data' => $chartData]]], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>
+</script>

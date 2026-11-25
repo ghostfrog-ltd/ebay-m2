@@ -8,6 +8,14 @@
              module="GhostFrog_Ebay"
              sortOrder="75"
              resource="GhostFrog_Ebay::config"/>
+        <add id="GhostFrog_Ebay::ghostfrog_dashboard"
+             title="Dashboard"
+             translate="title"
+             module="GhostFrog_Ebay"
+             sortOrder="5"
+             parent="GhostFrog_Ebay::ghostfrog"
+             action="ghostfrog_ebay/dashboard/index"
+             resource="GhostFrog_Ebay::dashboard"/>
         <add id="GhostFrog_Ebay::ebay"
              title="Ebay Configuration"
              translate="title"
