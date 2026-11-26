@@ -377,6 +377,39 @@ final class ClassifierTest extends TestCase
             ['Trading PrimaryCategoryName' => 'Toys & Games:Radio Control & RC Toys:RC Model Vehicles & Kits'],
             'rc-schumacher-car-cougar-kf2',
         ];
+        yield 'Headset is not a console from its description' => [
+            'ebay-consoles',
+            'Logitech Astro A10 Wired Over-The-Head Stereo Gaming Headset Black Binaural Circ',
+            [
+                'Brand' => 'Logitech',
+                'Trading Description' => 'Explosive audio to provide comfort. Compatible Products: PS4 PS5 Xbox Series',
+            ],
+            'unknown',
+        ];
+        yield 'Console bundled with a headset stays a console' => [
+            'ebay-consoles',
+            'Microsoft Xbox Series S 512GB Console With Headset',
+            [],
+            'microsoft-xbox-series-s-512gb',
+        ];
+        yield 'Pro in the description is not a PS5 Pro' => [
+            'ebay-consoles',
+            'Sony PlayStation 5 PS5 Disc Edition 825GB White Console',
+            ['Trading Description' => 'Professionally cleaned, product works'],
+            'sony-playstation-5-disc-825gb',
+        ];
+        yield 'Pro controller is not a PS5 Pro' => [
+            'ebay-consoles',
+            'Sony PS5 Disc Edition 825GB + DualSense + Custom Pro Controller',
+            [],
+            'sony-playstation-5-disc-825gb',
+        ];
+        yield 'PS5 Pro' => [
+            'ebay-consoles',
+            'Sony PlayStation 5 Pro Console 2TB',
+            [],
+            'sony-playstation-5-pro-2tb',
+        ];
         yield 'Game from Game Name' => [
             'ebay-consoles',
             'Uncharted 4: A Thief\'s End PS4 / PlayStation 4 Game, VGC, Free Postage',

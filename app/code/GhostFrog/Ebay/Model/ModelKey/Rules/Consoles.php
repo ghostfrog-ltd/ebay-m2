@@ -14,10 +14,20 @@ final class Consoles extends Rule
         return mb_strtolower(trim(self::stringify($val)));
     }
 
+    /**
+     * Seller prose, listing metadata and URLs are left out: descriptions list every compatible platform
+     * and words such as "provide" or "product", which made headsets and base consoles look like a PS5 Pro.
+     */
+    private const NOISY_ATTR = '~^(?:_|trading (?:description|conditiondescription|imageurls|primarycategory)|'
+        . 'browse (?:image|seller|shipping|itemlocation|itemcreation|itemend|category))|url~i';
+
     private static function attrBlob(array $attrs): string
     {
         $parts = [];
-        foreach (array_values($attrs) as $value) {
+        foreach ($attrs as $key => $value) {
+            if (preg_match(self::NOISY_ATTR, (string)$key)) {
+                continue;
+            }
             if (is_array($value)) {
                 array_push($parts, ...array_map(static fn($item) => self::asText($item), self::iterate($value)));
             } else {
@@ -122,6 +132,17 @@ final class Consoles extends Rule
             '\\b(charger|cable|controller|gamepad|case|bag|dock|stand|grip|game|software)\\b.{0,40}\\b(for|compatible with)\\b',
         ];
         return (!$hardwareSignal && self::any($accessoryPatterns, static fn($pattern) => self::search($pattern, $titleText)));
+    }
+
+    /**
+     * Headsets, wheels and similar peripherals name every platform they work with. They are the item only
+     * when they come before any "with", "+", "plus" or "bundle", so "Xbox Series S With Headset" stays a console.
+     */
+    private static function isPeripheral(string $titleText): bool
+    {
+        $head = preg_split('~\s(?:with|w/|plus|bundle|including|incl\.?|inc\.?|and)\s|\+|&~u', $titleText)[0];
+        return (bool)self::search('\b(?:gaming\s+)?(?:headsets?|headphones?|earbuds?|earphones?|mixamp|racing\s+wheel|steering\s+wheel|'
+            . 'usb\s+hub|cooling\s+fans?|charging\s+(?:station|base|stand)|keyboard|disc\s+drive\s+for|optical\s+disc\s+drive)\b', $head);
     }
 
     private static function isAccessoryOrPart(string $text, bool $hardwareSignal = false): bool
@@ -247,7 +268,23 @@ final class Consoles extends Rule
         return ($platformOnly && !$hardwareSignal);
     }
 
-    private static function playstationKey(string $titleText, string $text, string $storage): string
+    /** "Pro" must name the console itself ("PS5 Pro"), not a "Pro Controller" or a word like "provide". */
+    private static function isProModel(string $titleText, array $attrs, string $generation): bool
+    {
+        $pattern = '\\b(?:ps\\s*' . $generation . '|playstation\\s*' . $generation . ')\\s*(?:console\\s+)?pro\\b';
+        if (self::search($pattern, $titleText)) {
+            return true;
+        }
+        $model = ($attrs['Model'] ?? $attrs['model_name'] ?? null);
+        foreach (is_array($model) ? $model : [$model] as $item) {
+            if (self::search($pattern, self::asText($item))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static function playstationKey(array $attrs, string $titleText, string $text, string $storage): string
     {
         if (!self::containsAny($text, ['playstation', 'ps5', 'ps4', 'ps3', 'vita'])) {
             return self::UNKNOWN_KEY;
@@ -265,12 +302,13 @@ final class Consoles extends Rule
             return 'sony-playstation-3';
         }
         if ((str_contains($text, 'ps5')) || (str_contains($text, 'playstation 5'))) {
-            if (str_contains($text, 'pro')) {
+            if (self::isProModel($titleText, $attrs, '5')) {
                 return 'sony-playstation-5-pro-2tb';
             }
             $slim = (str_contains($text, 'slim'));
             $digital = (str_contains($text, 'digital'));
-            $disc = self::containsAny($text, ['disc edition', 'disk edition', 'blu ray', 'blu-ray']);
+            $disc = self::containsAny($text, ['disc edition', 'disk edition', 'disc console', 'disk console',
+                'disc version', 'blu ray', 'blu-ray']);
             if (!$storage || !($digital || $disc)) {
                 return self::UNKNOWN_KEY;
             }
@@ -290,7 +328,7 @@ final class Consoles extends Rule
             if (!$storage) {
                 return self::UNKNOWN_KEY;
             }
-            if (str_contains($text, 'pro')) {
+            if (self::isProModel($titleText, $attrs, '4')) {
                 $variant = 'pro';
             } else {
                 if (str_contains($text, 'slim')) {
@@ -435,11 +473,11 @@ final class Consoles extends Rule
         $titleText = self::asText($title);
         $text = self::blob($attrs, $title);
         $hardwareSignal = self::hasConsoleHardwareSignal($titleText, $text);
-        if (self::looksLikeAccessoryOrSoftwareIntent($titleText, $text, $attrs) || self::isAccessoryOrPart($text, hardwareSignal: $hardwareSignal) || self::looksLikeGameOnly($text, $attrs)) {
+        if (self::isPeripheral($titleText) || self::looksLikeAccessoryOrSoftwareIntent($titleText, $text, $attrs) || self::isAccessoryOrPart($text, hardwareSignal: $hardwareSignal) || self::looksLikeGameOnly($text, $attrs)) {
             return self::UNKNOWN_KEY;
         }
         $storage = self::extractStorage($attrs, $title);
-        $key = self::playstationKey($titleText, $text, $storage);
+        $key = self::playstationKey($attrs, $titleText, $text, $storage);
         if ($key !== self::UNKNOWN_KEY) {
             return $key;
         }
