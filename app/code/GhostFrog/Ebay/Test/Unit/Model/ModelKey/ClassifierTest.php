@@ -392,6 +392,30 @@ final class ClassifierTest extends TestCase
             [],
             'microsoft-xbox-series-s-512gb',
         ];
+        yield 'Toggle switch is not a Nintendo Switch' => [
+            'ebay-consoles',
+            'On OFF On 3 Position Momentary Toggle Switch 6 Pin 12mm 15A 250VAC',
+            ['Brand' => 'Unbranded'],
+            'unknown',
+        ];
+        yield 'Car charger is not a Switch Lite' => [
+            'ebay-consoles',
+            'PowerA Nintendo Switch & Switch Lite Car Charger Black USB High-Speed Power A UK',
+            ['Type' => 'Car Charger', 'Platform' => 'Nintendo Switch'],
+            'unknown',
+        ];
+        yield 'Power adapter is not an Xbox 360' => [
+            'ebay-consoles',
+            'Microsoft Xbox 360 Slim Console CPA09-011A 135W 10.83A AC Power Adapter UK Plug',
+            [],
+            'unknown',
+        ];
+        yield 'Console listed with a charger stays a console' => [
+            'ebay-consoles',
+            'Nintendo Switch Lite Coral Console and Charger - Free and Fast P&P',
+            ['Brand' => 'Nintendo'],
+            'nintendo-switch-lite',
+        ];
         yield 'Pro in the description is not a PS5 Pro' => [
             'ebay-consoles',
             'Sony PlayStation 5 PS5 Disc Edition 825GB White Console',

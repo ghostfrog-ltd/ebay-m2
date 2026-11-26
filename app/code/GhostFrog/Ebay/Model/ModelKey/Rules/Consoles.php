@@ -88,7 +88,7 @@ final class Consoles extends Rule
             $values = (is_array($value) ? $value : [$value]);
             foreach (self::iterate($values) as $item) {
                 $text = self::asText($item);
-                if (self::search('\\b(travel\\s+cases?|carrying\\s+cases?|carry\\s+cases?|protective\\s+cases?|hard\\s+cases?|memory\\s+cards?|usb\\s*-?\\s*cables?|controllers?)\\b', $text)) {
+                if (self::search('\\b(travel\\s+cases?|carrying\\s+cases?|carry\\s+cases?|protective\\s+cases?|hard\\s+cases?|memory\\s+cards?|usb\\s*-?\\s*cables?|controllers?|chargers?|headsets?|power\\s+adapters?|power\\s+supply)\\b', $text)) {
                     return true;
                 }
             }
@@ -135,14 +135,27 @@ final class Consoles extends Rule
     }
 
     /**
-     * Headsets, wheels and similar peripherals name every platform they work with. They are the item only
-     * when they come before any "with", "+", "plus" or "bundle", so "Xbox Series S With Headset" stays a console.
+     * Headsets, wheels, chargers and similar peripherals name every platform they work with. They are the
+     * item unless a "with", "+", "plus" or "bundle" comes first, so "Xbox Series S With Headset" stays a
+     * console while "Nintendo Switch & Switch Lite Car Charger" does not. "No charger" is not a peripheral.
      */
     private static function isPeripheral(string $titleText): bool
     {
-        $head = preg_split('~\s(?:with|w/|plus|bundle|including|incl\.?|inc\.?|and)\s|\+|&~u', $titleText)[0];
-        return (bool)self::search('\b(?:gaming\s+)?(?:headsets?|headphones?|earbuds?|earphones?|mixamp|racing\s+wheel|steering\s+wheel|'
-            . 'usb\s+hub|cooling\s+fans?|charging\s+(?:station|base|stand)|keyboard|disc\s+drive\s+for|optical\s+disc\s+drive)\b', $head);
+        $peripheral = self::search('(?<!\\bno\\s)(?<!\\bwithout\\s)\\b(?:headsets?|headphones?|earbuds?|earphones?|mixamp|'
+            . 'racing\\s+wheel|steering\\s+wheel|usb\\s+hub|cooling\\s+fans?|charging\\s+(?:station|base|stand|dock)|'
+            . 'keyboard|disc\\s+drive\\s+for|optical\\s+disc\\s+drive|chargers?|adapters?|hubs?|'
+            . 'power\\s+(?:supply|supplies|suply|bricks?))\\b(?!\\s+port)', $titleText);
+        if (!$peripheral) {
+            return false;
+        }
+        $before = mb_substr($titleText, 0, $peripheral->start());
+        if (self::search('\\b(?:with|plus|bundle|includ\\w*|incl?|no)\\b|\\bw/|\\+', $before)) {
+            return false;
+        }
+        // "Switch Lite Console and Charger", "Xbox 360 Console 250GB - Controller & Power Supply": the console
+        // comes first and the peripheral is one of a list. "Xbox 360 Console 150W AC Power Adapter" is not.
+        return !self::search('\\b(?:console|system|handheld|edition|\\d+\\s?(?:gb|tb))\\b.*(?:,|&|\\.\\s|\\s[-–|]\\s|\\band\\b|'
+            . '\\b(?:controllers?|pads?|joy-?cons?|games?|dock)\\b)', $before);
     }
 
     private static function isAccessoryOrPart(string $text, bool $hardwareSignal = false): bool
@@ -446,7 +459,8 @@ final class Consoles extends Rule
 
     private static function switchKey(array $attrs, string $titleText, string $text): string
     {
-        if (!str_contains($text, 'switch')) {
+        // "Toggle switch", "transfer switch" and "switchless" are not Nintendo hardware.
+        if (!self::search('\\bswitch\\b', $text) || !str_contains($text, 'nintendo')) {
             return self::UNKNOWN_KEY;
         }
         if ((str_contains($text, 'tablet only')) || (str_contains($text, 'console/tablet only')) || (str_contains($text, 'screen only'))) {
