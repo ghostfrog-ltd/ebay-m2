@@ -142,6 +142,25 @@ final class Stats
                 ->joinLeft(['s' => $this->table(Source::TABLE)], 's.id = a.source_id', [])
                 ->where($active)
                 ->group('source')->order('total DESC')),
+            'model_key_by_source' => array_map(fn (array $row) => [
+                'id' => (int)$row['id'],
+                'name' => $row['name'],
+                'total' => (int)$row['total'],
+                'mk_missing' => (int)$row['mk_missing'],
+                'mk_unknown' => (int)$row['mk_unknown'],
+                'mk_valid' => (int)$row['total'] - (int)$row['mk_missing'] - (int)$row['mk_unknown'],
+            ], $db->fetchAll($db->select()
+                ->from(['s' => $this->table(Source::TABLE)], ['id', 'name'])
+                ->joinLeft(['a' => $table], 'a.source_id = s.id', [
+                    'total' => new Expression('COUNT(a.id)'),
+                    'mk_missing' => new Expression(
+                        "COALESCE(SUM(a.model_key IS NULL OR a.model_key = ''), 0)"
+                    ),
+                    'mk_unknown' => new Expression("COALESCE(SUM($unknownKey), 0)"),
+                ])
+                ->where('COALESCE(s.enabled, 0) = 1')
+                ->group(['s.id', 's.name'])
+                ->order('s.name'))),
         ];
     }
 
@@ -217,11 +236,53 @@ final class Stats
             'top_models' => $db->fetchAll($db->select()->from($comps, [
                 'model_key', 'condition_grade', 'samples', 'median_final_price',
             ])->order('samples DESC')->limit(10)),
+            'top_models_by_source' => $this->topModelsBySource($comps),
             'index_backlog' => [
                 'comps' => $this->mviewBacklog('ghostfrog_ebay_comps'),
                 'opportunities' => $this->mviewBacklog('ghostfrog_ebay_opportunities'),
             ],
         ];
+    }
+
+    /**
+     * Best-supported comp groups for each enabled source, ranked by how many of the group's
+     * selected sales came from that source's listings. Median and total sales stay group-wide,
+     * since comps pool sales across sources.
+     */
+    private function topModelsBySource(string $comps): array
+    {
+        $db = $this->resource->getConnection();
+        $sources = $db->fetchPairs($db->select()
+            ->from($this->table(Source::TABLE), ['id', 'name'])
+            ->where('COALESCE(enabled, 0) = 1')
+            ->order('name'));
+
+        $result = [];
+        foreach ($sources as $id => $name) {
+            $result[] = [
+                'id' => (int)$id,
+                'name' => $name,
+                'rows' => $db->fetchAll($db->select()
+                    ->from(['cs' => $this->table('ghostfrog_ebay_comp_sales')], [
+                        'model_key', 'condition_grade',
+                        'source_samples' => new Expression('COUNT(*)'),
+                    ])
+                    ->join(['a' => $this->table(Listing::TABLE)], 'a.id = cs.listing_id', [])
+                    ->join(
+                        ['c' => $comps],
+                        'c.model_key = cs.model_key AND c.condition_grade = cs.condition_grade',
+                        [
+                            'samples' => new Expression('MAX(c.samples)'),
+                            'median_final_price' => new Expression('MAX(c.median_final_price)'),
+                        ]
+                    )
+                    ->where('a.source_id = ?', (int)$id)
+                    ->group(['cs.model_key', 'cs.condition_grade'])
+                    ->order('source_samples DESC')
+                    ->limit(10)),
+            ];
+        }
+        return $result;
     }
 
     private function queues(): array

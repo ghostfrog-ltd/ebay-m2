@@ -43,6 +43,39 @@ final class SourceSearches
                 ],
             ],
         ],
+        'ebay-ipod' => [
+            // iPods & MP3 Players. Model terms keep generic MP3 players out of the results.
+            'categories' => [73839],
+            'queries' => [
+                'ipod classic',
+                'ipod video',
+                'ipod nano',
+                'ipod touch',
+                'ipod shuffle',
+                'ipod mini',
+            ],
+        ],
+        'ebay-rc' => [
+            // RC cars and kits (182183) and RC vehicle parts (182187). The toy-grade
+            // "Remote-Controlled Toys" category (84912) is deliberately left out.
+            'categories' => [182183, 182187],
+            // A Buy It Now floor drops pocket-money cars. Auctions are left unfiltered
+            // because good kits often start at 99p.
+            'filters' => ['bin' => 'price:[30..],priceCurrency:GBP'],
+            'category_queries' => [
+                182183 => [
+                    '(schumacher, xray, "team associated", losi, tlr, kyosho, yokomo, mugen)',
+                    '(tekno, infinity, awesomatix, serpent, trf, tamiya)',
+                    '(nitro, "1/8 buggy", "touring car", "pan car", "1/10 buggy", vintage)',
+                ],
+                182187 => [
+                    '(sanwa, futaba, hobbywing, lrp, tekin, orion, savox)',
+                    '(nitro, novarossi, picco, reds, sirio, "os engine")',
+                    '(schumacher, xray, "team associated", losi, tlr, kyosho, yokomo, mugen)',
+                    '(tekno, infinity, awesomatix, serpent, trf)',
+                ],
+            ],
+        ],
         'ebay-consoles' => [
             'categories' => [139971, 54968, 139973],
             'queries' => ['a'],

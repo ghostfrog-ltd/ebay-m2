@@ -57,21 +57,27 @@
                 <label translate="true">eBay Item ID</label>
             </settings>
         </column>
-        <column name="source" sortOrder="40">
+        <column name="source" component="Magento_Ui/js/grid/columns/select" sortOrder="40">
             <settings>
-                <filter>text</filter>
+                <options class="GhostFrog\Ebay\Ui\Component\Listing\Column\Sources"/>
+                <filter>select</filter>
+                <dataType>select</dataType>
                 <label translate="true">Source</label>
             </settings>
         </column>
-        <column name="status" sortOrder="50">
+        <column name="status" component="Magento_Ui/js/grid/columns/select" sortOrder="50">
             <settings>
-                <filter>text</filter>
+                <options class="GhostFrog\Ebay\Ui\Component\Listing\Column\Statuses"/>
+                <filter>select</filter>
+                <dataType>select</dataType>
                 <label translate="true">Status</label>
             </settings>
         </column>
-        <column name="sale_type" sortOrder="60">
+        <column name="sale_type" component="Magento_Ui/js/grid/columns/select" sortOrder="60">
             <settings>
-                <filter>text</filter>
+                <options class="GhostFrog\Ebay\Ui\Component\Opportunities\Column\SaleTypes"/>
+                <filter>select</filter>
+                <dataType>select</dataType>
                 <label translate="true">Sale Type</label>
             </settings>
         </column>
@@ -101,9 +107,11 @@
                 <label translate="true">Model Key</label>
             </settings>
         </column>
-        <column name="condition_grade" sortOrder="110">
+        <column name="condition_grade" component="Magento_Ui/js/grid/columns/select" sortOrder="110">
             <settings>
-                <filter>text</filter>
+                <options class="GhostFrog\Ebay\Ui\Component\Listing\Column\ConditionGrades"/>
+                <filter>select</filter>
+                <dataType>select</dataType>
                 <label translate="true">Condition Grade</label>
             </settings>
         </column>

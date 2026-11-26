@@ -162,6 +162,19 @@ final class ListingSummary
             'categoryId', 'categoryPath', 'itemCreationDate', 'itemEndDate'] as $key) {
             $this->add($attrs, 'Browse ' . $key, $item[$key] ?? null, 4000);
         }
+        // Search results carry the category as leafCategoryIds and categories[] rather than
+        // categoryId and categoryPath, which only getItem returns.
+        if (!isset($attrs['Browse categoryId']) && is_scalar($item['leafCategoryIds'][0] ?? null)) {
+            $this->add($attrs, 'Browse categoryId', (string)$item['leafCategoryIds'][0], 255);
+        }
+        if (!isset($attrs['Browse categoryPath']) && is_array($item['categories'] ?? null)) {
+            $names = array_filter(array_map(
+                static fn ($category): string => is_array($category) && is_string($category['categoryName'] ?? null)
+                    ? trim($category['categoryName']) : '',
+                $item['categories']
+            ));
+            $this->add($attrs, 'Browse categoryPath', implode('|', $names), 4000);
+        }
         foreach ([
             'seller' => ['username', 'feedbackScore', 'feedbackPercentage'],
             'itemLocation' => ['country', 'city', 'stateOrProvince', 'postalCode'],

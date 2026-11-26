@@ -33,3 +33,9 @@ a.gf-tile:hover { border-color: var(--gf-accent); text-decoration: none; }
 .gf-meter__track { height: 8px; background: #efeeea; border-radius: 4px; overflow: hidden; }
 .gf-meter__track span { display: block; height: 100%; background: var(--gf-accent); border-radius: 4px; }
 .gf-meter__track--hot span { background: #d03b3b; }
+.gf-tabs { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: 1rem; border-bottom: 1px solid var(--gf-line); }
+.gf-tab { background: none; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; padding: .6rem 1rem;
+    color: var(--gf-ink-2); font-weight: 600; cursor: pointer; }
+.gf-tab:hover { color: var(--gf-ink); background: none; }
+.gf-tab--active { color: var(--gf-ink); border-bottom-color: var(--gf-accent); }
+.gf-tab__meta { margin-left: .4rem; color: var(--gf-ink-2); font-weight: normal; font-variant-numeric: tabular-nums; }

@@ -10,6 +10,8 @@ final class Valuation
 {
     private const SOURCE_MINIMUMS = [
         'ebay-apple' => 10,
+        'ebay-ipod' => 5,
+        'ebay-rc' => 5,
         'ebay-samsung' => 5,
         'ebay-graphics-cards' => 5,
     ];

@@ -110,6 +110,12 @@ final class TradingResponse
                 $raw['Trading ' . $name] = mb_substr($value, 0, 4000);
             }
         }
+        foreach (['CategoryID', 'CategoryName'] as $name) {
+            $value = trim($xpath->evaluate('string(./*[local-name()="PrimaryCategory"]/*[local-name()="' . $name . '"])', $item));
+            if ($value !== '') {
+                $raw['Trading Primary' . $name] = mb_substr($value, 0, 1000);
+            }
+        }
         $description = html_entity_decode($this->text($xpath, $item, 'Description'), ENT_QUOTES | ENT_HTML5, 'UTF-8');
         if ($description !== '') {
             $description = preg_replace('~<(script|style)\b[^>]*>.*?</\1>~is', '', $description);

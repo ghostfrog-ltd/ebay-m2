@@ -131,25 +131,47 @@ define(['jquery', 'chartJs'], function ($, Chart) {
         var data = config.data,
             daily = {};
 
+        $(element).on('click', '[data-gf-tab]', function () {
+            var $tab = $(this),
+                key = $tab.attr('data-gf-tab'),
+                $card = $tab.closest('.gf-card');
+
+            $card.find('[data-gf-tab]').removeClass('gf-tab--active').attr('aria-selected', 'false');
+            $tab.addClass('gf-tab--active').attr('aria-selected', 'true');
+            $card.find('[data-gf-panel]').each(function () {
+                this.hidden = this.getAttribute('data-gf-panel') !== key;
+            });
+            renderCharts($card.find('[data-gf-panel="' + key + '"]'));
+        });
+
         Chart.defaults.font.family = getComputedStyle(element).fontFamily;
         Object.keys(data.daily).forEach(function (d) { daily[d.slice(5)] = data.daily[d]; });
 
-        $(element).find('canvas[data-chart]').each(function () {
-            var name = this.getAttribute('data-chart');
+        // Charts in hidden tab panels have no size yet, so they are drawn when first shown.
+        function renderCharts($scope) {
+            $scope.find('canvas[data-chart]').filter(function () {
+                return !this.hasAttribute('data-rendered') && !$(this).closest('[hidden]').length;
+            }).each(function () {
+                var name = this.getAttribute('data-chart');
 
-            switch (name) {
-                case 'daily':
-                    bar(this, daily, 'new listings');
-                    break;
-                case 'compBuckets':
-                    bar(this, data.compBuckets, 'comp groups');
-                    break;
-                case 'roi':
-                    bar(this, data.roi, 'opportunities');
-                    break;
-                default:
-                    doughnut(this, data[name] || {});
-            }
-        });
+                this.setAttribute('data-rendered', '1');
+
+                switch (name) {
+                    case 'daily':
+                        bar(this, daily, 'new listings');
+                        break;
+                    case 'compBuckets':
+                        bar(this, data.compBuckets, 'comp groups');
+                        break;
+                    case 'roi':
+                        bar(this, data.roi, 'opportunities');
+                        break;
+                    default:
+                        doughnut(this, data[name] || {});
+                }
+            });
+        }
+
+        renderCharts($(element));
     };
 });

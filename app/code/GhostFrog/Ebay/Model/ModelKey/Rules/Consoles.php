@@ -428,6 +428,10 @@ final class Consoles extends Rule
 
     public static function consoleOrGameModelKey(array $attrs, string $title): ?string
     {
+        $game = Games::key($attrs, $title);
+        if ($game !== self::UNKNOWN_KEY) {
+            return $game;
+        }
         $titleText = self::asText($title);
         $text = self::blob($attrs, $title);
         $hardwareSignal = self::hasConsoleHardwareSignal($titleText, $text);

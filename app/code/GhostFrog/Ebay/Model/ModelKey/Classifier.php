@@ -11,10 +11,12 @@ use GhostFrog\Ebay\Model\ModelKey\Rules\Consoles;
 use GhostFrog\Ebay\Model\ModelKey\Rules\Headphones;
 use GhostFrog\Ebay\Model\ModelKey\Rules\HondaMsx125;
 use GhostFrog\Ebay\Model\ModelKey\Rules\HondaNc750;
+use GhostFrog\Ebay\Model\ModelKey\Rules\Ipod;
 use GhostFrog\Ebay\Model\ModelKey\Rules\Lego;
 use GhostFrog\Ebay\Model\ModelKey\Rules\MiniCooper;
 use GhostFrog\Ebay\Model\ModelKey\Rules\Motors;
 use GhostFrog\Ebay\Model\ModelKey\Rules\Pokemon;
+use GhostFrog\Ebay\Model\ModelKey\Rules\RcCars;
 use GhostFrog\Ebay\Model\ModelKey\Rules\RetroPc;
 use GhostFrog\Ebay\Model\ModelKey\Rules\Samsung;
 use GhostFrog\Ebay\Model\ModelKey\Rules\Tools;
@@ -35,7 +37,8 @@ final class Classifier
         }
         $source = strtolower(trim($source));
         // Packaging, empty boxes and explicit repair listings are unsafe product identities.
-        if (preg_match('~\b(?:box only|empty box|packaging only|case only|charger only|'
+        // RC keeps faulty listings identified; comps eligibility still excludes them.
+        if ($source !== 'ebay-rc' && preg_match('~\b(?:box only|empty box|packaging only|case only|charger only|'
             . 'for parts|parts only|parts (?:or|and) repair|spares (?:or|and) repair|repair only)\b~i', $title)
         ) {
             return 'unknown';
@@ -46,7 +49,7 @@ final class Classifier
             }
         }
         $storageFields = ['Storage Capacity'];
-        if ($source === 'ebay-apple') {
+        if ($source === 'ebay-apple' || $source === 'ebay-ipod') {
             array_push($storageFields, 'SSD Capacity', 'Hard Drive Capacity', 'Capacity');
         }
         if (!empty($attrs['storage_gb']) && !array_intersect_key(array_filter($attrs), array_flip($storageFields))) {
@@ -55,6 +58,7 @@ final class Classifier
 
         $key = match ($source) {
             'ebay-apple' => $this->apple($attrs, Evidence::texts([], $title)[0]),
+            'ebay-ipod' => Ipod::key($attrs, $title),
             'ebay-actioncams' => Cameras::cameraDroneModelKey($attrs, $title),
             'ebay-camera-lenses' => Components::cameraLensModelKey($attrs, $title),
             'ebay-consoles' => Consoles::consoleOrGameModelKey($attrs, $title),
@@ -69,6 +73,7 @@ final class Classifier
             'ebay-motherboards' => Components::motherboardModelKey($attrs, $title),
             'ebay-motors' => Motors::motorsModelKey($attrs, $title),
             'ebay-pokemon' => Pokemon::pokemonModelKey($attrs, $title),
+            'ebay-rc' => RcCars::key($attrs, $title),
             'ebay-retro-pc' => RetroPc::key($attrs, $title),
             'ebay-samsung' => Samsung::samsungModelKey($attrs, $title),
             'ebay-tools' => Tools::toolsModelKey($attrs, $title),
@@ -115,7 +120,7 @@ final class Classifier
             'airtag' => $this->devices->airtag($attrs, $title),
             'apple-tv' => $this->appleTv($texts, $attrs, $title),
             'homepod' => $this->homepod($texts),
-            'ipod' => $this->ipod($texts, $attrs, $title),
+            'ipod' => Ipod::key($attrs, $title),
             default => 'unknown',
         };
     }
@@ -149,12 +154,5 @@ final class Classifier
     {
         $model = Evidence::any('~\bmini\b~', $texts) ? 'homepod-mini' : 'homepod';
         return 'apple-' . $model . (Evidence::any('~\b(?:2nd|second|2023)\b~', $texts) ? '-2nd-gen' : '');
-    }
-
-    private function ipod(array $texts, array $attrs, string $title): string
-    {
-        $models = Evidence::matches('~\b(touch|nano|classic)\b~', $texts);
-        $storage = $this->devices->storage($attrs, $title);
-        return count($models) === 1 && $storage !== '' ? 'apple-ipod-' . $models[0] . '-' . $storage : 'unknown';
     }
 }

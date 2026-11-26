@@ -44,13 +44,15 @@ final class BrowseClient
                 continue;
             }
 
+            $extra = $definition['filters'][$saleType] ?? '';
+            $categoryFilter = $extra === '' ? $buyingFilter : $buyingFilter . ',' . $extra;
             foreach ($definition['categories'] as $category) {
                 $queries = $definition['category_queries'][$category] ?? $definition['queries'];
                 foreach ($queries as $query) {
                     $payload = $this->get($params + [
                         'q' => $query,
                         'category_ids' => $category,
-                        'filter' => $buyingFilter,
+                        'filter' => $categoryFilter,
                     ], Usage::CATEGORY_SEARCH);
                     foreach ($this->summaries($payload) as $item) {
                         yield [$saleType, $item];
