@@ -58,6 +58,12 @@ class ImportSales extends Command
                 $output->writeln(sprintf('<error>%s: %s</error>', $label, $result));
                 continue;
             }
+            if (isset($result['payouts'])) {
+                $output->writeln(sprintf('%s: %d eBay transactions (%s to %s UTC): %d new fee lines, %d updated, %d payouts, %d linked.',
+                    $label, $result['fetched'], $result['from'], $result['to'], $result['created'], $result['updated'],
+                    $result['payouts'], $result['linked']));
+                continue;
+            }
             $orders = implode(', ', array_map(static fn($k, $v) => "$v $k", array_keys($result['orders']), $result['orders'])) ?: 'none';
             $output->writeln(sprintf('%s: %d sale lines (%s to %s UTC): %d new, %d updated, %d unchanged. Orders: %s.',
                 $label, $result['fetched'], $result['from'], $result['to'], $result['created'], $result['updated'],

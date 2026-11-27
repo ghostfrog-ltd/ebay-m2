@@ -1,0 +1,16 @@
+{"transactions": [
+  {"transactionId": "T-SALE-1", "orderId": "12-34567-00001", "transactionType": "SALE", "transactionStatus": "PAYOUT", "bookingEntry": "CREDIT",
+   "transactionDate": "2026-12-08T19:13:00.000Z", "payoutId": "P-1", "amount": {"value": "106.91", "currency": "GBP"},
+   "buyer": {"username": "some_buyer_123"}, "totalFeeAmount": {"value": "12.59", "currency": "GBP"},
+   "orderLineItems": [{"lineItemId": "10055500001", "feeBasisAmount": {"value": "119.50", "currency": "GBP"},
+     "marketplaceFees": [{"feeType": "FINAL_VALUE_FEE", "amount": {"value": "12.29", "currency": "GBP"}},
+                         {"feeType": "FINAL_VALUE_FEE_FIXED_PER_ORDER", "amount": {"value": "0.30", "currency": "GBP"}},
+                         {"feeType": "REGULATORY_OPERATING_FEE", "amount": {"value": "0.00", "currency": "GBP"}}]}]},
+  {"transactionId": "T-LABEL-1", "transactionType": "SHIPPING_LABEL", "bookingEntry": "DEBIT", "transactionDate": "2026-12-09T09:00:00.000Z",
+   "amount": {"value": "3.35", "currency": "GBP"}, "references": [{"referenceId": "12-34567-00001", "referenceType": "ORDER_ID"}]},
+  {"transactionId": "T-AD-1", "transactionType": "NON_SALE_CHARGE", "bookingEntry": "DEBIT", "feeType": "AD_FEE", "transactionDate": "2026-12-10T00:00:00.000Z",
+   "amount": {"value": "2.40", "currency": "GBP"}, "references": [{"referenceId": "12-34567-00001", "referenceType": "ORDER_ID"}]},
+  {"transactionId": "T-REF-1", "orderId": "12-34567-00001", "transactionType": "REFUND", "bookingEntry": "DEBIT", "transactionDate": "2026-12-12T00:00:00.000Z",
+   "amount": {"value": "5.00", "currency": "GBP"},
+   "orderLineItems": [{"lineItemId": "10055500001", "marketplaceFees": [{"feeType": "FINAL_VALUE_FEE", "amount": {"value": "0.51", "currency": "GBP"}}]}]}
+]}

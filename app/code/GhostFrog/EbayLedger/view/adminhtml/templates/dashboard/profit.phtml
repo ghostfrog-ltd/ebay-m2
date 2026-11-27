@@ -1,0 +1,124 @@
+<?php
+/** @var \GhostFrog\EbayLedger\Block\Adminhtml\Dashboard\Profit $block */
+/** @var \Magento\Framework\Escaper $escaper */
+$d = $block->data();
+$m = fn(?float $v) => $escaper->escapeHtml($block->money($v));
+$statusLabels = \GhostFrog\EbayLedger\Model\StockUnit\Status::LABELS;
+?>
+<style>
+    .gf-profit .tiles{display:flex;flex-wrap:wrap;gap:1rem;margin:0 0 1.5rem}
+    .gf-profit .tile{border:1px solid #ddd;padding:.8rem 1.1rem;min-width:11rem}
+    .gf-profit .tile b{display:block;font-size:1.6rem;margin-top:.2rem}
+    .gf-profit table{border-collapse:collapse;width:100%;margin:0 0 1.75rem}
+    .gf-profit th,.gf-profit td{border-bottom:1px solid #e3e3e3;padding:.4rem .55rem;text-align:left;vertical-align:top}
+    .gf-profit .num{text-align:right;white-space:nowrap}
+    .gf-profit .neg{color:#b42318}
+    .gf-profit .muted{color:#666}
+    .gf-profit .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(18rem,1fr));gap:1.5rem}
+</style>
+<div class="gf-profit">
+    <p>
+        <a class="action-secondary" href="<?= $escaper->escapeUrl($block->getUrl('*/*/export')) ?>"><?= $escaper->escapeHtml(__('Export to CSV')) ?></a>
+        <a class="action-secondary" href="<?= $escaper->escapeUrl($block->getUrl('ghostfrog_ledger/cost/new')) ?>"><?= $escaper->escapeHtml(__('Add a Cost')) ?></a>
+    </p>
+    <div class="tiles">
+        <div class="tile"><?= $escaper->escapeHtml(__('Profit so far')) ?><b class="<?= $d['profit'] < 0 ? 'neg' : '' ?>"><?= $m($d['profit']) ?></b></div>
+        <div class="tile"><?= $escaper->escapeHtml(__('Sales income')) ?><b><?= $m($d['income']) ?></b></div>
+        <div class="tile"><?= $escaper->escapeHtml(__('Items sold')) ?><b><?= count($d['sold']) ?></b></div>
+        <div class="tile"><?= $escaper->escapeHtml(__('Cash in unsold stock')) ?><b><?= $m($d['tied_up']) ?></b></div>
+        <?php foreach ($d['days'] as $label => $days): ?>
+            <div class="tile"><?= $escaper->escapeHtml(__($label)) ?><b><?= $days === null ? '—' : $escaper->escapeHtml(number_format($days, 1) . ' ' . __('days')) ?></b></div>
+        <?php endforeach; ?>
+    </div>
+
+    <h2><?= $escaper->escapeHtml(__('Stock units')) ?></h2>
+    <table>
+        <thead><tr>
+            <th><?= $escaper->escapeHtml(__('Unit')) ?></th><th><?= $escaper->escapeHtml(__('Status')) ?></th>
+            <th class="num"><?= $escaper->escapeHtml(__('Cost')) ?></th><th><?= $escaper->escapeHtml(__('Plan')) ?></th>
+            <th class="num"><?= $escaper->escapeHtml(__('Actual profit')) ?></th><th class="num"><?= $escaper->escapeHtml(__('Planned')) ?></th>
+            <th class="num"><?= $escaper->escapeHtml(__('Whole was predicted')) ?></th>
+            <th><?= $escaper->escapeHtml(__('Grade: predicted / actual')) ?></th>
+        </tr></thead>
+        <tbody>
+        <?php foreach ($d['units'] as $u): ?>
+            <tr>
+                <td><strong><?= $escaper->escapeHtml($u['reference']) ?></strong> <span class="muted"><?= $escaper->escapeHtml(mb_substr((string)$u['title'], 0, 60)) ?></span></td>
+                <td><?= $escaper->escapeHtml(__($statusLabels[$u['status']] ?? $u['status'])) ?></td>
+                <td class="num"><?= $m((float)$u['total_cost'] - (float)$u['refund_amount']) ?></td>
+                <td><?= $escaper->escapeHtml($u['plan'] ? __($u['plan']) : '—') ?></td>
+                <td class="num <?= ($u['profit'] ?? 0) < 0 ? 'neg' : '' ?>"><?= $m($u['profit']) ?><?= $u['profit'] !== null && !$u['complete'] ? ' <span class="muted">' . $escaper->escapeHtml(__('so far')) . '</span>' : '' ?></td>
+                <td class="num"><?= $m($u['planned_profit'] === null ? null : (float)$u['planned_profit']) ?></td>
+                <td class="num"><?= $m($u['whole_predicted'] === null ? null : (float)$u['whole_predicted']) ?></td>
+                <td><?= $escaper->escapeHtml(($u['predicted_grade'] ?: '—') . ' / ' . ($u['actual_grade'] ?: '—')) ?></td>
+            </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+
+    <h2><?= $escaper->escapeHtml(__('Sold products')) ?></h2>
+    <?php if ($d['sold'] === []): ?>
+        <p class="muted"><?= $escaper->escapeHtml(__('Nothing sold yet. Sales appear here once they import and match a product.')) ?></p>
+    <?php else: ?>
+    <table>
+        <thead><tr>
+            <th><?= $escaper->escapeHtml(__('Sold')) ?></th><th><?= $escaper->escapeHtml(__('SKU')) ?></th><th><?= $escaper->escapeHtml(__('Sells')) ?></th>
+            <th class="num"><?= $escaper->escapeHtml(__('Income')) ?></th><th class="num"><?= $escaper->escapeHtml(__('Allocated cost')) ?></th>
+            <th class="num"><?= $escaper->escapeHtml(__('eBay fees')) ?></th><th class="num"><?= $escaper->escapeHtml(__('Postage')) ?></th>
+            <th class="num"><?= $escaper->escapeHtml(__('Packaging')) ?></th><th class="num"><?= $escaper->escapeHtml(__('Other')) ?></th>
+            <th class="num"><?= $escaper->escapeHtml(__('Profit')) ?></th>
+        </tr></thead>
+        <tbody>
+        <?php foreach ($d['sold'] as $p): ?>
+            <tr>
+                <td><?= $escaper->escapeHtml(substr((string)$p['sold_at'], 0, 10)) ?></td>
+                <td><?= $escaper->escapeHtml($p['sku']) ?></td>
+                <td><?= $escaper->escapeHtml($p['part_name']) ?></td>
+                <td class="num"><?= $m((float)$p['income']) ?></td>
+                <td class="num"><?= $m((float)$p['allocated_cost']) ?></td>
+                <td class="num"><?= $m((float)$p['ebay_fees']) ?></td>
+                <td class="num"><?= $m((float)$p['postage_total']) ?></td>
+                <td class="num"><?= $m((float)$p['packaging']) ?></td>
+                <td class="num"><?= $m((float)$p['other_costs']) ?></td>
+                <td class="num <?= $p['profit'] < 0 ? 'neg' : '' ?>"><?= $m((float)$p['profit']) ?></td>
+            </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+    <?php endif; ?>
+
+    <div class="cols">
+        <?php foreach (['month' => __('By month'), 'model' => __('By model'), 'account' => __('By account')] as $key => $title): ?>
+            <div>
+                <h2><?= $escaper->escapeHtml($title) ?></h2>
+                <table>
+                    <thead><tr><th></th><th class="num"><?= $escaper->escapeHtml(__('Sales')) ?></th><th class="num"><?= $escaper->escapeHtml(__('Income')) ?></th><th class="num"><?= $escaper->escapeHtml(__('Profit')) ?></th></tr></thead>
+                    <tbody>
+                    <?php foreach ($d['totals'][$key] as $name => $row): ?>
+                        <tr><td><?= $escaper->escapeHtml($name) ?></td><td class="num"><?= (int)$row['sales'] ?></td>
+                            <td class="num"><?= $m($row['income']) ?></td><td class="num <?= $row['profit'] < 0 ? 'neg' : '' ?>"><?= $m($row['profit']) ?></td></tr>
+                    <?php endforeach; ?>
+                    <?php if ($d['totals'][$key] === []): ?><tr><td colspan="4" class="muted"><?= $escaper->escapeHtml(__('Nothing yet.')) ?></td></tr><?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endforeach; ?>
+        <div>
+            <h2><?= $escaper->escapeHtml(__('Grade accuracy')) ?></h2>
+            <?php $g = $d['grades']; ?>
+            <?php if ($g['graded'] === 0): ?>
+                <p class="muted"><?= $escaper->escapeHtml(__('Grade items when they arrive to see how often GhostFrog\'s predicted grade was right.')) ?></p>
+            <?php else: ?>
+                <p><?= $escaper->escapeHtml(__('%1 of %2 graded items matched the predicted grade (%3%).', $g['exact'], $g['graded'], round(100 * $g['exact'] / $g['graded']))) ?></p>
+                <table>
+                    <thead><tr><th><?= $escaper->escapeHtml(__('Predicted → actual')) ?></th><?php foreach (['A', 'B', 'C', 'D', 'F'] as $a): ?><th class="num"><?= $escaper->escapeHtml($a) ?></th><?php endforeach; ?></tr></thead>
+                    <tbody>
+                    <?php foreach ($g['matrix'] as $predicted => $actuals): ?>
+                        <tr><td><?= $escaper->escapeHtml($predicted) ?></td><?php foreach (['A', 'B', 'C', 'D', 'F'] as $a): ?><td class="num"><?= (int)($actuals[$a] ?? 0) ?></td><?php endforeach; ?></tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>

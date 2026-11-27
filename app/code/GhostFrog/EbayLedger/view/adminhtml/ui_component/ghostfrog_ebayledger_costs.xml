@@ -1,0 +1,91 @@
+<?xml version="1.0"?>
+<listing xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Ui:etc/ui_configuration.xsd">
+    <argument name="data" xsi:type="array">
+        <item name="js_config" xsi:type="array">
+            <item name="provider" xsi:type="string">ghostfrog_ebayledger_costs.ghostfrog_ebayledger_costs_data_source</item>
+        </item>
+    </argument>
+    <settings>
+        <buttons>
+            <button name="add">
+                <url path="*/*/new"/>
+                <class>primary</class>
+                <label translate="true">Add a Cost</label>
+            </button>
+        </buttons>
+        <spinner>ghostfrog_ebayledger_costs_columns</spinner>
+        <deps>
+            <dep>ghostfrog_ebayledger_costs.ghostfrog_ebayledger_costs_data_source</dep>
+        </deps>
+    </settings>
+    <dataSource name="ghostfrog_ebayledger_costs_data_source" component="Magento_Ui/js/grid/provider">
+        <settings>
+            <storageConfig>
+                <param name="indexField" xsi:type="string">cost_id</param>
+            </storageConfig>
+            <updateUrl path="mui/index/render"/>
+        </settings>
+        <aclResource>GhostFrog_EbayLedger::dashboard</aclResource>
+        <dataProvider class="Magento\Framework\View\Element\UiComponent\DataProvider\DataProvider" name="ghostfrog_ebayledger_costs_data_source">
+            <settings>
+                <requestFieldName>cost_id</requestFieldName>
+                <primaryFieldName>cost_id</primaryFieldName>
+            </settings>
+        </dataProvider>
+    </dataSource>
+    <listingToolbar name="listing_top">
+        <filters name="listing_filters"/>
+        <exportButton name="export_button"/>
+        <paging name="listing_paging"/>
+    </listingToolbar>
+    <columns name="ghostfrog_ebayledger_costs_columns">
+        <column name="incurred_on" class="Magento\Ui\Component\Listing\Columns\Date" component="Magento_Ui/js/grid/columns/date" sortOrder="10">
+            <settings>
+                <filter>dateRange</filter>
+                <dataType>date</dataType>
+                <timezone>false</timezone>
+                <dateFormat>yyyy-MM-dd</dateFormat>
+                <sorting>desc</sorting>
+                <label translate="true">Date</label>
+            </settings>
+        </column>
+        <column name="reference" sortOrder="20">
+            <settings>
+                <filter>text</filter>
+                <label translate="true">Stock Unit</label>
+            </settings>
+        </column>
+        <column name="sku" sortOrder="30">
+            <settings>
+                <filter>text</filter>
+                <label translate="true">Product</label>
+            </settings>
+        </column>
+        <column name="cost_type" component="Magento_Ui/js/grid/columns/select" sortOrder="40">
+            <settings>
+                <options class="GhostFrog\EbayLedger\Model\Cost\CostType"/>
+                <filter>select</filter>
+                <dataType>select</dataType>
+                <label translate="true">Kind</label>
+            </settings>
+        </column>
+        <column name="amount" sortOrder="50">
+            <settings>
+                <filter>textRange</filter>
+                <label translate="true">Amount £</label>
+            </settings>
+        </column>
+        <column name="note" sortOrder="60">
+            <settings>
+                <filter>text</filter>
+                <label translate="true">Note</label>
+            </settings>
+        </column>
+        <actionsColumn name="actions" class="GhostFrog\EbayLedger\Ui\Component\Column\CostActions" sortOrder="900">
+            <settings>
+                <indexField>cost_id</indexField>
+            </settings>
+        </actionsColumn>
+    </columns>
+</listing>

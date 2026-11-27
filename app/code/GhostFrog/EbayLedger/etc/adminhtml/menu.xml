@@ -16,6 +16,12 @@
         <add id="GhostFrog_EbayLedger::sales" title="Sales" translate="title" module="GhostFrog_EbayLedger"
              sortOrder="40" parent="GhostFrog_EbayLedger::ledger" action="ghostfrog_ledger/sale/index"
              resource="GhostFrog_EbayLedger::sales"/>
+        <add id="GhostFrog_EbayLedger::dashboard" title="Profit Dashboard" translate="title" module="GhostFrog_EbayLedger"
+             sortOrder="50" parent="GhostFrog_EbayLedger::ledger" action="ghostfrog_ledger/dashboard/index"
+             resource="GhostFrog_EbayLedger::dashboard"/>
+        <add id="GhostFrog_EbayLedger::costs" title="My Costs" translate="title" module="GhostFrog_EbayLedger"
+             sortOrder="55" parent="GhostFrog_EbayLedger::ledger" action="ghostfrog_ledger/cost/index"
+             resource="GhostFrog_EbayLedger::dashboard"/>
         <add id="GhostFrog_EbayLedger::parts_templates" title="Parts Templates" translate="title" module="GhostFrog_EbayLedger"
              sortOrder="60" parent="GhostFrog_EbayLedger::ledger" action="ghostfrog_ledger/template/index"
              resource="GhostFrog_EbayLedger::parts_templates"/>

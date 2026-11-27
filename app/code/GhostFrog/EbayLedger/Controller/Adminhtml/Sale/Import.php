@@ -31,6 +31,11 @@ class Import extends Action implements HttpGetActionInterface, HttpPostActionInt
                 $this->messageManager->addErrorMessage(__('%1: %2', $label, $result));
                 continue;
             }
+            if (isset($result['payouts'])) {
+                $this->messageManager->addSuccessMessage(__('%1: %2 eBay transactions, %3 new fee lines, %4 payouts.', $label,
+                    $result['fetched'], $result['created'], $result['payouts']));
+                continue;
+            }
             $this->messageManager->addSuccessMessage(__('%1: %2 sale lines, %3 new. Orders created: %4, waiting for a match: %5.', $label,
                 $result['fetched'], $result['created'], $result['orders']['created'] ?? 0, $result['orders']['waiting'] ?? 0));
         }

@@ -8,6 +8,10 @@
     </argument>
     <settings>
         <buttons>
+            <button name="signing_key">
+                <url path="*/*/createSigningKey"/>
+                <label translate="true">Create Signing Key</label>
+            </button>
             <button name="add">
                 <url path="*/*/new"/>
                 <class>primary</class>

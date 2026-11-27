@@ -18,7 +18,8 @@
             "purchases_imported_at": true,
             "created_at": true,
             "updated_at": true,
-            "sales_imported_at": true
+            "sales_imported_at": true,
+            "finances_imported_at": true
         },
         "constraint": {
             "PRIMARY": true,
@@ -202,6 +203,93 @@
         "constraint": {
             "PRIMARY": true,
             "GHOSTFROG_EBAYLEDGER_SALE_LINE_EBAY_ORDER_ID_EBAY_LINE_ITEM_ID": true
+        }
+    },
+    "ghostfrog_ebayledger_signing_key": {
+        "column": {
+            "signing_key_id": true,
+            "cipher": true,
+            "jwe": true,
+            "private_key": true,
+            "expires_at": true,
+            "created_at": true
+        },
+        "constraint": {
+            "PRIMARY": true
+        }
+    },
+    "ghostfrog_ebayledger_fee": {
+        "column": {
+            "fee_id": true,
+            "account_id": true,
+            "fee_key": true,
+            "transaction_id": true,
+            "transaction_type": true,
+            "fee_type": true,
+            "amount": true,
+            "currency": true,
+            "booked_at": true,
+            "ebay_order_id": true,
+            "ebay_line_item_id": true,
+            "payout_id": true,
+            "sale_line_id": true,
+            "ledger_product_id": true,
+            "magento_order_id": true,
+            "raw_payload": true,
+            "imported_at": true
+        },
+        "index": {
+            "GHOSTFROG_EBAYLEDGER_FEE_EBAY_ORDER_ID": true,
+            "GHOSTFROG_EBAYLEDGER_FEE_LEDGER_PRODUCT_ID": true
+        },
+        "constraint": {
+            "PRIMARY": true,
+            "GHOSTFROG_EBAYLEDGER_FEE_FEE_KEY": true
+        }
+    },
+    "ghostfrog_ebayledger_payout": {
+        "column": {
+            "payout_id": true,
+            "account_id": true,
+            "amount": true,
+            "currency": true,
+            "status": true,
+            "payout_at": true,
+            "imported_at": true
+        },
+        "constraint": {
+            "PRIMARY": true
+        }
+    },
+    "ghostfrog_ebayledger_sale_payout": {
+        "column": {
+            "transaction_id": true,
+            "ebay_order_id": true,
+            "payout_id": true,
+            "net_amount": true,
+            "booked_at": true
+        },
+        "index": {
+            "GHOSTFROG_EBAYLEDGER_SALE_PAYOUT_EBAY_ORDER_ID": true
+        },
+        "constraint": {
+            "PRIMARY": true
+        }
+    },
+    "ghostfrog_ebayledger_cost": {
+        "column": {
+            "cost_id": true,
+            "stock_unit_id": true,
+            "ledger_product_id": true,
+            "cost_type": true,
+            "amount": true,
+            "incurred_on": true,
+            "note": true,
+            "created_at": true
+        },
+        "constraint": {
+            "PRIMARY": true,
+            "FK_470B9D8EF0168A73D878866C6B77A956": true
         }
     }
 }
