@@ -24,24 +24,61 @@ use GhostFrog\Ebay\Model\ModelKey\Rules\Watches;
 
 final class Classifier
 {
+    /** Columns a classification may set besides the key. Sources without item types leave them alone. */
+    public const DETAIL_COLUMNS = ['item_type', 'key_source', 'brand'];
+
     public function __construct(
         private readonly AppleMac $mac,
-        private readonly AppleDevices $devices
+        private readonly AppleDevices $devices,
+        private readonly ?BrandAliases $aliases = null
     ) {
     }
 
     /** Key for a stored listing row, from its title, raw_attrs (JSON or decoded) and enrichment columns. */
     public function forListing(string $source, array $listing): string
     {
+        return $this->columnsForListing($source, $listing)['model_key'];
+    }
+
+    /**
+     * The listing columns a classification decides: model_key always, and for sources with item types
+     * (ebay-rc) also item_type, key_source and the canonical brand.
+     *
+     * @return array<string, ?string>
+     */
+    public function columnsForListing(string $source, array $listing): array
+    {
         $attrs = $listing['raw_attrs'] ?? [];
         if (is_string($attrs)) {
             $attrs = json_decode($attrs, true);
         }
         $fields = array_intersect_key($listing, array_flip(['brand', 'model_name', 'storage_gb', 'colour', 'epid']));
-        return $this->key($source, (string)($listing['title'] ?? ''), (is_array($attrs) ? $attrs : []) + $fields);
+        return $this->columns($source, (string)($listing['title'] ?? ''), (is_array($attrs) ? $attrs : []) + $fields);
     }
 
     public function key(string $source, string $title, array $attrs): string
+    {
+        return $this->columns($source, $title, $attrs)['model_key'];
+    }
+
+    /** @return array<string, ?string> model_key, plus the DETAIL_COLUMNS the source's rules decide */
+    public function columns(string $source, string $title, array $attrs): array
+    {
+        if (strtolower(trim($source)) !== RcCars::SOURCE) {
+            return ['model_key' => $this->plainKey($source, $title, $attrs)];
+        }
+        // RC reads the item specifics exactly as eBay returned them. The brand column holds the name this
+        // classifier chose, so feeding it back in would make the answer depend on the previous run.
+        $found = RcCars::classify($attrs, $title, $this->aliases);
+        $key = mb_strtolower(trim($found['model_key']));
+        $found['model_key'] = $key === '' || strlen($key) > 255 ? 'unknown' : $key;
+        if ($found['brand'] === null) {
+            unset($found['brand']);
+        }
+        return $found;
+    }
+
+    private function plainKey(string $source, string $title, array $attrs): string
     {
         if (trim($title) === '') {
             return 'unknown';
@@ -49,7 +86,7 @@ final class Classifier
         $source = strtolower(trim($source));
         // Packaging and empty boxes are not the product. Faulty and repair listings keep their identity:
         // comps eligibility values them only against other faulty sales.
-        if ($source !== 'ebay-rc' && preg_match('~\b(?:box only|empty box|packaging only|case only|charger only)\b~i', $title)) {
+        if (preg_match('~\b(?:box only|empty box|packaging only|case only|charger only)\b~i', $title)) {
             return 'unknown';
         }
         foreach (['Brand' => 'brand', 'Model' => 'model_name', 'Colour' => 'colour', 'ePID' => 'epid'] as $key => $column) {
@@ -82,7 +119,6 @@ final class Classifier
             'ebay-motherboards' => Components::motherboardModelKey($attrs, $title),
             'ebay-motors' => Motors::motorsModelKey($attrs, $title),
             'ebay-pokemon' => Pokemon::pokemonModelKey($attrs, $title),
-            'ebay-rc' => RcCars::key($attrs, $title),
             'ebay-retro-pc' => RetroPc::key($attrs, $title),
             'ebay-samsung' => Samsung::samsungModelKey($attrs, $title),
             'ebay-tools' => Tools::toolsModelKey($attrs, $title),

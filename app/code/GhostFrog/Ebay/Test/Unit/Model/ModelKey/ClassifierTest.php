@@ -59,7 +59,7 @@ final class ClassifierTest extends TestCase
             'ebay-rc',
             'Team Associated B6.4 Team Kit 1/10 2WD Buggy',
             ['Browse categoryId' => '182183'],
-            'rc-associated-car-b6-4',
+            'rc-car-teamassociated-b64',
         ];
         yield 'ebay-camera-lenses' => [
             'ebay-camera-lenses',
@@ -351,7 +351,7 @@ final class ClassifierTest extends TestCase
             'ebay-rc',
             'HPI Racing Rush Evo 1:10 2WD Nitro Off-Road RTR Truck',
             [],
-            'rc-hpi-car-rush-evo',
+            'rc-car-hpi-rushevo',
         ];
         yield 'RC aircraft engine is out of scope' => [
             'ebay-rc',
@@ -369,13 +369,13 @@ final class ClassifierTest extends TestCase
             'ebay-rc',
             'Kyosho Fazer MK2 1/10 RTR with radio',
             [],
-            'rc-kyosho-car-fazer-mk2',
+            'rc-car-kyosho-fazermk2',
         ];
         yield 'RC category from the Trading API' => [
             'ebay-rc',
             'Schumacher Cougar KF2 roller',
             ['Trading PrimaryCategoryName' => 'Toys & Games:Radio Control & RC Toys:RC Model Vehicles & Kits'],
-            'rc-schumacher-car-cougar-kf2',
+            'rc-car-schumacher-kf2',
         ];
         yield 'Headset is not a console from its description' => [
             'ebay-consoles',
@@ -762,37 +762,37 @@ final class ClassifierTest extends TestCase
             'ebay-rc',
             'Xray T4 front suspension arms graphite',
             ['Browse categoryPath' => 'Toys & Games|Radio Control & RC Toys|RC Model Vehicle Parts & Accs|Other RC Parts & Accs'],
-            'rc-xray-part-t4',
+            'rc-part-xray-t4',
         ];
         yield 'RC electronics' => [
             'ebay-rc',
             'Savox SB-2290SG Brushless Servo',
             ['Browse categoryPath' => 'Toys & Games|Radio Control & RC Toys|RC Model Vehicle Parts & Accs|Other RC Parts & Accs'],
-            'rc-savox-servo-sb-2290sg',
+            'rc-servo-savox-sb2290sg',
         ];
         yield 'RC car listed under parts' => [
             'ebay-rc',
             'Schumacher Fusion R12 Shelf Queen 2 Speed 1/10 Nitro RC Car Boxed Unused Rare',
             ['Browse categoryPath' => 'Toys & Games|Radio Control & RC Toys|RC Model Vehicle Parts & Accs|Other RC Parts & Accs'],
-            'rc-schumacher-car-fusion-r12',
+            'rc-car-schumacher-r12',
         ];
         yield 'RC faulty stays identified' => [
             'ebay-rc',
             'Schumacher Cat L1 Evo 1/10 4WD Buggy Kit - not working spares',
             ['Browse categoryId' => '182183'],
-            'rc-schumacher-car-cat-l1',
+            'rc-car-schumacher-catl1',
         ];
         yield 'RC named vintage model' => [
             'ebay-rc',
             'Tamiya Hornet re-release 58336 boxed',
             [],
-            'rc-tamiya-car-58336',
+            'rc-car-tamiya-58336',
         ];
         yield 'RC Losi version number' => [
             'ebay-rc',
             'TLR Losi 22.1 bodyshell 1/10 used',
             ['Browse categoryPath' => 'Toys & Games|Radio Control & RC Toys|RC Model Vehicle Parts & Accs|Other RC Parts & Accs'],
-            'rc-losi-part-22-1',
+            'rc-part-losi-221',
         ];
         yield 'RC race car from unlisted brand' => [
             'ebay-rc',
@@ -804,7 +804,7 @@ final class ClassifierTest extends TestCase
             'ebay-rc',
             'Team Durango DEX410 1/10 4wd buggy',
             [],
-            'rc-durango-car-dex410',
+            'rc-car-teamdurango-dex410',
         ];
         yield 'RC known brand without a model' => [
             'ebay-rc',

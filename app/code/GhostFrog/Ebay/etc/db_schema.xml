@@ -125,6 +125,8 @@
         <column xsi:type="datetime" name="visual_condition_checked_at" nullable="true" on_update="false" comment="Visual condition checked at"/>
         <column xsi:type="boolean" name="text_condition_checked" nullable="false" default="false" comment="Text condition checked"/>
         <column xsi:type="datetime" name="text_condition_checked_at" nullable="true" on_update="false" comment="Text condition checked at"/>
+        <column xsi:type="varchar" name="item_type" nullable="true" length="32" comment="Item type the classifier assigned, for sources that have types"/>
+        <column xsi:type="varchar" name="key_source" nullable="true" length="16" comment="Evidence the model key came from: specifics, title or mixed"/>
         <constraint xsi:type="primary" referenceId="PRIMARY">
             <column name="id"/>
         </constraint>
@@ -181,6 +183,9 @@
         </index>
         <index referenceId="GHOSTFROG_EBAY_AUCTION_LISTINGS_BACKFILL_CHECKED_AT" indexType="btree">
             <column name="backfill_checked_at"/>
+        </index>
+        <index referenceId="GHOSTFROG_EBAY_AUCTION_LISTINGS_ITEM_TYPE" indexType="btree">
+            <column name="item_type"/>
         </index>
     </table>
 
@@ -296,6 +301,7 @@
             <column name="condition_grade"/>
         </index>
     </table>
+
 
     <table name="ghostfrog_ebay_ebay_app_token" resource="default" engine="innodb" comment="Legacy eBay application token">
         <column xsi:type="int" name="id" nullable="false" default="1" comment="ID"/>

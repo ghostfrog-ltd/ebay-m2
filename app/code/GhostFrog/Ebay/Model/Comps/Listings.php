@@ -134,7 +134,7 @@ final class Listings
         $db = $this->resource->getConnection();
         $select = $db->select()->from(['a' => $this->resource->getTableName(Listing::TABLE)], [
             'id', 'external_id', 'source', 'title', 'raw_attrs', 'model_key', 'condition_grade', 'final_price',
-            'price_current', 'end_time', 'brand', 'model_name', 'storage_gb', 'colour', 'epid',
+            'price_current', 'end_time', 'brand', 'model_name', 'storage_gb', 'colour', 'epid', 'item_type',
         ])
             ->joinLeft(['s' => $this->resource->getTableName('ghostfrog_ebay_sources')],
                 's.id = a.source_id', [

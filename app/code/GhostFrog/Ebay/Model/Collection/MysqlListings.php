@@ -187,13 +187,15 @@ final class MysqlListings
      */
     private function withEarlyKey(array $source, array $row): array
     {
-        $key = $this->classifier->forListing((string)$source['domain'], $row);
-        if (str_starts_with($key, 'unknown')) {
-            return $row;
+        $found = $this->classifier->columnsForListing((string)$source['domain'], $row);
+        if (str_starts_with($found['model_key'], 'unknown')) {
+            // No key yet, but a source with item types still knows what kind of thing this is.
+            unset($found['model_key'], $found['key_source']);
+            return $found + $row;
         }
         $attrs = (array)json_decode((string)$row['raw_attrs'], false, 512, JSON_THROW_ON_ERROR);
         $attrs[Pending::FLAG] = true;
-        return ['model_key' => $key, 'raw_attrs' => json_encode((object)$attrs, JSON_THROW_ON_ERROR)] + $row;
+        return $found + ['raw_attrs' => json_encode((object)$attrs, JSON_THROW_ON_ERROR)] + $row;
     }
 
     private function assertDecimalPrices(AdapterInterface $db, string $listings, string $history): void

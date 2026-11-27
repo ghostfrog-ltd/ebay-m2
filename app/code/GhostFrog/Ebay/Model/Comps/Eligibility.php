@@ -7,6 +7,7 @@ namespace GhostFrog\Ebay\Model\Comps;
 use GhostFrog\Ebay\Model\Condition\Assessment;
 use GhostFrog\Ebay\Model\Condition\Stage;
 use GhostFrog\Ebay\Model\ModelKey\Classifier;
+use GhostFrog\Ebay\Model\ModelKey\Rules\RcCars;
 
 /**
  * Puts a listing in the comparable group it can be valued against, or none.
@@ -29,11 +30,17 @@ final class Eligibility
 
     private const EXCLUDED = '~\b(?:empty (?:original )?box|box (?:and|&) inserts|'
         . '(?:box|packaging|manual|instructions|stickers|charger|case|housing|shell|cable|adapter|battery|screen) only|'
-        . 'replacement (?:part|screen|keyboard|battery|shell|case)|logic ?board|screen (?:for|assembly)|'
+        . 'logic ?board|screen (?:for|assembly)|'
         . '(?:carrying|protective|travel) cases?|screen protector|usb[ -]?[ac]?(?: to usb[ -]?[ac])? cables?|'
         . '(?:case|cover|charger|cable|dock|keyboard|battery) for|(?:lcd|display|keyboard) assembly|'
         . 'job\s*lot|unit only|no accessories|activation lock(?:ed)?|'
         . '(?:icloud|mdm|bios|password|carrier|network|account)[ -]locked|blacklisted)\b~i';
+
+    /**
+     * A spare for the item rather than the item. RC sellers call any genuine spare a "replacement part", and
+     * there the part is the product, so the wording does not exclude RC listings.
+     */
+    private const REPLACEMENT = '~\breplacement (?:part|screen|keyboard|battery|shell|case)\b~i';
 
     public function __construct(private readonly Classifier $classifier)
     {
@@ -53,6 +60,7 @@ final class Eligibility
             || str_contains($key, 'gen-unk') || preg_match('/_[a-d](?:-[a-d])?$/', $key)
             || ($listing['review_action'] ?? null) === 'down'
             || preg_match(self::EXCLUDED, $evidence)
+            || (strtolower($source) !== RcCars::SOURCE && preg_match(self::REPLACEMENT, $evidence))
         ) {
             return null;
         }

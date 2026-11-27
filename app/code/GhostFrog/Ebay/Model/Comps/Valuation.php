@@ -16,7 +16,8 @@ final class Valuation
         private readonly Listings $listings,
         private readonly Eligibility $eligibility,
         private readonly Pricing $pricing,
-        private readonly ResaleBasis $resaleBasis
+        private readonly ResaleBasis $resaleBasis,
+        private readonly TypePolicy $typePolicy
     ) {
     }
 
@@ -78,9 +79,11 @@ final class Valuation
             $median = 0.0;
         }
         $minimum = (int)($listing['source_min_comps'] ?? self::DEFAULT_MINIMUM);
+        $itemType = (string)($listing['item_type'] ?? '') ?: null;
         $valuation = [
             'model_key' => $key,
             'condition_grade' => $grade,
+            'item_type' => $itemType,
             'comp_count' => $count,
             'minimum' => $minimum,
             'sold_median' => $median > 0 ? $median : null,
@@ -88,6 +91,10 @@ final class Valuation
             'computed_at' => $comp['computed_at'] ?? null,
         ];
 
+        // A valuation without meets_target never ranks or alerts.
+        if ($this->typePolicy->isExcluded($itemType)) {
+            return $valuation + ['signal' => __('Item type excluded from ranking')];
+        }
         if ($count < $minimum || $median <= 0) {
             return $valuation + ['signal' => __('Insufficient sold comps')];
         }
