@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <preference for="GhostFrog\EbayShadow\Api\RealFlipReaderInterface" type="GhostFrog\EbayShadow\Model\Ledger\NoRealFlips"/>
+    <type name="GhostFrog\EbayShadow\Console\Command\Run">
+        <arguments>
+            <argument name="extractor" xsi:type="object">GhostFrog\EbayShadow\Model\Extraction\Extractor\Proxy</argument>
+            <argument name="decisions" xsi:type="object">GhostFrog\EbayShadow\Model\Decisions\Proxy</argument>
+            <argument name="advance" xsi:type="object">GhostFrog\EbayShadow\Model\Advance\Proxy</argument>
+        </arguments>
+    </type>
+    <type name="GhostFrog\EbayShadow\Console\Command\CreatePot">
+        <arguments>
+            <argument name="pots" xsi:type="object">GhostFrog\EbayShadow\Model\Pots\Proxy</argument>
+        </arguments>
+    </type>
+    <type name="Magento\Framework\Console\CommandListInterface">
+        <arguments>
+            <argument name="commands" xsi:type="array">
+                <item name="ghostfrog_shadow_run" xsi:type="object">GhostFrog\EbayShadow\Console\Command\Run</item>
+                <item name="ghostfrog_shadow_pot_create" xsi:type="object">GhostFrog\EbayShadow\Console\Command\CreatePot</item>
+            </argument>
+        </arguments>
+    </type>
+</config>

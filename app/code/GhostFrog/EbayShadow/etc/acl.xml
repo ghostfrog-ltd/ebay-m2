@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:Acl/etc/acl.xsd">
+    <acl>
+        <resources>
+            <resource id="Magento_Backend::admin">
+                <resource id="GhostFrog_EbayShadow::shadow" title="GhostFrog Shadow Trading" translate="title" sortOrder="80">
+                    <resource id="GhostFrog_EbayShadow::dashboard" title="View Shadow Dashboard" translate="title"/>
+                    <resource id="GhostFrog_EbayShadow::buys" title="View Shadow Buys" translate="title"/>
+                    <resource id="GhostFrog_EbayShadow::sells" title="View Shadow Sells" translate="title"/>
+                    <resource id="GhostFrog_EbayShadow::pots" title="Manage Shadow Pots" translate="title"/>
+                </resource>
+                <resource id="Magento_Backend::stores">
+                    <resource id="Magento_Backend::stores_settings">
+                        <resource id="Magento_Config::config">
+                            <resource id="GhostFrog_EbayShadow::config" title="Shadow Trading Configuration" translate="title"/>
+                        </resource>
+                    </resource>
+                </resource>
+            </resource>
+        </resources>
+    </acl>
+</config>

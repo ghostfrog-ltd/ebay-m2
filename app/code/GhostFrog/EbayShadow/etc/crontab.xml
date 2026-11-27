@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Cron:etc/crontab.xsd">
+    <group id="default">
+        <job name="ghostfrog_ebayshadow_extract" instance="GhostFrog\EbayShadow\Cron\Extract" method="execute">
+            <schedule>*/5 * * * *</schedule>
+        </job>
+        <job name="ghostfrog_ebayshadow_decide" instance="GhostFrog\EbayShadow\Cron\Decide" method="execute">
+            <schedule>*/5 * * * *</schedule>
+        </job>
+        <job name="ghostfrog_ebayshadow_advance" instance="GhostFrog\EbayShadow\Cron\Advance" method="execute">
+            <schedule>7,22,37,52 * * * *</schedule>
+        </job>
+        <job name="ghostfrog_ebayshadow_daily_summary" instance="GhostFrog\EbayShadow\Cron\DailySummary" method="execute">
+            <schedule>0 8 * * *</schedule>
+        </job>
+    </group>
+</config>

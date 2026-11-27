@@ -1,0 +1,73 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Store:etc/config.xsd">
+    <default>
+        <ghostfrog_ebayshadow>
+            <general>
+                <mode>shadow</mode>
+                <categories></categories>
+                <decision_window_minutes>60</decision_window_minutes>
+                <void_after_days>7</void_after_days>
+            </general>
+            <capital>
+                <default_capital>150</default_capital>
+                <max_item_percent>60</max_item_percent>
+                <max_category_percent>100</max_category_percent>
+                <min_cautious_profit>10</min_cautious_profit>
+                <min_roi_percent>10</min_roi_percent>
+            </capital>
+            <evidence>
+                <min_grade_confidence>0.7</min_grade_confidence>
+                <min_comparables>15</min_comparables>
+                <max_price_age_hours>1</max_price_age_hours>
+                <cautious_discount_percent>10</cautious_discount_percent>
+                <grade_risk>A:3,B:5,C:10</grade_risk>
+                <require_extraction>1</require_extraction>
+            </evidence>
+            <inbound>
+                <seller_dispatch_days>2</seller_dispatch_days>
+                <delivery_days>default:2
+express:1
+collection:1</delivery_days>
+            </inbound>
+            <outbound>
+                <listing_days>2</listing_days>
+                <dispatch_days>1</dispatch_days>
+                <delivery_days>2</delivery_days>
+                <postage>default:core
+small:3.50
+medium:5.50
+large:9.00</postage>
+                <category_bands></category_bands>
+                <packaging>2.50</packaging>
+            </outbound>
+            <costs>
+                <per_order_fee>0.00</per_order_fee>
+                <payout_delay_days>2</payout_delay_days>
+                <return_window_days>30</return_window_days>
+                <returns_rate_percent>3</returns_rate_percent>
+            </costs>
+            <sell>
+                <forward_window_days>30</forward_window_days>
+                <statistic>lower_quartile</statistic>
+                <min_forward_sales>3</min_forward_sales>
+                <max_days_to_sell>30</max_days_to_sell>
+                <max_hold_days>60</max_hold_days>
+                <stale_action>markdown</stale_action>
+                <stale_markdown_percent>25</stale_markdown_percent>
+            </sell>
+            <llm>
+                <enabled>1</enabled>
+                <model>qwen3.6:35b-a3b-coding-nvfp4</model>
+                <prompt_version>v1</prompt_version>
+                <timeout>90</timeout>
+                <min_confidence>0.6</min_confidence>
+                <batch>5</batch>
+            </llm>
+            <alerts>
+                <slack_on_buy>0</slack_on_buy>
+                <daily_summary>0</daily_summary>
+            </alerts>
+        </ghostfrog_ebayshadow>
+    </default>
+</config>

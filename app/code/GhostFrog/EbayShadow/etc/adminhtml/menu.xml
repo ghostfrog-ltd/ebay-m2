@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Backend:etc/menu.xsd">
+    <menu>
+        <add id="GhostFrog_EbayShadow::shadow" title="Shadow Trading" translate="title" module="GhostFrog_EbayShadow"
+             sortOrder="60" parent="GhostFrog_Ebay::ghostfrog" resource="GhostFrog_EbayShadow::shadow"/>
+        <add id="GhostFrog_EbayShadow::dashboard" title="Dashboard" translate="title" module="GhostFrog_EbayShadow"
+             sortOrder="10" parent="GhostFrog_EbayShadow::shadow" action="ghostfrog_shadow/dashboard/index"
+             resource="GhostFrog_EbayShadow::dashboard"/>
+        <add id="GhostFrog_EbayShadow::buys" title="Shadow Buys" translate="title" module="GhostFrog_EbayShadow"
+             sortOrder="20" parent="GhostFrog_EbayShadow::shadow" action="ghostfrog_shadow/buys/index"
+             resource="GhostFrog_EbayShadow::buys"/>
+        <add id="GhostFrog_EbayShadow::sells" title="Shadow Sells" translate="title" module="GhostFrog_EbayShadow"
+             sortOrder="30" parent="GhostFrog_EbayShadow::shadow" action="ghostfrog_shadow/sells/index"
+             resource="GhostFrog_EbayShadow::sells"/>
+        <add id="GhostFrog_EbayShadow::pots" title="Pots" translate="title" module="GhostFrog_EbayShadow"
+             sortOrder="40" parent="GhostFrog_EbayShadow::shadow" action="ghostfrog_shadow/pots/index"
+             resource="GhostFrog_EbayShadow::pots"/>
+        <add id="GhostFrog_EbayShadow::settings" title="Settings" translate="title" module="GhostFrog_EbayShadow"
+             sortOrder="50" parent="GhostFrog_EbayShadow::shadow"
+             action="adminhtml/system_config/edit/section/ghostfrog_ebayshadow" resource="GhostFrog_EbayShadow::config"/>
+    </menu>
+</config>

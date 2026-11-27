@@ -1,0 +1,231 @@
+<?xml version="1.0"?>
+<!--
+    Shadow trading keeps all of its data here. It never writes to GhostFrog_Ebay's tables and never to the
+    future GhostFrog_EbayLedger tables, which hold only real trades.
+-->
+<schema xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:Setup/Declaration/Schema/etc/schema.xsd">
+    <table name="ghostfrog_ebayshadow_pot" resource="default" engine="innodb" comment="Simulated pools of capital">
+        <column xsi:type="int" name="pot_id" unsigned="true" nullable="false" identity="true" comment="Pot ID"/>
+        <column xsi:type="varchar" name="name" nullable="false" length="255" comment="Name"/>
+        <column xsi:type="decimal" name="starting_capital" nullable="false" precision="12" scale="2" comment="Starting capital in GBP"/>
+        <column xsi:type="datetime" name="start_date" nullable="false" on_update="false" comment="Start date in UTC"/>
+        <column xsi:type="varchar" name="status" nullable="false" length="16" default="running" comment="running, paused or closed"/>
+        <column xsi:type="json" name="overrides" nullable="true" comment="Setting overrides; a missing key uses the config default"/>
+        <column xsi:type="timestamp" name="created_at" nullable="false" on_update="false" default="CURRENT_TIMESTAMP" comment="Created at"/>
+        <column xsi:type="timestamp" name="updated_at" nullable="false" on_update="true" default="CURRENT_TIMESTAMP" comment="Updated at"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="pot_id"/>
+        </constraint>
+        <index referenceId="GHOSTFROG_EBAYSHADOW_POT_STATUS" indexType="btree">
+            <column name="status"/>
+        </index>
+    </table>
+
+    <table name="ghostfrog_ebayshadow_cash_movement" resource="default" engine="innodb"
+           comment="Append-only cash movements; a pot's balance is their sum">
+        <column xsi:type="bigint" name="movement_id" unsigned="true" nullable="false" identity="true" comment="Movement ID"/>
+        <column xsi:type="int" name="pot_id" unsigned="true" nullable="false" comment="Pot ID"/>
+        <column xsi:type="bigint" name="item_id" unsigned="true" nullable="true" comment="Shadow item ID"/>
+        <column xsi:type="varchar" name="type" nullable="false" length="32"
+                comment="capital, bid_reserve, bid_release, buy_debit, payout_credit, write_off"/>
+        <column xsi:type="decimal" name="amount" nullable="false" precision="12" scale="2" comment="Signed amount in GBP"/>
+        <column xsi:type="varchar" name="idempotency_key" nullable="false" length="128" comment="One movement per key"/>
+        <column xsi:type="datetime" name="occurred_at" nullable="false" on_update="false" comment="Simulated time in UTC"/>
+        <column xsi:type="varchar" name="note" nullable="true" length="255" comment="Note"/>
+        <column xsi:type="timestamp" name="created_at" nullable="false" on_update="false" default="CURRENT_TIMESTAMP" comment="Recorded at"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="movement_id"/>
+        </constraint>
+        <constraint xsi:type="unique" referenceId="GHOSTFROG_EBAYSHADOW_CASH_MOVEMENT_IDEMPOTENCY_KEY">
+            <column name="idempotency_key"/>
+        </constraint>
+        <constraint xsi:type="foreign" referenceId="GHOSTFROG_EBAYSHADOW_CASH_MOVEMENT_POT_ID_POT_POT_ID"
+                    table="ghostfrog_ebayshadow_cash_movement" column="pot_id"
+                    referenceTable="ghostfrog_ebayshadow_pot" referenceColumn="pot_id" onDelete="CASCADE"/>
+        <index referenceId="GHOSTFROG_EBAYSHADOW_CASH_MOVEMENT_POT_ID_OCCURRED_AT" indexType="btree">
+            <column name="pot_id"/>
+            <column name="occurred_at"/>
+        </index>
+        <index referenceId="GHOSTFROG_EBAYSHADOW_CASH_MOVEMENT_ITEM_ID" indexType="btree">
+            <column name="item_id"/>
+        </index>
+    </table>
+
+    <table name="ghostfrog_ebayshadow_run" resource="default" engine="innodb" comment="Decision runs per pot">
+        <column xsi:type="bigint" name="run_id" unsigned="true" nullable="false" identity="true" comment="Run ID"/>
+        <column xsi:type="int" name="pot_id" unsigned="true" nullable="false" comment="Pot ID"/>
+        <column xsi:type="datetime" name="run_at" nullable="false" on_update="false" comment="Run time in UTC"/>
+        <column xsi:type="decimal" name="free_cash" nullable="false" precision="12" scale="2" comment="Free cash before buying"/>
+        <column xsi:type="int" name="candidates" nullable="false" default="0" comment="Candidates evaluated"/>
+        <column xsi:type="int" name="bought" nullable="false" default="0" comment="Buys placed"/>
+        <column xsi:type="int" name="no_cash" nullable="false" default="0" comment="Candidates skipped for no cash"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="run_id"/>
+        </constraint>
+        <constraint xsi:type="foreign" referenceId="GHOSTFROG_EBAYSHADOW_RUN_POT_ID_POT_POT_ID"
+                    table="ghostfrog_ebayshadow_run" column="pot_id"
+                    referenceTable="ghostfrog_ebayshadow_pot" referenceColumn="pot_id" onDelete="CASCADE"/>
+        <index referenceId="GHOSTFROG_EBAYSHADOW_RUN_POT_ID_RUN_AT" indexType="btree">
+            <column name="pot_id"/>
+            <column name="run_at"/>
+        </index>
+    </table>
+
+    <table name="ghostfrog_ebayshadow_decision" resource="default" engine="innodb"
+           comment="One buy decision per pot and listing, with its evidence and settings snapshot">
+        <column xsi:type="bigint" name="decision_id" unsigned="true" nullable="false" identity="true" comment="Decision ID"/>
+        <column xsi:type="int" name="pot_id" unsigned="true" nullable="false" comment="Pot ID"/>
+        <column xsi:type="bigint" name="listing_id" nullable="false" comment="GhostFrog_Ebay listing ID"/>
+        <column xsi:type="varchar" name="external_id" nullable="false" length="255" comment="eBay item ID"/>
+        <column xsi:type="text" name="title" nullable="true" comment="Listing title"/>
+        <column xsi:type="text" name="url" nullable="true" comment="Listing URL"/>
+        <column xsi:type="varchar" name="category" nullable="false" length="64" comment="GhostFrog source domain"/>
+        <column xsi:type="varchar" name="sale_type" nullable="false" length="16" default="auction" comment="auction in this build"/>
+        <column xsi:type="varchar" name="model_key" nullable="false" length="255" comment="Model key"/>
+        <column xsi:type="varchar" name="condition_grade" nullable="false" length="16" comment="Effective grade"/>
+        <column xsi:type="decimal" name="grade_confidence" nullable="true" precision="5" scale="3" comment="Lowest LLM grade confidence"/>
+        <column xsi:type="int" name="comp_count" nullable="false" default="0" comment="Verified prior sales used"/>
+        <column xsi:type="decimal" name="current_price" nullable="false" precision="12" scale="2" comment="Auction price at decision"/>
+        <column xsi:type="decimal" name="expected_price" nullable="true" precision="12" scale="2" comment="Expected winning price"/>
+        <column xsi:type="decimal" name="max_bid" nullable="true" precision="12" scale="2" comment="Shadow max bid"/>
+        <column xsi:type="decimal" name="predicted_resale" nullable="true" precision="12" scale="2" comment="Frozen predicted resale"/>
+        <column xsi:type="decimal" name="cautious_profit" nullable="true" precision="12" scale="2" comment="Cautious profit at expected price"/>
+        <column xsi:type="decimal" name="roi_percent" nullable="true" precision="10" scale="2" comment="Cautious ROI percent"/>
+        <column xsi:type="decimal" name="cycle_days" nullable="true" precision="8" scale="2" comment="Predicted cycle days"/>
+        <column xsi:type="decimal" name="score" nullable="true" precision="16" scale="8" comment="Profit per GBP per day"/>
+        <column xsi:type="varchar" name="outcome" nullable="false" length="16" comment="bought or skipped"/>
+        <column xsi:type="varchar" name="reason" nullable="false" length="32" comment="Reason code"/>
+        <column xsi:type="int" name="evaluations" nullable="false" default="1" comment="Times evaluated before the final outcome"/>
+        <column xsi:type="datetime" name="auction_end_at" nullable="true" on_update="false" comment="Auction end in UTC"/>
+        <column xsi:type="datetime" name="decided_at" nullable="false" on_update="false" comment="Decision time in UTC"/>
+        <column xsi:type="bigint" name="run_id" unsigned="true" nullable="true" comment="Run ID"/>
+        <column xsi:type="json" name="settings_snapshot" nullable="false" comment="Effective settings at decision"/>
+        <column xsi:type="json" name="evidence" nullable="false" comment="Evidence at decision"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="decision_id"/>
+        </constraint>
+        <constraint xsi:type="unique" referenceId="GHOSTFROG_EBAYSHADOW_DECISION_POT_ID_LISTING_ID">
+            <column name="pot_id"/>
+            <column name="listing_id"/>
+        </constraint>
+        <constraint xsi:type="foreign" referenceId="GHOSTFROG_EBAYSHADOW_DECISION_POT_ID_POT_POT_ID"
+                    table="ghostfrog_ebayshadow_decision" column="pot_id"
+                    referenceTable="ghostfrog_ebayshadow_pot" referenceColumn="pot_id" onDelete="CASCADE"/>
+        <index referenceId="GHOSTFROG_EBAYSHADOW_DECISION_OUTCOME_REASON" indexType="btree">
+            <column name="outcome"/>
+            <column name="reason"/>
+        </index>
+        <index referenceId="GHOSTFROG_EBAYSHADOW_DECISION_DECIDED_AT" indexType="btree">
+            <column name="decided_at"/>
+        </index>
+    </table>
+
+    <table name="ghostfrog_ebayshadow_item" resource="default" engine="innodb"
+           comment="A bought shadow item moving through its lifecycle">
+        <column xsi:type="bigint" name="item_id" unsigned="true" nullable="false" identity="true" comment="Item ID"/>
+        <column xsi:type="bigint" name="decision_id" unsigned="true" nullable="false" comment="Decision ID"/>
+        <column xsi:type="int" name="pot_id" unsigned="true" nullable="false" comment="Pot ID"/>
+        <column xsi:type="bigint" name="listing_id" nullable="false" comment="GhostFrog_Ebay listing ID"/>
+        <column xsi:type="varchar" name="category" nullable="false" length="64" comment="Source domain"/>
+        <column xsi:type="varchar" name="stage" nullable="false" length="16" default="bidding" comment="Lifecycle stage"/>
+        <column xsi:type="decimal" name="reserved" nullable="false" precision="12" scale="2" default="0" comment="Cash reserved for the max bid"/>
+        <column xsi:type="decimal" name="final_price" nullable="true" precision="12" scale="2" comment="Real auction final price"/>
+        <column xsi:type="decimal" name="price_paid" nullable="true" precision="12" scale="2" comment="Simulated winning price"/>
+        <column xsi:type="decimal" name="buy_cost" nullable="true" precision="12" scale="2" comment="Price paid plus Buyer Protection and postage"/>
+        <column xsi:type="varchar" name="auction_result" nullable="true" length="32" comment="Why the auction was won, lost or void"/>
+        <column xsi:type="boolean" name="stale" nullable="false" default="false" comment="Too few later sales to resolve the sale"/>
+        <column xsi:type="datetime" name="planned_received_at" nullable="true" on_update="false" comment="Planned received"/>
+        <column xsi:type="datetime" name="planned_listed_at" nullable="true" on_update="false" comment="Planned listed"/>
+        <column xsi:type="datetime" name="planned_sold_at" nullable="true" on_update="false" comment="Planned sold"/>
+        <column xsi:type="datetime" name="planned_delivered_at" nullable="true" on_update="false" comment="Planned delivered to buyer"/>
+        <column xsi:type="datetime" name="planned_paid_out_at" nullable="true" on_update="false" comment="Planned payout"/>
+        <column xsi:type="datetime" name="planned_banked_at" nullable="true" on_update="false" comment="Planned banked"/>
+        <column xsi:type="datetime" name="bought_at" nullable="true" on_update="false" comment="Actual bought (auction end)"/>
+        <column xsi:type="datetime" name="received_at" nullable="true" on_update="false" comment="Actual received"/>
+        <column xsi:type="datetime" name="listed_at" nullable="true" on_update="false" comment="Actual listed"/>
+        <column xsi:type="datetime" name="sold_at" nullable="true" on_update="false" comment="Actual sold"/>
+        <column xsi:type="datetime" name="delivered_at" nullable="true" on_update="false" comment="Actual delivered to buyer"/>
+        <column xsi:type="datetime" name="paid_out_at" nullable="true" on_update="false" comment="Actual payout"/>
+        <column xsi:type="datetime" name="banked_at" nullable="true" on_update="false" comment="Actual banked"/>
+        <column xsi:type="datetime" name="closed_at" nullable="true" on_update="false" comment="Lost, void or written off at"/>
+        <column xsi:type="timestamp" name="updated_at" nullable="false" on_update="true" default="CURRENT_TIMESTAMP" comment="Updated at"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="item_id"/>
+        </constraint>
+        <constraint xsi:type="unique" referenceId="GHOSTFROG_EBAYSHADOW_ITEM_DECISION_ID">
+            <column name="decision_id"/>
+        </constraint>
+        <constraint xsi:type="foreign" referenceId="GHOSTFROG_EBAYSHADOW_ITEM_DECISION_ID_DECISION_DECISION_ID"
+                    table="ghostfrog_ebayshadow_item" column="decision_id"
+                    referenceTable="ghostfrog_ebayshadow_decision" referenceColumn="decision_id" onDelete="CASCADE"/>
+        <index referenceId="GHOSTFROG_EBAYSHADOW_ITEM_POT_ID_STAGE" indexType="btree">
+            <column name="pot_id"/>
+            <column name="stage"/>
+        </index>
+        <index referenceId="GHOSTFROG_EBAYSHADOW_ITEM_STAGE" indexType="btree">
+            <column name="stage"/>
+        </index>
+    </table>
+
+    <table name="ghostfrog_ebayshadow_sale" resource="default" engine="innodb"
+           comment="Simulated sale of a shadow item; parent_sale_id leaves room for part-out rows">
+        <column xsi:type="bigint" name="sale_id" unsigned="true" nullable="false" identity="true" comment="Sale ID"/>
+        <column xsi:type="bigint" name="item_id" unsigned="true" nullable="false" comment="Item ID"/>
+        <column xsi:type="bigint" name="parent_sale_id" unsigned="true" nullable="true" comment="Parent sale for a part sold separately (not built)"/>
+        <column xsi:type="varchar" name="part_key" nullable="false" length="64" default="whole" comment="whole, or a part name for part-out (not built)"/>
+        <column xsi:type="int" name="pot_id" unsigned="true" nullable="false" comment="Pot ID"/>
+        <column xsi:type="varchar" name="method" nullable="false" length="16" comment="forward, markdown or write_off"/>
+        <column xsi:type="decimal" name="predicted_resale" nullable="false" precision="12" scale="2" comment="Frozen predicted resale"/>
+        <column xsi:type="decimal" name="sell_price" nullable="false" precision="12" scale="2" comment="Simulated sell price"/>
+        <column xsi:type="decimal" name="fees" nullable="false" precision="12" scale="2" comment="Selling fees"/>
+        <column xsi:type="decimal" name="postage" nullable="false" precision="12" scale="2" comment="Outbound postage"/>
+        <column xsi:type="decimal" name="packaging" nullable="false" precision="12" scale="2" comment="Packaging"/>
+        <column xsi:type="decimal" name="returns_cost" nullable="false" precision="12" scale="2" default="0" comment="Expected returns cost"/>
+        <column xsi:type="decimal" name="net_proceeds" nullable="false" precision="12" scale="2" comment="Payout after costs"/>
+        <column xsi:type="decimal" name="buy_cost" nullable="false" precision="12" scale="2" comment="Buy cost"/>
+        <column xsi:type="decimal" name="realised_profit" nullable="false" precision="12" scale="2" comment="Net proceeds less buy cost"/>
+        <column xsi:type="decimal" name="cautious_profit" nullable="true" precision="12" scale="2" comment="Cautious profit predicted at decision"/>
+        <column xsi:type="decimal" name="error_percent" nullable="true" precision="10" scale="2" comment="Sell price vs predicted resale"/>
+        <column xsi:type="decimal" name="days_to_sell" nullable="false" precision="8" scale="2" comment="Days listed before sale"/>
+        <column xsi:type="int" name="forward_sales" nullable="false" default="0" comment="Later verified sales used"/>
+        <column xsi:type="json" name="evidence" nullable="false" comment="Later sales, statistic and settings used"/>
+        <column xsi:type="datetime" name="resolved_at" nullable="false" on_update="false" comment="Resolved at UTC"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="sale_id"/>
+        </constraint>
+        <constraint xsi:type="unique" referenceId="GHOSTFROG_EBAYSHADOW_SALE_ITEM_ID_PART_KEY">
+            <column name="item_id"/>
+            <column name="part_key"/>
+        </constraint>
+        <constraint xsi:type="foreign" referenceId="GHOSTFROG_EBAYSHADOW_SALE_ITEM_ID_ITEM_ITEM_ID"
+                    table="ghostfrog_ebayshadow_sale" column="item_id"
+                    referenceTable="ghostfrog_ebayshadow_item" referenceColumn="item_id" onDelete="CASCADE"/>
+        <index referenceId="GHOSTFROG_EBAYSHADOW_SALE_POT_ID" indexType="btree">
+            <column name="pot_id"/>
+        </index>
+    </table>
+
+    <table name="ghostfrog_ebayshadow_extraction" resource="default" engine="innodb"
+           comment="Structured fields the local LLM extracted from listing text">
+        <column xsi:type="bigint" name="extraction_id" unsigned="true" nullable="false" identity="true" comment="Extraction ID"/>
+        <column xsi:type="bigint" name="listing_id" nullable="false" comment="GhostFrog_Ebay listing ID"/>
+        <column xsi:type="varchar" name="model" nullable="false" length="128" comment="Ollama model"/>
+        <column xsi:type="varchar" name="prompt_version" nullable="false" length="32" comment="Prompt version"/>
+        <column xsi:type="varchar" name="input_hash" nullable="false" length="64" comment="SHA-256 of the text sent"/>
+        <column xsi:type="varchar" name="status" nullable="false" length="16" comment="ok, invalid or error"/>
+        <column xsi:type="json" name="fields" nullable="true" comment="Validated fields"/>
+        <column xsi:type="decimal" name="confidence" nullable="true" precision="5" scale="3" comment="Model confidence"/>
+        <column xsi:type="varchar" name="error" nullable="true" length="255" comment="Last error"/>
+        <column xsi:type="int" name="attempts" nullable="false" default="1" comment="Attempts"/>
+        <column xsi:type="datetime" name="extracted_at" nullable="false" on_update="false" comment="Extracted at UTC"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="extraction_id"/>
+        </constraint>
+        <constraint xsi:type="unique" referenceId="GHOSTFROG_EBAYSHADOW_EXTRACTION_LISTING_ID_MODEL_PROMPT_VERSION">
+            <column name="listing_id"/>
+            <column name="model"/>
+            <column name="prompt_version"/>
+        </constraint>
+    </table>
+</schema>
