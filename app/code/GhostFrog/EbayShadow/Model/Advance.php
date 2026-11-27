@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GhostFrog\EbayShadow\Model;
 
+use GhostFrog\Ebay\Api\FinalPriceRequestInterface;
 use GhostFrog\Ebay\Api\ListingOutcomesInterface;
 use GhostFrog\Ebay\Api\PricingRulesInterface;
 use GhostFrog\Ebay\Api\SoldComparablesInterface;
@@ -19,7 +20,9 @@ use Throwable;
  * Moves shadow items forward in simulated time. Each step reads the decision's own settings snapshot.
  *
  * 1. Bidding items whose auction has ended are settled against core's verified outcome: won, lost or void.
- *    The reservation is released and, when won, the buy cost is debited.
+ *    The reservation is released and, when won, the buy cost is debited. While the outcome is missing,
+ *    shadow asks core's final-price check to take the listing next. Core queues it only when its own check
+ *    would take it and it is not already queued, so asking on every run adds no eBay calls.
  * 2. Won items move inbound > received > listed as their dates pass.
  * 3. A listed item's sale is resolved by the forward-sales check, which fixes its sold, delivered, payout
  *    and banked times. A stale item waits for its hold period and is then marked down or written off.
@@ -41,7 +44,8 @@ class Advance
         private readonly Cash $cash,
         private readonly ListingOutcomesInterface $outcomes,
         private readonly SoldComparablesInterface $comparables,
-        private readonly PricingRulesInterface $pricing
+        private readonly PricingRulesInterface $pricing,
+        private readonly FinalPriceRequestInterface $finalPrices
     ) {
     }
 
@@ -49,7 +53,8 @@ class Advance
     public function run(?int $now = null): array
     {
         $now ??= time();
-        $counts = ['won' => 0, 'lost' => 0, 'void' => 0, 'sales' => 0, 'stale' => 0, 'moved' => 0, 'paid_out' => 0];
+        $counts = ['won' => 0, 'lost' => 0, 'void' => 0, 'sales' => 0, 'stale' => 0, 'moved' => 0, 'paid_out' => 0,
+            'price_requested' => 0];
         if (!$this->settings->isActive()) {
             return $counts;
         }
@@ -73,17 +78,22 @@ class Advance
             return;
         }
         $outcomes = $this->outcomes->forListings(array_column($rows, 'listing_id'));
+        $missing = [];
         foreach ($rows as $item) {
             $settings = json_decode((string)$item['settings_snapshot'], true);
             $evidence = json_decode((string)$item['evidence'], true);
             $result = AuctionOutcome::resolve((float)$item['max_bid'], $outcomes[(int)$item['listing_id']] ?? null,
                 (string)$item['auction_end_at'], $now, (int)$settings['general/void_after_days']);
             if ($result['result'] === AuctionOutcome::PENDING) {
+                $missing[] = (int)$item['listing_id'];
                 continue;
             }
             $this->transaction(function () use ($item, $settings, $evidence, $result, $now, &$counts): void {
                 $this->applyAuction($item, $settings, $evidence, $result, $now, $counts);
             });
+        }
+        if ($missing !== []) {
+            $counts['price_requested'] = $this->finalPrices->request($missing);
         }
     }
 

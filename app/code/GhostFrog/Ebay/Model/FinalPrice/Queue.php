@@ -47,6 +47,31 @@ final class Queue
         }
     }
 
+    /**
+     * Queues eligible listings that are not already queued, ahead of the routine backlog. A listing already in
+     * the queue keeps its place and retry delay, so repeated requests never bypass the backoff.
+     *
+     * @param int[] $ids
+     * @return int Listings newly queued.
+     */
+    public function prioritise(array $ids): int
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
+        if ($ids === []) {
+            return 0;
+        }
+        $db = $this->resource->getConnection();
+        $table = $this->table();
+        // Due from the listing's end time, so it sorts ahead of listings queued later for routine checks.
+        $select = $this->eligible()->reset(Select::COLUMNS)->columns(['listing_id' => 'id'], 'a')
+            ->columns(['available_at' => new Expression('LEAST(COALESCE(a.end_time, UTC_TIMESTAMP()), UTC_TIMESTAMP())')])
+            ->joinLeft(['q' => $table], 'q.listing_id = a.id', [])
+            ->where('q.listing_id IS NULL')
+            ->where('a.id IN (?)', $ids);
+        $rows = $db->fetchAll($select);
+        return $rows === [] ? 0 : $db->insertOnDuplicate($table, $rows, ['listing_id']);
+    }
+
     public function due(int $limit): array
     {
         $db = $this->resource->getConnection();

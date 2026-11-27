@@ -7,6 +7,7 @@
     <preference for="GhostFrog\Ebay\Api\ListingTextInterface" type="GhostFrog\Ebay\Model\Service\ListingText"/>
     <preference for="GhostFrog\Ebay\Api\PricingRulesInterface" type="GhostFrog\Ebay\Model\Service\PricingRules"/>
     <preference for="GhostFrog\Ebay\Api\LocalLlmInterface" type="GhostFrog\Ebay\Model\Service\LocalLlm"/>
+    <preference for="GhostFrog\Ebay\Api\FinalPriceRequestInterface" type="GhostFrog\Ebay\Model\Service\FinalPriceRequest"/>
     <preference for="GhostFrog\Ebay\Api\SlackInterface" type="GhostFrog\Ebay\Model\Service\SlackText"/>
     <type name="Magento\Config\Model\Config\TypePool">
         <arguments>
