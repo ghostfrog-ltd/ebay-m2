@@ -69,6 +69,16 @@ final class ObservationTest extends TestCase
         $observation->fields(self::ID, $item, $now);
     }
 
+    public function testBestOfferIsReadFromBuyingOptions(): void
+    {
+        $observation = new Observation(new ListingSummary());
+        $now = new DateTimeImmutable('2026-11-23T20:00:00Z');
+        $item = ['buyingOptions' => ['FIXED_PRICE', 'BEST_OFFER'],
+            'estimatedAvailabilities' => [['estimatedAvailabilityStatus' => 'IN_STOCK']]] + $this->item();
+        self::assertSame(1, $observation->fields(self::ID, $item, $now)['best_offer']);
+        self::assertSame(0, $observation->fields(self::ID, $this->item(), $now)['best_offer']);
+    }
+
     private function item(): array
     {
         return [

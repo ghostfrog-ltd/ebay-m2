@@ -22,12 +22,17 @@ class CollectListings extends Command
         $this->setName('ghostfrog:ebay:collect')
             ->setDescription('Collect eBay listings for due GhostFrog sources')
             ->addOption('source', null, InputOption::VALUE_REQUIRED, 'Source domain, such as ebay-apple')
-            ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Show source timing without calling eBay or saving listings');
+            ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Show source timing without calling eBay or saving listings')
+            ->addOption('force', null, InputOption::VALUE_NONE, 'Collect sources now even if their interval has not passed');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $results = $this->collector->run($input->getOption('source'), $input->getOption('dry-run'));
+        $results = $this->collector->run(
+            $input->getOption('source'),
+            $input->getOption('dry-run'),
+            (bool)$input->getOption('force')
+        );
         $code = self::SUCCESS;
         foreach ($results as $source => $result) {
             $output->writeln(

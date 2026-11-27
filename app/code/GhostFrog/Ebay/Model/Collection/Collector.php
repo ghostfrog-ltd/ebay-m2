@@ -28,8 +28,9 @@ final class Collector
     /**
      * CLI previews return a reason per source. Successful collection returns the
      * count of listings committed per source and marks failures separately.
+     * With $force, a source still waiting for its interval runs now; off-hours sources stay skipped.
      */
-    public function run(?string $domain = null, bool $preview = false): array
+    public function run(?string $domain = null, bool $preview = false, bool $force = false): array
     {
         if ($domain !== null && !isset(SourceSearches::DEFINITIONS[$domain])) {
             throw new RuntimeException('Unknown eBay source domain.');
@@ -54,6 +55,9 @@ final class Collector
 
                 $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
                 $results[$key] = $this->schedule($source, $now);
+                if ($force && $results[$key]['status'] === 'waiting') {
+                    $results[$key]['status'] = 'due';
+                }
                 if ($preview || $results[$key]['status'] !== 'due') {
                     continue;
                 }

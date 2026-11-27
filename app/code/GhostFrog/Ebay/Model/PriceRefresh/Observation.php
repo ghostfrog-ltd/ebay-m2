@@ -67,6 +67,7 @@ final class Observation
         return [
             'status' => 'live',
             'sale_type' => $type,
+            'best_offer' => (int)$this->summary->bestOffer($item),
             'price_current' => $price,
             'bids_count' => $type === 'bin' ? 0 : ($bids === false ? null : $bids),
             'price_bid_current' => $bid,

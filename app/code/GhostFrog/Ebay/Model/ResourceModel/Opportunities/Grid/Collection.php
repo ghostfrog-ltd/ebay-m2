@@ -20,14 +20,21 @@ class Collection extends SearchResult
     /** Whether this grid lists faulty opportunities (grade F) instead of working ones. */
     protected const FAULTY = false;
 
+    /** Whether this grid lists every grade where the seller accepts Best Offers. */
+    protected const BEST_OFFER = false;
+
     protected function _initSelect()
     {
         parent::_initSelect();
         $this->getSelect()->where('main_table.eligible_until > UTC_TIMESTAMP()');
-        $this->getSelect()->where(
-            'main_table.condition_grade ' . (static::FAULTY ? '=' : '<>') . ' ?',
-            Eligibility::FAULTY_GRADE
-        );
+        if (static::BEST_OFFER) {
+            $this->getSelect()->where('main_table.best_offer = 1');
+        } else {
+            $this->getSelect()->where(
+                'main_table.condition_grade ' . (static::FAULTY ? '=' : '<>') . ' ?',
+                Eligibility::FAULTY_GRADE
+            );
+        }
         $this->getSelect()->columns(['source_colour' => new Expression(sprintf(
             '(SELECT gf_colour_source.colour FROM %s AS gf_colour_listing'
             . ' INNER JOIN %s AS gf_colour_source ON gf_colour_source.id = gf_colour_listing.source_id'

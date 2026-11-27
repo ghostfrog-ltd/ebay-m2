@@ -120,7 +120,8 @@
             "last_price_checked_at": true,
             "candidate_attempted_at": true,
             "item_type": true,
-            "key_source": true
+            "key_source": true,
+            "best_offer": true
         },
         "index": {
             "GHOSTFROG_EBAY_AUCTION_LISTINGS_SOURCE_ID": true,
@@ -596,7 +597,8 @@
             "bid_price": true,
             "bin_price": true,
             "last_seen_at": true,
-            "last_price_checked_at": true
+            "last_price_checked_at": true,
+            "best_offer": true
         },
         "index": {
             "GHOSTFROG_EBAY_OPPORTUNITIES_EXPECTED_PROFIT_LISTING_ID": true,

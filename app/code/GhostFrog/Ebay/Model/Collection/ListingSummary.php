@@ -91,6 +91,7 @@ final class ListingSummary
             'end_time' => $end?->format(DATE_ATOM),
             'url' => mb_substr((string)($item['itemWebUrl'] ?? $item['itemUrl'] ?? ''), 0, 1024),
             'sale_type' => $saleType,
+            'best_offer' => (int)$this->bestOffer($item),
             'time_left_s' => $end === null ? null : max(0, $end->getTimestamp() - $now->getTimestamp()),
             'raw_attrs' => json_encode((object)$this->evidence($item), JSON_THROW_ON_ERROR),
         ] + $prices;
@@ -107,6 +108,12 @@ final class ListingSummary
             $bin => 'bin',
             default => null,
         };
+    }
+
+    public function bestOffer(array $item): bool
+    {
+        $options = array_map('strtoupper', array_filter((array)($item['buyingOptions'] ?? []), 'is_string'));
+        return in_array('BEST_OFFER', $options, true);
     }
 
     public function prices(array $item, string $saleType, bool $requireCurrency = false): array
