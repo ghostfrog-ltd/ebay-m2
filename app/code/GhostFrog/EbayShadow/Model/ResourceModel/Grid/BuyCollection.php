@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GhostFrog\EbayShadow\Model\ResourceModel\Grid;
 
+use Magento\Framework\DB\Sql\Expression;
 use Magento\Framework\View\Element\UiComponent\DataProvider\SearchResult;
 
 /** Shadow Buys: every decision, bought or skipped, with its pot and its item's lifecycle stage. */
@@ -16,6 +17,7 @@ class BuyCollection extends SearchResult
             'model_key', 'condition_grade', 'grade_confidence', 'comp_count', 'current_price', 'expected_price',
             'max_bid', 'predicted_resale', 'cautious_profit', 'roi_percent', 'cycle_days', 'score', 'outcome',
             'reason', 'evaluations', 'auction_end_at', 'decided_at',
+            'exclude_skipped' => new Expression("IF(main_table.outcome = 'skipped', 0, 1)"),
         ])
             ->joinLeft(['p' => $this->getTable('ghostfrog_ebayshadow_pot')], 'p.pot_id = main_table.pot_id',
                 ['pot_name' => 'name'])
@@ -27,6 +29,21 @@ class BuyCollection extends SearchResult
         $this->addFilterToMap('stage', 'i.stage');
         $this->addFilterToMap('pot_name', 'p.name');
         return $this;
+    }
+
+    /**
+     * "Exclude skipped" is a grid filter with no database column of its own: Yes keeps bought decisions only.
+     */
+    public function addFieldToFilter($field, $condition = null)
+    {
+        if ($field === 'exclude_skipped') {
+            $value = is_array($condition) ? reset($condition) : $condition;
+            if ((string)$value === '1') {
+                $this->getSelect()->where('main_table.outcome <> ?', 'skipped');
+            }
+            return $this;
+        }
+        return parent::addFieldToFilter($field, $condition);
     }
 
     protected function _renderOrders()
