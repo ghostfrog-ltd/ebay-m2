@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <type name="Magento\Framework\View\Element\UiComponent\DataProvider\CollectionFactory">
+        <arguments>
+            <argument name="collections" xsi:type="array">
+                <item name="ghostfrog_ebayshadow_buys_data_source" xsi:type="string">GhostFrog\EbayShadow\Model\ResourceModel\Grid\BuyCollection</item>
+                <item name="ghostfrog_ebayshadow_sells_data_source" xsi:type="string">GhostFrog\EbayShadow\Model\ResourceModel\Grid\SellCollection</item>
+                <item name="ghostfrog_ebayshadow_pots_data_source" xsi:type="string">GhostFrog\EbayShadow\Model\ResourceModel\Grid\PotCollection</item>
+            </argument>
+        </arguments>
+    </type>
+    <type name="GhostFrog\EbayShadow\Model\ResourceModel\Grid\BuyCollection">
+        <arguments>
+            <argument name="mainTable" xsi:type="string">ghostfrog_ebayshadow_decision</argument>
+            <argument name="resourceModel" xsi:type="string">GhostFrog\EbayShadow\Model\ResourceModel\Pot</argument>
+            <argument name="identifierName" xsi:type="string">decision_id</argument>
+        </arguments>
+    </type>
+    <type name="GhostFrog\EbayShadow\Model\ResourceModel\Grid\SellCollection">
+        <arguments>
+            <argument name="mainTable" xsi:type="string">ghostfrog_ebayshadow_item</argument>
+            <argument name="resourceModel" xsi:type="string">GhostFrog\EbayShadow\Model\ResourceModel\Pot</argument>
+            <argument name="identifierName" xsi:type="string">item_id</argument>
+        </arguments>
+    </type>
+    <type name="GhostFrog\EbayShadow\Model\ResourceModel\Grid\PotCollection">
+        <arguments>
+            <argument name="mainTable" xsi:type="string">ghostfrog_ebayshadow_pot</argument>
+            <argument name="resourceModel" xsi:type="string">GhostFrog\EbayShadow\Model\ResourceModel\Pot</argument>
+            <argument name="identifierName" xsi:type="string">pot_id</argument>
+        </arguments>
+    </type>
+    <virtualType name="GhostFrog\EbayShadow\Model\Source\Codes\Outcome" type="GhostFrog\EbayShadow\Model\Source\Codes">
+        <arguments>
+            <argument name="type" xsi:type="string">outcome</argument>
+        </arguments>
+    </virtualType>
+    <virtualType name="GhostFrog\EbayShadow\Model\Source\Codes\Reason" type="GhostFrog\EbayShadow\Model\Source\Codes">
+        <arguments>
+            <argument name="type" xsi:type="string">reason</argument>
+        </arguments>
+    </virtualType>
+    <virtualType name="GhostFrog\EbayShadow\Model\Source\Codes\Stage" type="GhostFrog\EbayShadow\Model\Source\Codes">
+        <arguments>
+            <argument name="type" xsi:type="string">stage</argument>
+        </arguments>
+    </virtualType>
+    <virtualType name="GhostFrog\EbayShadow\Model\Source\Codes\Method" type="GhostFrog\EbayShadow\Model\Source\Codes">
+        <arguments>
+            <argument name="type" xsi:type="string">method</argument>
+        </arguments>
+    </virtualType>
+    <virtualType name="GhostFrog\EbayShadow\Model\Source\Codes\Grade" type="GhostFrog\EbayShadow\Model\Source\Codes">
+        <arguments>
+            <argument name="type" xsi:type="string">grade</argument>
+        </arguments>
+    </virtualType>
+</config>

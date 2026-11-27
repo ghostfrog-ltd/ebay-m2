@@ -1,0 +1,210 @@
+<?xml version="1.0"?>
+<listing xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Ui:etc/ui_configuration.xsd">
+    <argument name="data" xsi:type="array">
+        <item name="js_config" xsi:type="array">
+            <item name="provider" xsi:type="string">ghostfrog_ebayshadow_buys.ghostfrog_ebayshadow_buys_data_source</item>
+        </item>
+    </argument>
+    <settings>
+        <spinner>ghostfrog_ebayshadow_buys_columns</spinner>
+        <deps>
+            <dep>ghostfrog_ebayshadow_buys.ghostfrog_ebayshadow_buys_data_source</dep>
+        </deps>
+    </settings>
+    <dataSource name="ghostfrog_ebayshadow_buys_data_source" component="Magento_Ui/js/grid/provider">
+        <settings>
+            <storageConfig>
+                <param name="indexField" xsi:type="string">decision_id</param>
+            </storageConfig>
+            <updateUrl path="mui/index/render"/>
+        </settings>
+        <aclResource>GhostFrog_EbayShadow::buys</aclResource>
+        <dataProvider class="Magento\Framework\View\Element\UiComponent\DataProvider\DataProvider" name="ghostfrog_ebayshadow_buys_data_source">
+            <settings>
+                <requestFieldName>decision_id</requestFieldName>
+                <primaryFieldName>decision_id</primaryFieldName>
+            </settings>
+        </dataProvider>
+    </dataSource>
+    <listingToolbar name="listing_top">
+        <settings>
+            <sticky>true</sticky>
+        </settings>
+        <bookmark name="bookmarks"/>
+        <columnsControls name="columns_controls"/>
+        <filterSearch name="fulltext"/>
+        <filters name="listing_filters"/>
+        <paging name="listing_paging"/>
+    </listingToolbar>
+    <columns name="ghostfrog_ebayshadow_buys_columns">
+        <column name="decision_id" sortOrder="10">
+            <settings>
+                <filter>textRange</filter>
+                <visible>false</visible>
+                <label translate="true">ID</label>
+            </settings>
+        </column>
+        <column name="pot_id" component="Magento_Ui/js/grid/columns/select" sortOrder="20">
+            <settings>
+                <options class="GhostFrog\EbayShadow\Model\Source\Pots"/>
+                <filter>select</filter>
+                <dataType>select</dataType>
+                <label translate="true">Pot</label>
+            </settings>
+        </column>
+        <column name="title" class="GhostFrog\EbayShadow\Ui\Component\Column\Title" sortOrder="30">
+            <settings>
+                <filter>text</filter>
+                <bodyTmpl>ui/grid/cells/html</bodyTmpl>
+                <label translate="true">Listing</label>
+            </settings>
+        </column>
+        <column name="category" component="Magento_Ui/js/grid/columns/select" sortOrder="40">
+            <settings>
+                <options class="GhostFrog\EbayShadow\Model\Config\Source\Categories"/>
+                <filter>select</filter>
+                <dataType>select</dataType>
+                <label translate="true">Category</label>
+            </settings>
+        </column>
+        <column name="sale_type" sortOrder="50">
+            <settings>
+                <filter>text</filter>
+                <label translate="true">Type</label>
+            </settings>
+        </column>
+        <column name="current_price" sortOrder="60">
+            <settings>
+                <filter>textRange</filter>
+                <label translate="true">Price at Decision</label>
+            </settings>
+        </column>
+        <column name="max_bid" sortOrder="70">
+            <settings>
+                <filter>textRange</filter>
+                <label translate="true">Max Bid</label>
+            </settings>
+        </column>
+        <column name="condition_grade" component="Magento_Ui/js/grid/columns/select" sortOrder="80">
+            <settings>
+                <options class="GhostFrog\EbayShadow\Model\Source\Codes\Grade"/>
+                <filter>select</filter>
+                <dataType>select</dataType>
+                <label translate="true">Grade</label>
+            </settings>
+        </column>
+        <column name="grade_confidence" sortOrder="90">
+            <settings>
+                <filter>textRange</filter>
+                <label translate="true">Confidence</label>
+            </settings>
+        </column>
+        <column name="comp_count" sortOrder="100">
+            <settings>
+                <filter>textRange</filter>
+                <label translate="true">Comps</label>
+            </settings>
+        </column>
+        <column name="predicted_resale" sortOrder="110">
+            <settings>
+                <filter>textRange</filter>
+                <label translate="true">Predicted Resale</label>
+            </settings>
+        </column>
+        <column name="cautious_profit" sortOrder="120">
+            <settings>
+                <filter>textRange</filter>
+                <label translate="true">Cautious Profit</label>
+            </settings>
+        </column>
+        <column name="roi_percent" sortOrder="130">
+            <settings>
+                <filter>textRange</filter>
+                <label translate="true">ROI %</label>
+            </settings>
+        </column>
+        <column name="score" sortOrder="140">
+            <settings>
+                <filter>textRange</filter>
+                <label translate="true">Score</label>
+            </settings>
+        </column>
+        <column name="outcome" component="Magento_Ui/js/grid/columns/select" sortOrder="150">
+            <settings>
+                <options class="GhostFrog\EbayShadow\Model\Source\Codes\Outcome"/>
+                <filter>select</filter>
+                <dataType>select</dataType>
+                <label translate="true">Outcome</label>
+            </settings>
+        </column>
+        <column name="reason" component="Magento_Ui/js/grid/columns/select" sortOrder="160">
+            <settings>
+                <options class="GhostFrog\EbayShadow\Model\Source\Codes\Reason"/>
+                <filter>select</filter>
+                <dataType>select</dataType>
+                <label translate="true">Reason</label>
+            </settings>
+        </column>
+        <column name="stage" component="Magento_Ui/js/grid/columns/select" sortOrder="170">
+            <settings>
+                <options class="GhostFrog\EbayShadow\Model\Source\Codes\Stage"/>
+                <filter>select</filter>
+                <dataType>select</dataType>
+                <label translate="true">Stage</label>
+            </settings>
+        </column>
+        <column name="price_paid" sortOrder="180">
+            <settings>
+                <filter>textRange</filter>
+                <visible>false</visible>
+                <label translate="true">Price Paid</label>
+            </settings>
+        </column>
+        <column name="auction_result" sortOrder="190">
+            <settings>
+                <filter>text</filter>
+                <visible>false</visible>
+                <label translate="true">Auction Result</label>
+            </settings>
+        </column>
+        <column name="model_key" sortOrder="200">
+            <settings>
+                <filter>text</filter>
+                <visible>false</visible>
+                <label translate="true">Model Key</label>
+            </settings>
+        </column>
+        <column name="evaluations" sortOrder="210">
+            <settings>
+                <filter>textRange</filter>
+                <visible>false</visible>
+                <label translate="true">Evaluations</label>
+            </settings>
+        </column>
+        <column name="auction_end_at" class="Magento\Ui\Component\Listing\Columns\Date" component="Magento_Ui/js/grid/columns/date" sortOrder="220">
+            <settings>
+                <filter>dateRange</filter>
+                <dataType>date</dataType>
+                <timezone>false</timezone>
+                <dateFormat>yyyy-MM-dd HH:mm</dateFormat>
+                <label translate="true">Auction End</label>
+            </settings>
+        </column>
+        <column name="decided_at" class="Magento\Ui\Component\Listing\Columns\Date" component="Magento_Ui/js/grid/columns/date" sortOrder="230">
+            <settings>
+                <filter>dateRange</filter>
+                <dataType>date</dataType>
+                <timezone>false</timezone>
+                <dateFormat>yyyy-MM-dd HH:mm</dateFormat>
+                <sorting>desc</sorting>
+                <label translate="true">Decided</label>
+            </settings>
+        </column>
+        <actionsColumn name="actions" class="GhostFrog\EbayShadow\Ui\Component\Column\BuyActions" sortOrder="900">
+            <settings>
+                <indexField>decision_id</indexField>
+            </settings>
+        </actionsColumn>
+    </columns>
+</listing>

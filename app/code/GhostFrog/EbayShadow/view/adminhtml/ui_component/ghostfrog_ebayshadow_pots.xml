@@ -1,0 +1,141 @@
+<?xml version="1.0"?>
+<listing xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Ui:etc/ui_configuration.xsd">
+    <argument name="data" xsi:type="array">
+        <item name="js_config" xsi:type="array">
+            <item name="provider" xsi:type="string">ghostfrog_ebayshadow_pots.ghostfrog_ebayshadow_pots_data_source</item>
+        </item>
+    </argument>
+    <settings>
+        <buttons>
+            <button name="add">
+                <url path="*/*/new"/>
+                <class>primary</class>
+                <label translate="true">Add Pot</label>
+            </button>
+        </buttons>
+        <spinner>ghostfrog_ebayshadow_pots_columns</spinner>
+        <deps>
+            <dep>ghostfrog_ebayshadow_pots.ghostfrog_ebayshadow_pots_data_source</dep>
+        </deps>
+    </settings>
+    <dataSource name="ghostfrog_ebayshadow_pots_data_source" component="Magento_Ui/js/grid/provider">
+        <settings>
+            <storageConfig>
+                <param name="indexField" xsi:type="string">pot_id</param>
+            </storageConfig>
+            <updateUrl path="mui/index/render"/>
+        </settings>
+        <aclResource>GhostFrog_EbayShadow::pots</aclResource>
+        <dataProvider class="Magento\Framework\View\Element\UiComponent\DataProvider\DataProvider" name="ghostfrog_ebayshadow_pots_data_source">
+            <settings>
+                <requestFieldName>pot_id</requestFieldName>
+                <primaryFieldName>pot_id</primaryFieldName>
+            </settings>
+        </dataProvider>
+    </dataSource>
+    <listingToolbar name="listing_top">
+        <settings>
+            <sticky>true</sticky>
+        </settings>
+        <bookmark name="bookmarks"/>
+        <columnsControls name="columns_controls"/>
+        <filterSearch name="fulltext"/>
+        <filters name="listing_filters"/>
+        <massaction name="listing_massaction">
+            <action name="status">
+                <settings>
+                    <type>status</type>
+                    <label translate="true">Change Status</label>
+                    <actions>
+                        <action name="running">
+                            <type>running</type>
+                            <label translate="true">Run</label>
+                            <url path="ghostfrog_shadow/pots/massStatus">
+                                <param name="status">running</param>
+                            </url>
+                        </action>
+                        <action name="paused">
+                            <type>paused</type>
+                            <label translate="true">Pause</label>
+                            <url path="ghostfrog_shadow/pots/massStatus">
+                                <param name="status">paused</param>
+                            </url>
+                        </action>
+                        <action name="closed">
+                            <type>closed</type>
+                            <label translate="true">Close</label>
+                            <url path="ghostfrog_shadow/pots/massStatus">
+                                <param name="status">closed</param>
+                            </url>
+                        </action>
+                    </actions>
+                </settings>
+            </action>
+        </massaction>
+        <paging name="listing_paging"/>
+    </listingToolbar>
+    <columns name="ghostfrog_ebayshadow_pots_columns">
+        <selectionsColumn name="ids" sortOrder="5">
+            <settings>
+                <indexField>pot_id</indexField>
+            </settings>
+        </selectionsColumn>
+        <column name="pot_id" sortOrder="10">
+            <settings>
+                <filter>textRange</filter>
+                <sorting>asc</sorting>
+                <label translate="true">ID</label>
+            </settings>
+        </column>
+        <column name="name" sortOrder="20">
+            <settings>
+                <filter>text</filter>
+                <label translate="true">Name</label>
+            </settings>
+        </column>
+        <column name="starting_capital" sortOrder="30">
+            <settings>
+                <filter>textRange</filter>
+                <label translate="true">Starting Capital</label>
+            </settings>
+        </column>
+        <column name="cash" sortOrder="40">
+            <settings>
+                <label translate="true">Cash Balance</label>
+            </settings>
+        </column>
+        <column name="open_items" sortOrder="50">
+            <settings>
+                <label translate="true">Open Items</label>
+            </settings>
+        </column>
+        <column name="status" component="Magento_Ui/js/grid/columns/select" sortOrder="60">
+            <settings>
+                <options class="GhostFrog\EbayShadow\Model\Config\Source\PotStatus"/>
+                <filter>select</filter>
+                <dataType>select</dataType>
+                <label translate="true">Status</label>
+            </settings>
+        </column>
+        <column name="start_date" class="Magento\Ui\Component\Listing\Columns\Date" component="Magento_Ui/js/grid/columns/date" sortOrder="70">
+            <settings>
+                <filter>dateRange</filter>
+                <dataType>date</dataType>
+                <timezone>false</timezone>
+                <dateFormat>yyyy-MM-dd HH:mm</dateFormat>
+                <label translate="true">Start</label>
+            </settings>
+        </column>
+        <column name="overrides" sortOrder="80">
+            <settings>
+                <label translate="true">Overrides</label>
+            </settings>
+        </column>
+        <actionsColumn name="actions" class="GhostFrog\EbayShadow\Ui\Component\Column\PotActions" sortOrder="900">
+            <settings>
+                <indexField>pot_id</indexField>
+            </settings>
+        </actionsColumn>
+    </columns>
+</listing>

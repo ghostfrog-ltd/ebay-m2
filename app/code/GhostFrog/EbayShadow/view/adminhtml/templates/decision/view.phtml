@@ -1,0 +1,85 @@
+<?php
+/** @var \GhostFrog\EbayShadow\Block\Adminhtml\DecisionView $block */
+/** @var \Magento\Framework\Escaper $escaper */
+$decision = $block->decision();
+if ($decision === null) {
+    echo '<p>' . $escaper->escapeHtml(__('This decision does not exist.')) . '</p>';
+    return;
+}
+$item = $block->item();
+$sale = $block->sale($item);
+$url = $block->listingUrl($decision);
+$fields = [
+    'Pot' => $decision['pot_name'], 'Outcome' => $decision['outcome'], 'Reason' => $decision['reason'],
+    'Category' => $decision['category'], 'Model key' => $decision['model_key'], 'Grade' => $decision['condition_grade'],
+    'Grade confidence' => $decision['grade_confidence'], 'Comparables' => $decision['comp_count'],
+    'Price at decision' => $decision['current_price'], 'Expected price' => $decision['expected_price'],
+    'Max bid' => $decision['max_bid'], 'Predicted resale' => $decision['predicted_resale'],
+    'Cautious profit' => $decision['cautious_profit'], 'ROI %' => $decision['roi_percent'],
+    'Cycle days' => $decision['cycle_days'], 'Score' => $decision['score'],
+    'Evaluations' => $decision['evaluations'], 'Auction end (UTC)' => $decision['auction_end_at'],
+    'Decided (UTC)' => $decision['decided_at'],
+];
+?>
+<style>
+    .gfs-view table { border-collapse: collapse; margin-bottom: 2rem; }
+    .gfs-view th, .gfs-view td { border-bottom: 1px solid #e3e3e3; padding: .35rem .8rem; text-align: left; vertical-align: top; }
+    .gfs-view th { width: 14rem; color: #514943; font-weight: 600; }
+    .gfs-view pre { background: #f8f8f8; border: 1px solid #e3e3e3; padding: 1rem; max-height: 32rem; overflow: auto; font-size: 12px; }
+    .gfs-view .gfs-note { background: #fffbe5; border: 1px solid #e8d48b; padding: .6rem 1rem; margin-bottom: 1.5rem; }
+</style>
+<div class="gfs-view">
+    <p class="gfs-note"><?= $escaper->escapeHtml(__('Simulated. Shadow trading never places a real bid, offer or purchase.')) ?></p>
+    <h2><?= $escaper->escapeHtml($decision['title']) ?>
+        <?php if ($url !== null): ?>
+            <a href="<?= $escaper->escapeUrl($url) ?>" target="_blank" rel="noopener noreferrer">(<?= $escaper->escapeHtml(__('eBay')) ?>)</a>
+        <?php endif; ?>
+    </h2>
+    <table>
+        <?php foreach ($fields as $label => $value): ?>
+            <tr><th><?= $escaper->escapeHtml(__($label)) ?></th><td><?= $escaper->escapeHtml((string)$value) ?></td></tr>
+        <?php endforeach; ?>
+    </table>
+
+    <?php if ($item !== null): ?>
+        <h3><?= $escaper->escapeHtml(__('Item lifecycle')) ?></h3>
+        <table>
+            <?php foreach (['stage', 'auction_result', 'final_price', 'price_paid', 'buy_cost', 'reserved', 'stale',
+                'bought_at', 'planned_received_at', 'received_at', 'planned_listed_at', 'listed_at', 'planned_sold_at',
+                'sold_at', 'planned_delivered_at', 'delivered_at', 'planned_paid_out_at', 'paid_out_at',
+                'planned_banked_at', 'banked_at', 'closed_at'] as $field): ?>
+                <tr><th><?= $escaper->escapeHtml($field) ?></th><td><?= $escaper->escapeHtml((string)$item[$field]) ?></td></tr>
+            <?php endforeach; ?>
+        </table>
+        <h3><?= $escaper->escapeHtml(__('Cash movements')) ?></h3>
+        <table>
+            <?php foreach ($block->movements($item) as $movement): ?>
+                <tr>
+                    <td><?= $escaper->escapeHtml($movement['occurred_at']) ?></td>
+                    <td><?= $escaper->escapeHtml($movement['type']) ?></td>
+                    <td>£<?= $escaper->escapeHtml($movement['amount']) ?></td>
+                    <td><?= $escaper->escapeHtml($movement['idempotency_key']) ?></td>
+                    <td><?= $escaper->escapeHtml((string)$movement['note']) ?></td>
+                </tr>
+            <?php endforeach; ?>
+        </table>
+    <?php endif; ?>
+
+    <?php if ($sale !== null): ?>
+        <h3><?= $escaper->escapeHtml(__('Simulated sale')) ?></h3>
+        <table>
+            <?php foreach (['method', 'predicted_resale', 'sell_price', 'fees', 'postage', 'packaging', 'returns_cost',
+                'net_proceeds', 'buy_cost', 'realised_profit', 'cautious_profit', 'error_percent', 'days_to_sell',
+                'forward_sales', 'resolved_at'] as $field): ?>
+                <tr><th><?= $escaper->escapeHtml($field) ?></th><td><?= $escaper->escapeHtml((string)$sale[$field]) ?></td></tr>
+            <?php endforeach; ?>
+        </table>
+        <h3><?= $escaper->escapeHtml(__('Sale evidence')) ?></h3>
+        <pre><?= $escaper->escapeHtml($block->pretty($sale['evidence'])) ?></pre>
+    <?php endif; ?>
+
+    <h3><?= $escaper->escapeHtml(__('Evidence at decision')) ?></h3>
+    <pre><?= $escaper->escapeHtml($block->pretty($decision['evidence'])) ?></pre>
+    <h3><?= $escaper->escapeHtml(__('Settings snapshot')) ?></h3>
+    <pre><?= $escaper->escapeHtml($block->pretty($decision['settings_snapshot'])) ?></pre>
+</div>
