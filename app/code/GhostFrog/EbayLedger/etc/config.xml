@@ -20,6 +20,16 @@ https://api.ebay.com/oauth/api_scope/sell.refund.read</scopes>
                 <first_run_days>90</first_run_days>
                 <refresh_days>30</refresh_days>
             </ledger_import>
+            <ledger_sell>
+                <effort_cost>2.00</effort_cost>
+                <per_order_fee>0.00</per_order_fee>
+                <packaging>1.50</packaging>
+                <postage>small:3.20
+medium:4.50
+large:7.50</postage>
+                <min_confidence>medium</min_confidence>
+                <comps_days>365</comps_days>
+            </ledger_sell>
             <ledger_products>
                 <sku_prefix>GF-</sku_prefix>
             </ledger_products>

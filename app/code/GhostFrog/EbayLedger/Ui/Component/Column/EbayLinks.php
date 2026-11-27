@@ -33,6 +33,10 @@ class EbayLinks extends Column
                     'href' => $this->urlBuilder->getUrl('ghostfrog_ledger/stockunit/edit', ['stock_unit_id' => $item['stock_unit_id']]),
                     'label' => in_array($item['status'] ?? '', ['purchased', 'in_transit'], true) ? __('Receive') : __('Edit'),
                 ],
+                'plan' => [
+                    'href' => $this->urlBuilder->getUrl('ghostfrog_ledger/stockunit/plan', ['stock_unit_id' => $item['stock_unit_id']]),
+                    'label' => __('Sell Plan'),
+                ],
                 'item' => ['href' => 'https://www.ebay.co.uk/itm/' . $itemId, 'label' => __('eBay Item'), 'target' => '_blank'],
             ];
             if ($transactionId !== '') {

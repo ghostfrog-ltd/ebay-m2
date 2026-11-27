@@ -1,0 +1,182 @@
+<?xml version="1.0"?>
+<form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Ui:etc/ui_configuration.xsd">
+    <argument name="data" xsi:type="array">
+        <item name="js_config" xsi:type="array">
+            <item name="provider" xsi:type="string">ghostfrog_ebayledger_template_form.ghostfrog_ebayledger_template_form_data_source</item>
+        </item>
+        <item name="label" xsi:type="string" translate="true">Parts Template</item>
+        <item name="template" xsi:type="string">templates/form/collapsible</item>
+    </argument>
+    <settings>
+        <buttons>
+            <button name="back" class="GhostFrog\EbayLedger\Block\Adminhtml\Template\BackButton"/>
+            <button name="save" class="GhostFrog\EbayLedger\Block\Adminhtml\StockUnit\SaveButton"/>
+        </buttons>
+        <namespace>ghostfrog_ebayledger_template_form</namespace>
+        <dataScope>data</dataScope>
+        <deps>
+            <dep>ghostfrog_ebayledger_template_form.ghostfrog_ebayledger_template_form_data_source</dep>
+        </deps>
+    </settings>
+    <dataSource name="ghostfrog_ebayledger_template_form_data_source">
+        <argument name="data" xsi:type="array">
+            <item name="js_config" xsi:type="array">
+                <item name="component" xsi:type="string">Magento_Ui/js/form/provider</item>
+            </item>
+        </argument>
+        <settings>
+            <submitUrl path="ghostfrog_ledger/template/save"/>
+        </settings>
+        <aclResource>GhostFrog_EbayLedger::parts_templates</aclResource>
+        <dataProvider class="GhostFrog\EbayLedger\Model\SellPlan\TemplateDataProvider" name="ghostfrog_ebayledger_template_form_data_source">
+            <settings>
+                <requestFieldName>template_id</requestFieldName>
+                <primaryFieldName>template_id</primaryFieldName>
+            </settings>
+        </dataProvider>
+    </dataSource>
+    <fieldset name="general">
+        <settings>
+            <label translate="true">Template</label>
+        </settings>
+        <field name="template_id" formElement="input">
+            <settings>
+                <dataType>text</dataType>
+                <visible>false</visible>
+                <dataScope>template_id</dataScope>
+            </settings>
+        </field>
+        <field name="name" formElement="input" sortOrder="10">
+            <settings>
+                <validation><rule name="required-entry" xsi:type="boolean">true</rule></validation>
+                <dataType>text</dataType>
+                <label translate="true">Name</label>
+                <dataScope>name</dataScope>
+            </settings>
+        </field>
+        <field name="model_keys" formElement="textarea" sortOrder="20">
+            <settings>
+                <validation><rule name="required-entry" xsi:type="boolean">true</rule></validation>
+                <dataType>text</dataType>
+                <label translate="true">Core Model Keys</label>
+                <notice translate="true">One per line, as shown in the Stock Units grid's Model column, such as nintendo-switch-base.</notice>
+                <dataScope>model_keys</dataScope>
+            </settings>
+        </field>
+        <field name="whole_size_band" formElement="select" sortOrder="30">
+            <settings>
+                <dataType>text</dataType>
+                <label translate="true">Size When Sold Whole</label>
+                <dataScope>whole_size_band</dataScope>
+            </settings>
+            <formElements>
+                <select>
+                    <settings>
+                        <options class="GhostFrog\EbayLedger\Model\SellPlan\SizeBand"/>
+                    </settings>
+                </select>
+            </formElements>
+        </field>
+        <field name="active" formElement="checkbox" sortOrder="40">
+            <settings>
+                <dataType>boolean</dataType>
+                <label translate="true">Active</label>
+                <dataScope>active</dataScope>
+            </settings>
+            <formElements>
+                <checkbox>
+                    <settings>
+                        <valueMap>
+                            <map name="false" xsi:type="number">0</map>
+                            <map name="true" xsi:type="number">1</map>
+                        </valueMap>
+                        <prefer>toggle</prefer>
+                    </settings>
+                </checkbox>
+            </formElements>
+        </field>
+    </fieldset>
+    <fieldset name="parts_fieldset">
+        <settings>
+            <label translate="true">Sellable Parts</label>
+        </settings>
+        <container name="parts_help" sortOrder="5">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="component" xsi:type="string">Magento_Ui/js/form/components/html</item>
+                    <item name="content" xsi:type="string" translate="true">Parts with the same Mixed Group sell together in the Mixed option; the rest sell on their own. Prices come from core's sold comparables when a Core Model Key is set and has sales; otherwise from Your Estimate, which counts as low confidence.</item>
+                </item>
+            </argument>
+        </container>
+        <dynamicRows name="parts" sortOrder="10">
+            <settings>
+                <addButtonLabel translate="true">Add Part</addButtonLabel>
+                <componentType>dynamicRows</componentType>
+                <dndConfig>
+                    <param name="enabled" xsi:type="boolean">true</param>
+                </dndConfig>
+            </settings>
+            <container name="record" component="Magento_Ui/js/dynamic-rows/record">
+                <argument name="data" xsi:type="array">
+                    <item name="config" xsi:type="array">
+                        <item name="isTemplate" xsi:type="boolean">true</item>
+                        <item name="is_collection" xsi:type="boolean">true</item>
+                        <item name="componentType" xsi:type="string">container</item>
+                    </item>
+                </argument>
+                <field name="name" formElement="input" sortOrder="10">
+                    <settings>
+                        <validation><rule name="required-entry" xsi:type="boolean">true</rule></validation>
+                        <dataType>text</dataType>
+                        <label translate="true">Part</label>
+                        <dataScope>name</dataScope>
+                    </settings>
+                </field>
+                <field name="group" formElement="input" sortOrder="20">
+                    <settings>
+                        <dataType>text</dataType>
+                        <label translate="true">Mixed Group</label>
+                        <dataScope>group</dataScope>
+                    </settings>
+                </field>
+                <field name="size_band" formElement="select" sortOrder="30">
+                    <settings>
+                        <dataType>text</dataType>
+                        <label translate="true">Size</label>
+                        <dataScope>size_band</dataScope>
+                    </settings>
+                    <formElements>
+                        <select>
+                            <settings>
+                                <options class="GhostFrog\EbayLedger\Model\SellPlan\SizeBand"/>
+                            </settings>
+                        </select>
+                    </formElements>
+                </field>
+                <field name="comp_model_key" formElement="input" sortOrder="40">
+                    <settings>
+                        <dataType>text</dataType>
+                        <label translate="true">Core Model Key for Prices</label>
+                        <dataScope>comp_model_key</dataScope>
+                    </settings>
+                </field>
+                <field name="estimate" formElement="input" sortOrder="50">
+                    <settings>
+                        <validation><rule name="validate-number" xsi:type="boolean">true</rule></validation>
+                        <dataType>text</dataType>
+                        <label translate="true">Your Estimate £</label>
+                        <dataScope>estimate</dataScope>
+                    </settings>
+                </field>
+                <actionDelete name="action_delete" template="Magento_Backend/dynamic-rows/cells/action-delete" sortOrder="90">
+                    <settings>
+                        <dataType>text</dataType>
+                        <label translate="true">Remove</label>
+                        <componentType>actionDelete</componentType>
+                    </settings>
+                </actionDelete>
+            </container>
+        </dynamicRows>
+    </fieldset>
+</form>

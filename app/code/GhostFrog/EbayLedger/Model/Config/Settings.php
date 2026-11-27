@@ -56,4 +56,47 @@ class Settings
         $prefix = trim((string)$this->config->getValue('ghostfrog_ebay/ledger_products/sku_prefix'));
         return $prefix === '' ? 'GF-' : $prefix;
     }
+
+    /** Core's selling fee percent (Comps and Pricing), so Ledger and core estimate fees the same way. */
+    public function sellingFeePercent(): float
+    {
+        return (float)$this->config->getValue('ghostfrog_ebay/comps/selling_fee_percent');
+    }
+
+    public function effortCost(): float
+    {
+        return max(0.0, (float)$this->config->getValue('ghostfrog_ebay/ledger_sell/effort_cost'));
+    }
+
+    public function perOrderFee(): float
+    {
+        return max(0.0, (float)$this->config->getValue('ghostfrog_ebay/ledger_sell/per_order_fee'));
+    }
+
+    public function packaging(): float
+    {
+        return max(0.0, (float)$this->config->getValue('ghostfrog_ebay/ledger_sell/packaging'));
+    }
+
+    /** @return array<string, float> Postage by size band. */
+    public function postage(): array
+    {
+        $bands = [];
+        foreach (preg_split('/\R/', (string)$this->config->getValue('ghostfrog_ebay/ledger_sell/postage')) ?: [] as $line) {
+            if (preg_match('/^\s*([a-z0-9_-]+)\s*:\s*([0-9.]+)\s*$/i', $line, $match)) {
+                $bands[strtolower($match[1])] = (float)$match[2];
+            }
+        }
+        return $bands + ['small' => 3.20, 'medium' => 4.50, 'large' => 7.50];
+    }
+
+    public function minConfidence(): string
+    {
+        return (string)$this->config->getValue('ghostfrog_ebay/ledger_sell/min_confidence') ?: 'medium';
+    }
+
+    public function compsDays(): int
+    {
+        return max(7, (int)$this->config->getValue('ghostfrog_ebay/ledger_sell/comps_days') ?: 365);
+    }
 }

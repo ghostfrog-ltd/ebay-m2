@@ -1,0 +1,124 @@
+<?php
+/** @var \GhostFrog\EbayLedger\Block\Adminhtml\StockUnit\Plan $block */
+/** @var \Magento\Framework\Escaper $escaper */
+$unit = $block->getUnit();
+if ($unit === null): ?>
+    <p><?= $escaper->escapeHtml(__('This stock unit no longer exists.')) ?></p>
+    <?php return; endif;
+$built = $block->getBuilt();
+$result = $built['result'];
+$confirmed = $block->getConfirmed();
+$confidenceLabels = ['high' => __('High'), 'medium' => __('Medium'), 'low' => __('Low'), 'none' => __('No price')];
+$sourceLabels = ['comps' => __('sold comparables'), 'old_comps' => __('old sold comparables'), 'estimate' => __('template estimate'), 'override' => __('your price'), 'none' => __('no price')];
+?>
+<style>
+    .gf-plan table{border-collapse:collapse;margin:0 0 1.5rem;width:100%}
+    .gf-plan th,.gf-plan td{border-bottom:1px solid #e3e3e3;padding:.45rem .6rem;text-align:left;vertical-align:top}
+    .gf-plan td.num,.gf-plan th.num{text-align:right;white-space:nowrap}
+    .gf-plan .flag{color:#b42318;font-weight:600}
+    .gf-plan .option{border:1px solid #ccc;padding:1rem 1.25rem;margin:0 0 1.25rem}
+    .gf-plan .option.best{border:2px solid #1a7f37}
+    .gf-plan .option h3{margin:0 0 .5rem}
+    .gf-plan .reasons li{margin:.2rem 0}
+    .gf-plan input.price{width:6rem}
+    .gf-plan .muted{color:#666}
+</style>
+<div class="gf-plan">
+    <p>
+        <strong><?= $escaper->escapeHtml($unit['reference']) ?></strong> —
+        <?= $escaper->escapeHtml($unit['title']) ?><br>
+        <?= $escaper->escapeHtml(__('Cost %1%2. Priced at grade %3 for %4.',
+            $block->money((float)$unit['total_cost'] - (float)$unit['refund_amount']),
+            (float)$unit['refund_amount'] > 0 ? ' ' . __('after refund') : '',
+            $built['grade'], $unit['model_key'] ?: __('an unknown model'))) ?>
+        <?php if ($built['grade_note']): ?><span class="muted"><?= $escaper->escapeHtml($built['grade_note']) ?></span><?php endif; ?>
+    </p>
+    <?php if (!$block->canPlan()): ?>
+        <div class="message message-warning"><?= $escaper->escapeHtml(__('Receive the item first (status: %1). These figures are a preview.', $unit['status'])) ?></div>
+    <?php endif; ?>
+    <?php if ($confirmed): ?>
+        <div class="message message-success"><?= $escaper->escapeHtml(__('Confirmed plan: %1, on %2 UTC.',
+            \GhostFrog\EbayLedger\Model\SellPlan\Calculator::LABELS[$confirmed['chosen_option']] ?? $confirmed['chosen_option'],
+            $confirmed['confirmed_at'])) ?></div>
+    <?php endif; ?>
+    <?php if ($built['template'] === null): ?>
+        <div class="message message-notice"><?= $escaper->escapeHtml(__('No parts template covers %1, so only selling whole is shown. Add one under Ledger → Parts Templates.', $unit['model_key'] ?: __('this item'))) ?></div>
+    <?php endif; ?>
+
+    <form method="post" action="<?= $escaper->escapeUrl($block->getUrl('*/*/planPost')) ?>">
+        <input type="hidden" name="form_key" value="<?= $escaper->escapeHtmlAttr($block->getFormKey()) ?>">
+        <input type="hidden" name="stock_unit_id" value="<?= (int)$unit['stock_unit_id'] ?>">
+
+        <?php if ($built['parts'] !== []): ?>
+            <h2><?= $escaper->escapeHtml(__('Parts')) ?></h2>
+            <p class="muted"><?= $escaper->escapeHtml(__('Tick the parts that arrived. Core has sold comparables only where the source says so; type a price to use your own figure.')) ?></p>
+            <table>
+                <thead><tr>
+                    <th><?= $escaper->escapeHtml(__('Arrived')) ?></th><th><?= $escaper->escapeHtml(__('Part')) ?></th>
+                    <th class="num"><?= $escaper->escapeHtml(__('Price')) ?></th><th><?= $escaper->escapeHtml(__('From')) ?></th>
+                    <th><?= $escaper->escapeHtml(__('Confidence')) ?></th><th class="num"><?= $escaper->escapeHtml(__('Your price £')) ?></th>
+                </tr></thead>
+                <tbody>
+                <?php foreach ($built['parts'] as $part):
+                    $confidence = \GhostFrog\EbayLedger\Model\SellPlan\Confidence::of($part['price'], $part['source'], (int)$part['comps']);
+                    $override = $block->getInputs()['overrides'][$part['name']] ?? ''; ?>
+                    <tr>
+                        <td><input type="checkbox" name="present[]" value="<?= $escaper->escapeHtmlAttr($part['name']) ?>" <?= $part['present'] ? 'checked' : '' ?>></td>
+                        <td><?= $escaper->escapeHtml($part['name']) ?><?php if ($part['group']): ?> <span class="muted">(<?= $escaper->escapeHtml($part['group']) ?>)</span><?php endif; ?></td>
+                        <td class="num"><?= $escaper->escapeHtml($block->money($part['price'])) ?></td>
+                        <td><?= $escaper->escapeHtml($sourceLabels[$part['source']] ?? $part['source']) ?><?php if ($part['comps']): ?> <span class="muted">(<?= (int)$part['comps'] ?>)</span><?php endif; ?></td>
+                        <td class="<?= in_array($confidence, ['low', 'none'], true) ? 'flag' : '' ?>"><?= $escaper->escapeHtml($confidenceLabels[$confidence]) ?></td>
+                        <td class="num"><input class="price admin__control-text" type="text" inputmode="decimal" name="overrides[<?= $escaper->escapeHtmlAttr($part['name']) ?>]" value="<?= $escaper->escapeHtmlAttr((string)$override) ?>"></td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+            <button type="submit" name="do" value="recalculate" class="action-secondary"><?= $escaper->escapeHtml(__('Recalculate')) ?></button>
+        <?php endif; ?>
+
+        <h2><?= $escaper->escapeHtml(__('Recommendation')) ?></h2>
+        <ul class="reasons">
+            <?php foreach ($result['reasons'] as $reason): ?><li><?= $escaper->escapeHtml($reason) ?></li><?php endforeach; ?>
+        </ul>
+
+        <?php foreach ($result['options'] as $code => $option): ?>
+            <div class="option <?= $code === $result['recommended'] ? 'best' : '' ?>">
+                <h3><?= $escaper->escapeHtml(__($option['label'])) ?><?= $code === $result['recommended'] ? ' — ' . $escaper->escapeHtml(__('recommended')) : '' ?></h3>
+                <table>
+                    <thead><tr>
+                        <th><?= $escaper->escapeHtml(__('Sale')) ?></th><th class="num"><?= $escaper->escapeHtml(__('Price')) ?></th>
+                        <th class="num"><?= $escaper->escapeHtml(__('eBay fees')) ?></th><th class="num"><?= $escaper->escapeHtml(__('Postage')) ?></th>
+                        <th class="num"><?= $escaper->escapeHtml(__('Nets')) ?></th><th><?= $escaper->escapeHtml(__('Confidence')) ?></th>
+                        <th class="num"><?= $escaper->escapeHtml(__('Days to sell')) ?></th>
+                    </tr></thead>
+                    <tbody>
+                    <?php foreach ($option['lines'] as $line): ?>
+                        <tr>
+                            <td><?= $escaper->escapeHtml($line['name']) ?>
+                                <?php foreach ($line['notes'] as $note): ?><br><span class="muted"><?= $escaper->escapeHtml($note) ?></span><?php endforeach; ?></td>
+                            <td class="num"><?= $escaper->escapeHtml($block->money($line['price'])) ?></td>
+                            <td class="num"><?= $escaper->escapeHtml($block->money($line['fees'])) ?></td>
+                            <td class="num"><?= $escaper->escapeHtml($block->money($line['postage'])) ?></td>
+                            <td class="num"><?= $escaper->escapeHtml($block->money($line['net'])) ?></td>
+                            <td class="<?= in_array($line['confidence'], ['low', 'none'], true) ? 'flag' : '' ?>"><?= $escaper->escapeHtml($confidenceLabels[$line['confidence']]) ?></td>
+                            <td class="num"><?= $line['days'] === null ? '—' : $escaper->escapeHtml(number_format($line['days'], 1)) ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+                <p>
+                    <?= $escaper->escapeHtml(__('Less packaging (in Nets), %1 effort for extra sales and %2 the unit cost.', $block->money($option['effort']), $block->money($option['unit_cost']))) ?><br>
+                    <strong><?= $escaper->escapeHtml(__('Certain profit %1', $block->money($option['certain_profit']))) ?></strong> ·
+                    <?= $escaper->escapeHtml(__('Expected profit %1', $block->money($option['expected_profit']))) ?>
+                    <?php if ($option['flagged'] !== []): ?><br><span class="flag"><?= $escaper->escapeHtml(__('Not counted as certain: %1', implode(', ', $option['flagged']))) ?></span><?php endif; ?>
+                </p>
+                <?php if ($block->canPlan()): ?>
+                    <button type="submit" name="confirm" value="<?= $escaper->escapeHtmlAttr($code) ?>" class="<?= $code === $result['recommended'] ? 'action-primary' : 'action-secondary' ?>"
+                            onclick="return confirm('<?= $escaper->escapeJs(__('Confirm: %1?', __($option['label']))) ?>');">
+                        <?= $escaper->escapeHtml(__('Confirm %1', __($option['label']))) ?>
+                    </button>
+                <?php endif; ?>
+            </div>
+        <?php endforeach; ?>
+    </form>
+</div>

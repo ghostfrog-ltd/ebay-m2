@@ -101,5 +101,42 @@
         "constraint": {
             "PRIMARY": true
         }
+    },
+    "ghostfrog_ebayledger_parts_template": {
+        "column": {
+            "template_id": true,
+            "name": true,
+            "model_keys": true,
+            "parts": true,
+            "whole_size_band": true,
+            "active": true,
+            "created_at": true,
+            "updated_at": true
+        },
+        "constraint": {
+            "PRIMARY": true
+        }
+    },
+    "ghostfrog_ebayledger_sell_plan": {
+        "column": {
+            "plan_id": true,
+            "stock_unit_id": true,
+            "status": true,
+            "chosen_option": true,
+            "recommended_option": true,
+            "inputs": true,
+            "options": true,
+            "template_id": true,
+            "created_at": true,
+            "updated_at": true,
+            "confirmed_at": true
+        },
+        "index": {
+            "GHOSTFROG_EBAYLEDGER_SELL_PLAN_STOCK_UNIT_ID_STATUS": true
+        },
+        "constraint": {
+            "PRIMARY": true,
+            "FK_7BFA998C37C7847A43997EE2699B9908": true
+        }
     }
 }

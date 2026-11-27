@@ -113,4 +113,40 @@
             <column name="kind"/>
         </index>
     </table>
+    <table name="ghostfrog_ebayledger_parts_template" resource="default" engine="innodb" comment="Sellable parts per model">
+        <column xsi:type="int" name="template_id" unsigned="true" nullable="false" identity="true"/>
+        <column xsi:type="varchar" name="name" length="100" nullable="false"/>
+        <column xsi:type="text" name="model_keys" nullable="false" comment="Core model keys it applies to, one per line"/>
+        <column xsi:type="json" name="parts" nullable="true" comment="name, group, size_band, comp_model_key, estimate"/>
+        <column xsi:type="varchar" name="whole_size_band" length="20" nullable="false" default="large"/>
+        <column xsi:type="smallint" name="active" unsigned="true" nullable="false" default="1"/>
+        <column xsi:type="timestamp" name="created_at" nullable="false" default="CURRENT_TIMESTAMP"/>
+        <column xsi:type="timestamp" name="updated_at" nullable="false" default="CURRENT_TIMESTAMP" on_update="true"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="template_id"/>
+        </constraint>
+    </table>
+    <table name="ghostfrog_ebayledger_sell_plan" resource="default" engine="innodb" comment="How a stock unit will be sold">
+        <column xsi:type="int" name="plan_id" unsigned="true" nullable="false" identity="true"/>
+        <column xsi:type="int" name="stock_unit_id" unsigned="true" nullable="false"/>
+        <column xsi:type="varchar" name="status" length="12" nullable="false" default="draft" comment="draft, confirmed, superseded"/>
+        <column xsi:type="varchar" name="chosen_option" length="12" nullable="true" comment="whole, part_out or mixed"/>
+        <column xsi:type="varchar" name="recommended_option" length="12" nullable="true"/>
+        <column xsi:type="json" name="inputs" nullable="true" comment="Parts present and your price overrides"/>
+        <column xsi:type="json" name="options" nullable="true" comment="Every option as estimated, kept for actual vs planned"/>
+        <column xsi:type="int" name="template_id" unsigned="true" nullable="true"/>
+        <column xsi:type="timestamp" name="created_at" nullable="false" default="CURRENT_TIMESTAMP"/>
+        <column xsi:type="timestamp" name="updated_at" nullable="false" default="CURRENT_TIMESTAMP" on_update="true"/>
+        <column xsi:type="datetime" name="confirmed_at" nullable="true" comment="UTC"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="plan_id"/>
+        </constraint>
+        <constraint xsi:type="foreign" referenceId="GHOSTFROG_EBAYLEDGER_SELL_PLAN_UNIT"
+                    table="ghostfrog_ebayledger_sell_plan" column="stock_unit_id"
+                    referenceTable="ghostfrog_ebayledger_stock_unit" referenceColumn="stock_unit_id" onDelete="NO ACTION"/>
+        <index referenceId="GHOSTFROG_EBAYLEDGER_SELL_PLAN_UNIT_STATUS" indexType="btree">
+            <column name="stock_unit_id"/>
+            <column name="status"/>
+        </index>
+    </table>
 </schema>

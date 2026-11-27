@@ -44,6 +44,43 @@
                         <config_path>ghostfrog_ebay/ledger_import/refresh_days</config_path>
                     </field>
                 </group>
+                <group id="sell" translate="label" sortOrder="25" showInDefault="1">
+                    <label>Sell Plan</label>
+                    <comment>The eBay selling fee is core's Selling Fee (%) in Comps and Pricing.</comment>
+                    <field id="effort_cost" translate="label comment" type="text" sortOrder="10" showInDefault="1">
+                        <label>Effort Cost per Extra Sale (GBP)</label>
+                        <comment>What your time is worth for each sale beyond the first, when splitting an item.</comment>
+                        <validate>validate-number validate-not-negative-number</validate>
+                        <config_path>ghostfrog_ebay/ledger_sell/effort_cost</config_path>
+                    </field>
+                    <field id="per_order_fee" translate="label comment" type="text" sortOrder="20" showInDefault="1">
+                        <label>eBay Fixed Fee per Sale (GBP)</label>
+                        <validate>validate-number validate-not-negative-number</validate>
+                        <config_path>ghostfrog_ebay/ledger_sell/per_order_fee</config_path>
+                    </field>
+                    <field id="packaging" translate="label" type="text" sortOrder="30" showInDefault="1">
+                        <label>Packaging per Sale (GBP)</label>
+                        <validate>validate-number validate-not-negative-number</validate>
+                        <config_path>ghostfrog_ebay/ledger_sell/packaging</config_path>
+                    </field>
+                    <field id="postage" translate="label comment" type="textarea" sortOrder="40" showInDefault="1">
+                        <label>Postage by Size Band (GBP)</label>
+                        <comment>band:price per line, such as small:3.20. Parts templates choose a band for each part.</comment>
+                        <config_path>ghostfrog_ebay/ledger_sell/postage</config_path>
+                    </field>
+                    <field id="min_confidence" translate="label comment" type="select" sortOrder="50" showInDefault="1">
+                        <label>Minimum Part Confidence</label>
+                        <comment>Parts priced below this are flagged and left out of the profit the recommendation relies on.</comment>
+                        <source_model>GhostFrog\EbayLedger\Model\SellPlan\Confidence</source_model>
+                        <config_path>ghostfrog_ebay/ledger_sell/min_confidence</config_path>
+                    </field>
+                    <field id="comps_days" translate="label comment" type="text" sortOrder="60" showInDefault="1">
+                        <label>Sold Comparables Window (days)</label>
+                        <comment>365 matches core. Prices whose newest sale is over 120 days old count as low confidence.</comment>
+                        <validate>validate-digits</validate>
+                        <config_path>ghostfrog_ebay/ledger_sell/comps_days</config_path>
+                    </field>
+                </group>
                 <group id="products" translate="label" sortOrder="30" showInDefault="1">
                     <label>Products</label>
                     <field id="sku_prefix" translate="label comment" type="text" sortOrder="10" showInDefault="1">

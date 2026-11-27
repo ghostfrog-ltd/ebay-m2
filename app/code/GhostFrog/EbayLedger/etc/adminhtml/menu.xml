@@ -10,5 +10,8 @@
         <add id="GhostFrog_EbayLedger::stock_units" title="Stock Units" translate="title" module="GhostFrog_EbayLedger"
              sortOrder="20" parent="GhostFrog_EbayLedger::ledger" action="ghostfrog_ledger/stockunit/index"
              resource="GhostFrog_EbayLedger::stock_units"/>
+        <add id="GhostFrog_EbayLedger::parts_templates" title="Parts Templates" translate="title" module="GhostFrog_EbayLedger"
+             sortOrder="60" parent="GhostFrog_EbayLedger::ledger" action="ghostfrog_ledger/template/index"
+             resource="GhostFrog_EbayLedger::parts_templates"/>
     </menu>
 </config>
