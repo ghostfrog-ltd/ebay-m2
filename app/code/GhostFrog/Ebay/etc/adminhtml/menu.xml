@@ -8,12 +8,19 @@
              module="GhostFrog_Ebay"
              sortOrder="75"
              resource="GhostFrog_Ebay::config"/>
+        <add id="GhostFrog_Ebay::live"
+             title="Live Trading"
+             translate="title"
+             module="GhostFrog_Ebay"
+             sortOrder="10"
+             parent="GhostFrog_Ebay::ghostfrog"
+             resource="GhostFrog_Ebay::config"/>
         <add id="GhostFrog_Ebay::ghostfrog_dashboard"
              title="Dashboard"
              translate="title"
              module="GhostFrog_Ebay"
              sortOrder="5"
-             parent="GhostFrog_Ebay::ghostfrog"
+             parent="GhostFrog_Ebay::live"
              action="ghostfrog_ebay/dashboard/index"
              resource="GhostFrog_Ebay::dashboard"/>
         <add id="GhostFrog_Ebay::ebay"
@@ -21,7 +28,7 @@
              translate="title"
              module="GhostFrog_Ebay"
              sortOrder="10"
-             parent="GhostFrog_Ebay::ghostfrog"
+             parent="GhostFrog_Ebay::live"
              action="adminhtml/system_config/edit/section/ghostfrog_ebay"
              resource="GhostFrog_Ebay::config"/>
         <add id="GhostFrog_Ebay::listings"
@@ -29,7 +36,7 @@
              translate="title"
              module="GhostFrog_Ebay"
              sortOrder="20"
-             parent="GhostFrog_Ebay::ghostfrog"
+             parent="GhostFrog_Ebay::live"
              action="ghostfrog_ebay/listing/index"
              resource="GhostFrog_Ebay::listings"/>
         <add id="GhostFrog_Ebay::opportunities"
@@ -37,7 +44,7 @@
              translate="title"
              module="GhostFrog_Ebay"
              sortOrder="30"
-             parent="GhostFrog_Ebay::ghostfrog"
+             parent="GhostFrog_Ebay::live"
              action="ghostfrog_ebay/opportunities/index"
              resource="GhostFrog_Ebay::opportunities"/>
         <add id="GhostFrog_Ebay::faulty_opportunities"
@@ -45,7 +52,7 @@
              translate="title"
              module="GhostFrog_Ebay"
              sortOrder="31"
-             parent="GhostFrog_Ebay::ghostfrog"
+             parent="GhostFrog_Ebay::live"
              action="ghostfrog_ebay/faulty/index"
              resource="GhostFrog_Ebay::opportunities"/>
         <add id="GhostFrog_Ebay::best_offer_opportunities"
@@ -53,7 +60,7 @@
              translate="title"
              module="GhostFrog_Ebay"
              sortOrder="32"
-             parent="GhostFrog_Ebay::ghostfrog"
+             parent="GhostFrog_Ebay::live"
              action="ghostfrog_ebay/bestoffer/index"
              resource="GhostFrog_Ebay::opportunities"/>
         <add id="GhostFrog_Ebay::sources"
@@ -61,7 +68,7 @@
              translate="title"
              module="GhostFrog_Ebay"
              sortOrder="40"
-             parent="GhostFrog_Ebay::ghostfrog"
+             parent="GhostFrog_Ebay::live"
              action="ghostfrog_ebay/source/index"
              resource="GhostFrog_Ebay::sources"/>
         <add id="GhostFrog_Ebay::tasks"
@@ -69,7 +76,7 @@
              translate="title"
              module="GhostFrog_Ebay"
              sortOrder="50"
-             parent="GhostFrog_Ebay::ghostfrog"
+             parent="GhostFrog_Ebay::live"
              action="ghostfrog_ebay/task/index"
              resource="GhostFrog_Ebay::tasks"/>
         <add id="GhostFrog_Ebay::api_usage"
@@ -77,7 +84,7 @@
              translate="title"
              module="GhostFrog_Ebay"
              sortOrder="45"
-             parent="GhostFrog_Ebay::ghostfrog"
+             parent="GhostFrog_Ebay::live"
              action="ghostfrog_ebay/usage/index"
              resource="GhostFrog_Ebay::api_usage"/>
     </menu>

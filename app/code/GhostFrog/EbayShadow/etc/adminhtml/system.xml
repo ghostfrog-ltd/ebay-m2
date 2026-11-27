@@ -1,0 +1,196 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
+    <system>
+        <section id="ghostfrog_ebayshadow" translate="label" sortOrder="20" showInDefault="1">
+            <label>Shadow Trading</label>
+            <tab>ghostfrog</tab>
+            <resource>GhostFrog_EbayShadow::config</resource>
+            <group id="general" translate="label" sortOrder="10" showInDefault="1">
+                <label>General</label>
+                <field id="mode" translate="label comment" type="select" sortOrder="10" showInDefault="1">
+                    <label>Mode</label>
+                    <comment>Off stops all shadow jobs. Shadow simulates buying and selling and never bids, offers or buys on eBay. There is no live mode in this build.</comment>
+                    <source_model>GhostFrog\EbayShadow\Model\Config\Source\Mode</source_model>
+                </field>
+                <field id="categories" translate="label comment" type="multiselect" sortOrder="20" showInDefault="1">
+                    <label>Enabled Categories</label>
+                    <comment>GhostFrog sources shadow may buy from. None selected means all.</comment>
+                    <source_model>GhostFrog\EbayShadow\Model\Config\Source\Categories</source_model>
+                    <can_be_empty>1</can_be_empty>
+                </field>
+                <field id="decision_window_minutes" translate="label comment" type="text" sortOrder="30" showInDefault="1">
+                    <label>Decide Within Minutes of Auction End</label>
+                    <comment>Auctions are decided once they end within this many minutes, when core checks prices most often.</comment>
+                </field>
+                <field id="void_after_days" translate="label comment" type="text" sortOrder="40" showInDefault="1">
+                    <label>Void Unresolved Auctions After Days</label>
+                    <comment>An auction with no verified outcome this long after its end is void and its reservation is released.</comment>
+                </field>
+            </group>
+            <group id="capital" translate="label" sortOrder="20" showInDefault="1">
+                <label>Capital and Risk</label>
+                <field id="default_capital" translate="label" type="text" sortOrder="10" showInDefault="1">
+                    <label>Default Starting Pot (GBP)</label>
+                </field>
+                <field id="max_item_percent" translate="label comment" type="text" sortOrder="20" showInDefault="1">
+                    <label>Max % of Pot per Item</label>
+                    <comment>Cash reserved for one item, as a share of the pot's starting capital.</comment>
+                </field>
+                <field id="max_category_percent" translate="label" type="text" sortOrder="30" showInDefault="1">
+                    <label>Max % of Pot per Category</label>
+                </field>
+                <field id="min_cautious_profit" translate="label" type="text" sortOrder="40" showInDefault="1">
+                    <label>Min Cautious Profit (GBP)</label>
+                </field>
+                <field id="min_roi_percent" translate="label" type="text" sortOrder="50" showInDefault="1">
+                    <label>Min ROI %</label>
+                </field>
+            </group>
+            <group id="evidence" translate="label" sortOrder="30" showInDefault="1">
+                <label>Evidence</label>
+                <field id="min_grade_confidence" translate="label comment" type="text" sortOrder="10" showInDefault="1">
+                    <label>Min Grade Confidence (0-1)</label>
+                    <comment>Lowest confidence of core's text and photo condition checks. A listing with no check fails when this is above 0.</comment>
+                </field>
+                <field id="min_comparables" translate="label comment" type="text" sortOrder="20" showInDefault="1">
+                    <label>Min Comparables</label>
+                    <comment>Verified sales of the same model and grade before the decision.</comment>
+                </field>
+                <field id="max_price_age_hours" translate="label" type="text" sortOrder="30" showInDefault="1">
+                    <label>Max Price Age (Hours)</label>
+                </field>
+                <field id="cautious_discount_percent" translate="label" type="text" sortOrder="40" showInDefault="1">
+                    <label>Cautious Discount %</label>
+                </field>
+                <field id="grade_risk" translate="label comment" type="text" sortOrder="50" showInDefault="1">
+                    <label>Grade-Risk Discount % by Grade</label>
+                    <comment>Expected loss from an item arriving worse than graded, as grade:percent pairs.</comment>
+                </field>
+                <field id="require_extraction" translate="label comment" type="select" sortOrder="60" showInDefault="1">
+                    <label>Require LLM Extraction</label>
+                    <comment>Candidates without a valid extraction are skipped as extraction_pending or review_needed.</comment>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+            </group>
+            <group id="inbound" translate="label" sortOrder="40" showInDefault="1">
+                <label>Inbound</label>
+                <field id="seller_dispatch_days" translate="label comment" type="text" sortOrder="10" showInDefault="1">
+                    <label>Default Seller Dispatch Days</label>
+                    <comment>Core does not store the seller's handling time, so this default always applies.</comment>
+                </field>
+                <field id="delivery_days" translate="label comment" type="textarea" sortOrder="20" showInDefault="1">
+                    <label>Delivery Days by Service</label>
+                    <comment>service:days per line. Only default is used until core stores the shipping service.</comment>
+                </field>
+            </group>
+            <group id="outbound" translate="label" sortOrder="50" showInDefault="1">
+                <label>Outbound</label>
+                <field id="listing_days" translate="label" type="text" sortOrder="10" showInDefault="1">
+                    <label>My Listing Days</label>
+                </field>
+                <field id="dispatch_days" translate="label" type="text" sortOrder="20" showInDefault="1">
+                    <label>My Dispatch Days</label>
+                </field>
+                <field id="delivery_days" translate="label" type="text" sortOrder="30" showInDefault="1">
+                    <label>Delivery Days to Buyer</label>
+                </field>
+                <field id="postage" translate="label comment" type="textarea" sortOrder="40" showInDefault="1">
+                    <label>Postage by Size Band (GBP)</label>
+                    <comment>band:price per line. default:core uses core's per-source shipping estimate less the inbound postage.</comment>
+                </field>
+                <field id="category_bands" translate="label comment" type="textarea" sortOrder="50" showInDefault="1">
+                    <label>Category Size Bands</label>
+                    <comment>source:band per line, such as ebay-consoles:large. Unlisted sources use default.</comment>
+                </field>
+                <field id="packaging" translate="label" type="text" sortOrder="60" showInDefault="1">
+                    <label>Packaging Cost (GBP)</label>
+                </field>
+            </group>
+            <group id="costs" translate="label" sortOrder="60" showInDefault="1">
+                <label>eBay Costs</label>
+                <field id="per_order_fee" translate="label comment" type="text" sortOrder="10" showInDefault="1">
+                    <label>Per-Order Fee (GBP)</label>
+                    <comment>The final value fee is core's Selling Fee setting, with per-source overrides.</comment>
+                </field>
+                <field id="payout_delay_days" translate="label comment" type="text" sortOrder="20" showInDefault="1">
+                    <label>Payout Delay Days</label>
+                    <comment>Days from delivery to the payout reaching the pot.</comment>
+                </field>
+                <field id="return_window_days" translate="label" type="text" sortOrder="30" showInDefault="1">
+                    <label>Return Window Days</label>
+                </field>
+                <field id="returns_rate_percent" translate="label comment" type="text" sortOrder="40" showInDefault="1">
+                    <label>Returns Rate %</label>
+                    <comment>Expected share of sales returned, charged as two-way postage and packaging.</comment>
+                </field>
+            </group>
+            <group id="sell" translate="label" sortOrder="70" showInDefault="1">
+                <label>Sell Simulation</label>
+                <field id="forward_window_days" translate="label comment" type="text" sortOrder="10" showInDefault="1">
+                    <label>Forward Window Days</label>
+                    <comment>Later sales are counted from the decision up to this many days after it.</comment>
+                </field>
+                <field id="statistic" translate="label" type="select" sortOrder="20" showInDefault="1">
+                    <label>Sell Statistic</label>
+                    <source_model>GhostFrog\EbayShadow\Model\Config\Source\Statistic</source_model>
+                </field>
+                <field id="min_forward_sales" translate="label" type="text" sortOrder="30" showInDefault="1">
+                    <label>Min Later Sales</label>
+                </field>
+                <field id="max_days_to_sell" translate="label" type="text" sortOrder="40" showInDefault="1">
+                    <label>Max Days to Sell</label>
+                </field>
+                <field id="max_hold_days" translate="label comment" type="text" sortOrder="50" showInDefault="1">
+                    <label>Max Hold Days</label>
+                    <comment>A stale item is marked down or written off this many days after it was bought.</comment>
+                </field>
+                <field id="stale_action" translate="label" type="select" sortOrder="60" showInDefault="1">
+                    <label>Stale Action</label>
+                    <source_model>GhostFrog\EbayShadow\Model\Config\Source\StaleAction</source_model>
+                </field>
+                <field id="stale_markdown_percent" translate="label comment" type="text" sortOrder="70" showInDefault="1">
+                    <label>Stale Markdown %</label>
+                    <comment>Taken off the predicted resale.</comment>
+                </field>
+            </group>
+            <group id="llm" translate="label" sortOrder="80" showInDefault="1">
+                <label>LLM Extraction</label>
+                <field id="enabled" translate="label comment" type="select" sortOrder="10" showInDefault="1">
+                    <label>Enable Extraction</label>
+                    <comment>Uses core's Ollama endpoint (Local LLM Condition Checks).</comment>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+                <field id="model" translate="label comment" type="text" sortOrder="20" showInDefault="1">
+                    <label>Model</label>
+                    <comment>Blank uses core's text condition model.</comment>
+                </field>
+                <field id="prompt_version" translate="label comment" type="text" sortOrder="30" showInDefault="1">
+                    <label>Prompt Version</label>
+                    <comment>Change to re-extract listings with a revised prompt.</comment>
+                </field>
+                <field id="timeout" translate="label" type="text" sortOrder="40" showInDefault="1">
+                    <label>Timeout Seconds</label>
+                </field>
+                <field id="min_confidence" translate="label" type="text" sortOrder="50" showInDefault="1">
+                    <label>Min Extraction Confidence (0-1)</label>
+                </field>
+                <field id="batch" translate="label" type="text" sortOrder="60" showInDefault="1">
+                    <label>Listings per Run</label>
+                </field>
+            </group>
+            <group id="alerts" translate="label" sortOrder="90" showInDefault="1">
+                <label>Alerts</label>
+                <field id="slack_on_buy" translate="label comment" type="select" sortOrder="10" showInDefault="1">
+                    <label>Slack on Shadow Buy</label>
+                    <comment>Uses core's Slack webhook.</comment>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+                <field id="daily_summary" translate="label" type="select" sortOrder="20" showInDefault="1">
+                    <label>Daily Slack Summary</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+            </group>
+        </section>
+    </system>
+</config>

@@ -1,0 +1,214 @@
+<?xml version="1.0"?>
+<listing xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Ui:etc/ui_configuration.xsd">
+    <argument name="data" xsi:type="array">
+        <item name="js_config" xsi:type="array">
+            <item name="provider" xsi:type="string">ghostfrog_ebayshadow_sells.ghostfrog_ebayshadow_sells_data_source</item>
+        </item>
+    </argument>
+    <settings>
+        <spinner>ghostfrog_ebayshadow_sells_columns</spinner>
+        <deps>
+            <dep>ghostfrog_ebayshadow_sells.ghostfrog_ebayshadow_sells_data_source</dep>
+        </deps>
+    </settings>
+    <dataSource name="ghostfrog_ebayshadow_sells_data_source" component="Magento_Ui/js/grid/provider">
+        <settings>
+            <storageConfig>
+                <param name="indexField" xsi:type="string">item_id</param>
+            </storageConfig>
+            <updateUrl path="mui/index/render"/>
+        </settings>
+        <aclResource>GhostFrog_EbayShadow::sells</aclResource>
+        <dataProvider class="Magento\Framework\View\Element\UiComponent\DataProvider\DataProvider" name="ghostfrog_ebayshadow_sells_data_source">
+            <settings>
+                <requestFieldName>item_id</requestFieldName>
+                <primaryFieldName>item_id</primaryFieldName>
+            </settings>
+        </dataProvider>
+    </dataSource>
+    <listingToolbar name="listing_top">
+        <settings>
+            <sticky>true</sticky>
+        </settings>
+        <bookmark name="bookmarks"/>
+        <columnsControls name="columns_controls"/>
+        <filterSearch name="fulltext"/>
+        <filters name="listing_filters"/>
+        <paging name="listing_paging"/>
+    </listingToolbar>
+    <columns name="ghostfrog_ebayshadow_sells_columns">
+        <column name="item_id" sortOrder="10">
+            <settings>
+                <filter>textRange</filter>
+                <visible>false</visible>
+                <label translate="true">Item</label>
+            </settings>
+        </column>
+        <column name="pot_id" component="Magento_Ui/js/grid/columns/select" sortOrder="20">
+            <settings>
+                <options class="GhostFrog\EbayShadow\Model\Source\Pots"/>
+                <filter>select</filter>
+                <dataType>select</dataType>
+                <label translate="true">Pot</label>
+            </settings>
+        </column>
+        <column name="title" class="GhostFrog\EbayShadow\Ui\Component\Column\Title" sortOrder="30">
+            <settings>
+                <filter>text</filter>
+                <bodyTmpl>ui/grid/cells/html</bodyTmpl>
+                <label translate="true">Listing</label>
+            </settings>
+        </column>
+        <column name="category" component="Magento_Ui/js/grid/columns/select" sortOrder="40">
+            <settings>
+                <options class="GhostFrog\EbayShadow\Model\Config\Source\Categories"/>
+                <filter>select</filter>
+                <dataType>select</dataType>
+                <label translate="true">Category</label>
+            </settings>
+        </column>
+        <column name="source" sortOrder="50">
+            <settings>
+                <filter>text</filter>
+                <label translate="true">Source</label>
+            </settings>
+        </column>
+        <column name="buy_cost" sortOrder="60">
+            <settings>
+                <filter>textRange</filter>
+                <label translate="true">Buy Cost</label>
+            </settings>
+        </column>
+        <column name="predicted_resale" sortOrder="70">
+            <settings>
+                <filter>textRange</filter>
+                <label translate="true">Predicted Resale</label>
+            </settings>
+        </column>
+        <column name="sell_price" sortOrder="80">
+            <settings>
+                <filter>textRange</filter>
+                <label translate="true">Sell Price</label>
+            </settings>
+        </column>
+        <column name="fees" sortOrder="90">
+            <settings>
+                <filter>textRange</filter>
+                <label translate="true">Fees</label>
+            </settings>
+        </column>
+        <column name="postage" sortOrder="100">
+            <settings>
+                <filter>textRange</filter>
+                <label translate="true">Postage</label>
+            </settings>
+        </column>
+        <column name="packaging" sortOrder="110">
+            <settings>
+                <filter>textRange</filter>
+                <label translate="true">Packaging</label>
+            </settings>
+        </column>
+        <column name="returns_cost" sortOrder="120">
+            <settings>
+                <filter>textRange</filter>
+                <visible>false</visible>
+                <label translate="true">Returns Cost</label>
+            </settings>
+        </column>
+        <column name="days_to_sell" sortOrder="130">
+            <settings>
+                <filter>textRange</filter>
+                <label translate="true">Days to Sell</label>
+            </settings>
+        </column>
+        <column name="realised_profit" sortOrder="140">
+            <settings>
+                <filter>textRange</filter>
+                <label translate="true">Realised Profit</label>
+            </settings>
+        </column>
+        <column name="cautious_profit" sortOrder="150">
+            <settings>
+                <filter>textRange</filter>
+                <label translate="true">Cautious Profit</label>
+            </settings>
+        </column>
+        <column name="error_percent" sortOrder="160">
+            <settings>
+                <filter>textRange</filter>
+                <label translate="true">Error %</label>
+            </settings>
+        </column>
+        <column name="method" component="Magento_Ui/js/grid/columns/select" sortOrder="170">
+            <settings>
+                <options class="GhostFrog\EbayShadow\Model\Source\Codes\Method"/>
+                <filter>select</filter>
+                <dataType>select</dataType>
+                <label translate="true">Sale Method</label>
+            </settings>
+        </column>
+        <column name="stage" component="Magento_Ui/js/grid/columns/select" sortOrder="180">
+            <settings>
+                <options class="GhostFrog\EbayShadow\Model\Source\Codes\Stage"/>
+                <filter>select</filter>
+                <dataType>select</dataType>
+                <label translate="true">Stage</label>
+            </settings>
+        </column>
+        <column name="stale" component="Magento_Ui/js/grid/columns/select" sortOrder="190">
+            <settings>
+                <options class="Magento\Config\Model\Config\Source\Yesno"/>
+                <filter>select</filter>
+                <dataType>select</dataType>
+                <label translate="true">Stale</label>
+            </settings>
+        </column>
+        <column name="forward_sales" sortOrder="200">
+            <settings>
+                <filter>textRange</filter>
+                <visible>false</visible>
+                <label translate="true">Later Sales</label>
+            </settings>
+        </column>
+        <column name="bought_at" class="Magento\Ui\Component\Listing\Columns\Date" component="Magento_Ui/js/grid/columns/date" sortOrder="210">
+            <settings>
+                <filter>dateRange</filter>
+                <dataType>date</dataType>
+                <timezone>false</timezone>
+                <dateFormat>yyyy-MM-dd HH:mm</dateFormat>
+                <label translate="true">Bought</label>
+            </settings>
+        </column>
+        <column name="sold_at" class="Magento\Ui\Component\Listing\Columns\Date" component="Magento_Ui/js/grid/columns/date" sortOrder="220">
+            <settings>
+                <filter>dateRange</filter>
+                <dataType>date</dataType>
+                <timezone>false</timezone>
+                <dateFormat>yyyy-MM-dd HH:mm</dateFormat>
+                <label translate="true">Sold</label>
+            </settings>
+        </column>
+        <column name="paid_out_at" class="Magento\Ui\Component\Listing\Columns\Date" component="Magento_Ui/js/grid/columns/date" sortOrder="230">
+            <settings>
+                <filter>dateRange</filter>
+                <dataType>date</dataType>
+                <timezone>false</timezone>
+                <dateFormat>yyyy-MM-dd HH:mm</dateFormat>
+                <visible>false</visible>
+                <label translate="true">Paid Out</label>
+            </settings>
+        </column>
+        <column name="banked_at" class="Magento\Ui\Component\Listing\Columns\Date" component="Magento_Ui/js/grid/columns/date" sortOrder="240">
+            <settings>
+                <filter>dateRange</filter>
+                <dataType>date</dataType>
+                <timezone>false</timezone>
+                <dateFormat>yyyy-MM-dd HH:mm</dateFormat>
+                <visible>false</visible>
+                <label translate="true">Banked</label>
+            </settings>
+        </column>
+    </columns>
+</listing>

@@ -1,6 +1,13 @@
 <?xml version="1.0"?>
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <preference for="GhostFrog\Ebay\Api\AuctionCandidatesInterface" type="GhostFrog\Ebay\Model\Service\AuctionCandidates"/>
+    <preference for="GhostFrog\Ebay\Api\SoldComparablesInterface" type="GhostFrog\Ebay\Model\Service\SoldComparables"/>
+    <preference for="GhostFrog\Ebay\Api\ListingOutcomesInterface" type="GhostFrog\Ebay\Model\Service\ListingOutcomes"/>
+    <preference for="GhostFrog\Ebay\Api\ListingTextInterface" type="GhostFrog\Ebay\Model\Service\ListingText"/>
+    <preference for="GhostFrog\Ebay\Api\PricingRulesInterface" type="GhostFrog\Ebay\Model\Service\PricingRules"/>
+    <preference for="GhostFrog\Ebay\Api\LocalLlmInterface" type="GhostFrog\Ebay\Model\Service\LocalLlm"/>
+    <preference for="GhostFrog\Ebay\Api\SlackInterface" type="GhostFrog\Ebay\Model\Service\SlackText"/>
     <type name="Magento\Config\Model\Config\TypePool">
         <arguments>
             <argument name="sensitive" xsi:type="array">

@@ -1,0 +1,181 @@
+<?xml version="1.0"?>
+<form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Ui:etc/ui_configuration.xsd">
+    <argument name="data" xsi:type="array">
+        <item name="js_config" xsi:type="array">
+            <item name="provider" xsi:type="string">ghostfrog_ebayshadow_pot_form.ghostfrog_ebayshadow_pot_form_data_source</item>
+        </item>
+        <item name="label" xsi:type="string" translate="true">Pot</item>
+        <item name="template" xsi:type="string">templates/form/collapsible</item>
+    </argument>
+    <settings>
+        <buttons>
+            <button name="back" class="GhostFrog\EbayShadow\Block\Adminhtml\Pot\BackButton"/>
+            <button name="save" class="GhostFrog\EbayShadow\Block\Adminhtml\Pot\SaveButton"/>
+        </buttons>
+        <namespace>ghostfrog_ebayshadow_pot_form</namespace>
+        <dataScope>data</dataScope>
+        <deps>
+            <dep>ghostfrog_ebayshadow_pot_form.ghostfrog_ebayshadow_pot_form_data_source</dep>
+        </deps>
+    </settings>
+    <dataSource name="ghostfrog_ebayshadow_pot_form_data_source">
+        <argument name="data" xsi:type="array">
+            <item name="js_config" xsi:type="array">
+                <item name="component" xsi:type="string">Magento_Ui/js/form/provider</item>
+            </item>
+        </argument>
+        <settings>
+            <submitUrl path="ghostfrog_shadow/pots/save"/>
+        </settings>
+        <aclResource>GhostFrog_EbayShadow::pots</aclResource>
+        <dataProvider class="GhostFrog\EbayShadow\Model\Pot\DataProvider" name="ghostfrog_ebayshadow_pot_form_data_source">
+            <settings>
+                <requestFieldName>pot_id</requestFieldName>
+                <primaryFieldName>pot_id</primaryFieldName>
+            </settings>
+        </dataProvider>
+    </dataSource>
+    <fieldset name="general">
+        <settings>
+            <label translate="true">Pot</label>
+        </settings>
+        <field name="pot_id" formElement="input">
+            <settings>
+                <dataType>text</dataType>
+                <visible>false</visible>
+                <dataScope>pot_id</dataScope>
+            </settings>
+        </field>
+        <field name="name" formElement="input" sortOrder="10">
+            <settings>
+                <validation>
+                    <rule name="required-entry" xsi:type="boolean">true</rule>
+                </validation>
+                <dataType>text</dataType>
+                <label translate="true">Name</label>
+                <dataScope>name</dataScope>
+            </settings>
+        </field>
+        <field name="starting_capital" formElement="input" sortOrder="20">
+            <settings>
+                <validation>
+                    <rule name="required-entry" xsi:type="boolean">true</rule>
+                    <rule name="validate-greater-than-zero" xsi:type="boolean">true</rule>
+                </validation>
+                <dataType>text</dataType>
+                <label translate="true">Starting Capital (GBP)</label>
+                <dataScope>starting_capital</dataScope>
+                <notice translate="true">Fixed once the pot is saved.</notice>
+            </settings>
+        </field>
+        <field name="start_date" formElement="input" sortOrder="30">
+            <settings>
+                <dataType>text</dataType>
+                <label translate="true">Start Date (UTC, Y-m-d H:i:s)</label>
+                <dataScope>start_date</dataScope>
+                <notice translate="true">Fixed once the pot is saved.</notice>
+            </settings>
+        </field>
+        <field name="status" formElement="select" sortOrder="40">
+            <settings>
+                <dataType>text</dataType>
+                <label translate="true">Status</label>
+                <dataScope>status</dataScope>
+            </settings>
+            <formElements>
+                <select>
+                    <settings>
+                        <options class="GhostFrog\EbayShadow\Model\Config\Source\PotStatus"/>
+                    </settings>
+                </select>
+            </formElements>
+        </field>
+    </fieldset>
+    <fieldset name="overrides">
+        <settings>
+            <label translate="true">Risk and Evidence Overrides</label>
+            <collapsible>true</collapsible>
+        </settings>
+        <field name="capital__max_item_percent" formElement="input" sortOrder="10">
+            <settings>
+                <dataType>text</dataType>
+                <label translate="true">Max % of Pot per Item</label>
+                <dataScope>overrides.capital__max_item_percent</dataScope>
+                <notice translate="true">Blank uses the Shadow Trading config default.</notice>
+            </settings>
+        </field>
+        <field name="capital__max_category_percent" formElement="input" sortOrder="20">
+            <settings>
+                <dataType>text</dataType>
+                <label translate="true">Max % of Pot per Category</label>
+                <dataScope>overrides.capital__max_category_percent</dataScope>
+                <notice translate="true">Blank uses the Shadow Trading config default.</notice>
+            </settings>
+        </field>
+        <field name="capital__min_cautious_profit" formElement="input" sortOrder="30">
+            <settings>
+                <dataType>text</dataType>
+                <label translate="true">Min Cautious Profit (GBP)</label>
+                <dataScope>overrides.capital__min_cautious_profit</dataScope>
+                <notice translate="true">Blank uses the Shadow Trading config default.</notice>
+            </settings>
+        </field>
+        <field name="capital__min_roi_percent" formElement="input" sortOrder="40">
+            <settings>
+                <dataType>text</dataType>
+                <label translate="true">Min ROI %</label>
+                <dataScope>overrides.capital__min_roi_percent</dataScope>
+                <notice translate="true">Blank uses the Shadow Trading config default.</notice>
+            </settings>
+        </field>
+        <field name="evidence__min_grade_confidence" formElement="input" sortOrder="50">
+            <settings>
+                <dataType>text</dataType>
+                <label translate="true">Min Grade Confidence (0-1)</label>
+                <dataScope>overrides.evidence__min_grade_confidence</dataScope>
+                <notice translate="true">Blank uses the Shadow Trading config default.</notice>
+            </settings>
+        </field>
+        <field name="evidence__min_comparables" formElement="input" sortOrder="60">
+            <settings>
+                <dataType>text</dataType>
+                <label translate="true">Min Comparables</label>
+                <dataScope>overrides.evidence__min_comparables</dataScope>
+                <notice translate="true">Blank uses the Shadow Trading config default.</notice>
+            </settings>
+        </field>
+        <field name="evidence__max_price_age_hours" formElement="input" sortOrder="70">
+            <settings>
+                <dataType>text</dataType>
+                <label translate="true">Max Price Age (Hours)</label>
+                <dataScope>overrides.evidence__max_price_age_hours</dataScope>
+                <notice translate="true">Blank uses the Shadow Trading config default.</notice>
+            </settings>
+        </field>
+        <field name="evidence__cautious_discount_percent" formElement="input" sortOrder="80">
+            <settings>
+                <dataType>text</dataType>
+                <label translate="true">Cautious Discount %</label>
+                <dataScope>overrides.evidence__cautious_discount_percent</dataScope>
+                <notice translate="true">Blank uses the Shadow Trading config default.</notice>
+            </settings>
+        </field>
+        <field name="evidence__grade_risk" formElement="input" sortOrder="90">
+            <settings>
+                <dataType>text</dataType>
+                <label translate="true">Grade-Risk Discount % (A:3,B:5,C:10)</label>
+                <dataScope>overrides.evidence__grade_risk</dataScope>
+                <notice translate="true">Blank uses the Shadow Trading config default.</notice>
+            </settings>
+        </field>
+        <field name="evidence__require_extraction" formElement="input" sortOrder="100">
+            <settings>
+                <dataType>text</dataType>
+                <label translate="true">Require LLM Extraction (1 or 0)</label>
+                <dataScope>overrides.evidence__require_extraction</dataScope>
+                <notice translate="true">Blank uses the Shadow Trading config default.</notice>
+            </settings>
+        </field>
+    </fieldset>
+</form>

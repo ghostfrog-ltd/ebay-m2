@@ -186,7 +186,7 @@ final class Worker
         $attrs = is_array($attrs) ? $attrs : [];
         $title = mb_substr(trim((string)$listing['title']), 0, 255);
         if ($stage === Stage::Text) {
-            $captured = $this->textEvidence($attrs);
+            $captured = TextEvidence::fromAttrs($attrs);
             $job = ['evidence' => ['title' => $title, 'captured_text' => $captured], 'images' => []];
             if ($title === '' && $captured === []) {
                 $job['missing'] = Assessment::missing($stage, Assessment::NO_TEXT);
@@ -199,32 +199,5 @@ final class Worker
             $job['missing'] = Assessment::missing($stage, 'No usable eBay photos available.');
         }
         return $job;
-    }
-
-    private function textEvidence(array $attrs): array
-    {
-        $result = [];
-        $remaining = 10_000;
-        foreach ($attrs as $name => $value) {
-            if (!preg_match('~\A(?:Browse (?:condition|description|shortDescription|subtitle|aspect )|'
-                . 'Trading (?:ConditionDescription|ConditionDisplayName|Description)|'
-                . '(?:Condition|Condition Description|Description|Product Condition|Grade|Product Grade|'
-                . 'Network Lock|Lock Status|Operation|Defects|Features)\z)~i', (string)$name)
-            ) {
-                continue;
-            }
-            $values = array_filter((array)$value, static fn($item) => is_scalar($item));
-            $plain = trim(implode(', ', $values));
-            $plain = html_entity_decode(strip_tags($plain), ENT_QUOTES | ENT_HTML5, 'UTF-8');
-            if ($plain !== '') {
-                $plain = mb_substr($plain, 0, min($remaining, 4000));
-                $result[(string)$name] = $plain;
-                $remaining -= mb_strlen($plain);
-            }
-            if ($remaining === 0 || count($result) >= 40) {
-                break;
-            }
-        }
-        return $result;
     }
 }

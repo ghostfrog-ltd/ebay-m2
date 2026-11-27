@@ -1,0 +1,151 @@
+<?php
+/** @var \GhostFrog\EbayShadow\Block\Adminhtml\Dashboard $block */
+/** @var \Magento\Framework\Escaper $escaper */
+$report = $block->report();
+$pots = $block->pots();
+$pot = $block->selectedPot();
+$e = static fn($value): string => $escaper->escapeHtml((string)$value);
+$pct = static fn(?float $value): string => $value === null ? '-' : number_format($value, 1) . '%';
+?>
+<style>
+    .gfs-dash h2 { margin: 2rem 0 .8rem; }
+    .gfs-dash table { border-collapse: collapse; width: 100%; margin-bottom: 1rem; }
+    .gfs-dash th, .gfs-dash td { border-bottom: 1px solid #e3e3e3; padding: .4rem .6rem; text-align: left; }
+    .gfs-dash td.num, .gfs-dash th.num { text-align: right; }
+    .gfs-dash .gfs-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); gap: .8rem; }
+    .gfs-dash .gfs-tile { border: 1px solid #e3e3e3; padding: .7rem .9rem; background: #fff; }
+    .gfs-dash .gfs-tile b { display: block; font-size: 1.5rem; margin-top: .2rem; }
+    .gfs-dash .gfs-note { background: #fffbe5; border: 1px solid #e8d48b; padding: .6rem 1rem; }
+    .gfs-dash .gfs-pots a { margin-right: 1rem; }
+    .gfs-dash .gfs-pots a.current { font-weight: 700; text-decoration: none; color: #333; }
+</style>
+<div class="gfs-dash">
+    <p class="gfs-note"><?= $e(__('All figures are simulated. Shadow trading never places a real bid, offer or purchase.')) ?></p>
+    <?php if ($pot === null): ?>
+        <p><?= $e(__('No pots yet. Create one under Shadow Trading > Pots.')) ?></p>
+        <?php return; ?>
+    <?php endif; ?>
+
+    <h2><?= $e(__('Compare pots')) ?></h2>
+    <table>
+        <thead><tr>
+            <th><?= $e(__('Pot')) ?></th><th><?= $e(__('Status')) ?></th><th class="num"><?= $e(__('Capital')) ?></th>
+            <th class="num"><?= $e(__('Cash')) ?></th><th class="num"><?= $e(__('Tied up')) ?></th>
+            <th class="num"><?= $e(__('Won / bids')) ?></th><th class="num"><?= $e(__('Sold')) ?></th>
+            <th class="num"><?= $e(__('Spend')) ?></th><th class="num"><?= $e(__('Realised')) ?></th>
+            <th class="num"><?= $e(__('Banked')) ?></th><th class="num"><?= $e(__('Missed (no cash)')) ?></th>
+            <th class="num"><?= $e(__('Days no cash')) ?></th><th class="num"><?= $e(__('Hit rate')) ?></th>
+            <th class="num"><?= $e(__('Avg error')) ?></th>
+        </tr></thead>
+        <tbody>
+        <?php foreach ($pots as $row): $s = $report->summary((int)$row['pot_id']); ?>
+            <tr>
+                <td><a href="<?= $escaper->escapeUrl($block->potUrl((int)$row['pot_id'])) ?>"><?= $e($row['name']) ?></a></td>
+                <td><?= $e($row['status']) ?></td>
+                <td class="num"><?= $e($block->money($s['starting_capital'])) ?></td>
+                <td class="num"><?= $e($block->money($s['cash'])) ?></td>
+                <td class="num"><?= $e($block->money($s['tied_up'])) ?></td>
+                <td class="num"><?= $e($s['bought'] . ' / ' . $s['bids']) ?></td>
+                <td class="num"><?= $e($s['sold']) ?></td>
+                <td class="num"><?= $e($block->money($s['spend'])) ?></td>
+                <td class="num"><?= $e($block->money($s['realised'])) ?></td>
+                <td class="num"><?= $e($block->money($s['banked'])) ?></td>
+                <td class="num"><?= $e($block->money($s['missed_profit'])) ?></td>
+                <td class="num"><?= $e($s['days_no_cash']) ?></td>
+                <td class="num"><?= $e($pct($s['hit_rate'])) ?></td>
+                <td class="num"><?= $e($pct($s['avg_error'])) ?></td>
+            </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+
+    <?php $potId = (int)$pot['pot_id']; $s = $report->summary($potId); ?>
+    <h2><?= $e(__('Pot: %1', $pot['name'])) ?></h2>
+    <p class="gfs-pots">
+        <?php foreach ($pots as $row): ?>
+            <a class="<?= (int)$row['pot_id'] === $potId ? 'current' : '' ?>"
+               href="<?= $escaper->escapeUrl($block->potUrl((int)$row['pot_id'])) ?>"><?= $e($row['name']) ?></a>
+        <?php endforeach; ?>
+    </p>
+    <div class="gfs-tiles">
+        <?php foreach ([
+            'Cash balance' => $block->money($s['cash']),
+            'Cash tied up' => $block->money($s['tied_up']),
+            'Simulated spend' => $block->money($s['spend']),
+            'Realised P&L' => $block->money($s['realised']),
+            'Banked P&L' => $block->money($s['banked']),
+            'Missed profit (no cash)' => $block->money($s['missed_profit']) . ' (' . $s['missed_count'] . ')',
+            'Days with no free cash' => (string)$s['days_no_cash'],
+            'Auction win rate' => $pct($s['win_rate']),
+            'Hit rate (profitable sales)' => $pct($s['hit_rate']),
+            'Avg price error' => $pct($s['avg_error']) . ' (abs ' . $pct($s['avg_abs_error']) . ')',
+            'Avg days to sell' => $s['avg_days_to_sell'] === null ? '-' : (string)$s['avg_days_to_sell'],
+            'Decisions logged' => (string)$s['decisions'],
+        ] as $label => $value): ?>
+            <div class="gfs-tile"><?= $e(__($label)) ?><b><?= $e($value) ?></b></div>
+        <?php endforeach; ?>
+    </div>
+
+    <h2><?= $e(__('Cash balance over time')) ?></h2>
+    <?= /* @noEscape */ $block->lineChart($report->cashSeries($potId)) ?>
+
+    <h2><?= $e(__('Cash tied up by stage')) ?></h2>
+    <?= /* @noEscape */ $block->barChart($report->tiedUpByStage($potId)) ?>
+
+    <h2><?= $e(__('Results by category')) ?></h2>
+    <table>
+        <thead><tr>
+            <th><?= $e(__('Category')) ?></th><th class="num"><?= $e(__('Candidates')) ?></th>
+            <th class="num"><?= $e(__('Bids')) ?></th><th class="num"><?= $e(__('Won')) ?></th>
+            <th class="num"><?= $e(__('Spend')) ?></th><th class="num"><?= $e(__('Sold')) ?></th>
+            <th class="num"><?= $e(__('Profit')) ?></th>
+        </tr></thead>
+        <tbody>
+        <?php foreach ($report->byCategory($potId) as $row): ?>
+            <tr>
+                <td><?= $e($row['category']) ?></td><td class="num"><?= $e($row['candidates']) ?></td>
+                <td class="num"><?= $e($row['bids']) ?></td><td class="num"><?= $e((int)$row['won']) ?></td>
+                <td class="num"><?= $e($block->money((float)$row['spend'])) ?></td><td class="num"><?= $e($row['sold']) ?></td>
+                <td class="num"><?= $e($block->money((float)$row['profit'])) ?></td>
+            </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+
+    <h2><?= $e(__('Decisions by reason')) ?></h2>
+    <table>
+        <?php foreach ($report->reasons($potId) as $reason => $count): ?>
+            <tr><td><?= $e($reason) ?></td><td class="num"><?= $e($count) ?></td></tr>
+        <?php endforeach; ?>
+    </table>
+
+    <h2><?= $e(__('Worst 10 decisions')) ?></h2>
+    <?php $worst = $report->worst($potId); ?>
+    <?php if ($worst === []): ?>
+        <p><?= $e(__('No simulated sales have resolved yet.')) ?></p>
+    <?php else: ?>
+        <table>
+            <thead><tr>
+                <th><?= $e(__('Listing')) ?></th><th><?= $e(__('Category')) ?></th><th><?= $e(__('Grade')) ?></th>
+                <th class="num"><?= $e(__('Buy cost')) ?></th><th class="num"><?= $e(__('Predicted')) ?></th>
+                <th class="num"><?= $e(__('Cautious')) ?></th><th class="num"><?= $e(__('Realised')) ?></th>
+                <th class="num"><?= $e(__('Error')) ?></th><th><?= $e(__('Why')) ?></th>
+            </tr></thead>
+            <tbody>
+            <?php foreach ($worst as $row): ?>
+                <tr>
+                    <td><a href="<?= $escaper->escapeUrl($block->getUrl('*/buys/view', ['id' => $row['decision_id']])) ?>"><?= $e($row['title']) ?></a></td>
+                    <td><?= $e($row['category']) ?></td><td><?= $e($row['condition_grade']) ?></td>
+                    <td class="num"><?= $e($block->money((float)$row['buy_cost'])) ?></td>
+                    <td class="num"><?= $e($block->money((float)$row['predicted_resale'])) ?></td>
+                    <td class="num"><?= $e($block->money((float)$row['cautious_profit'])) ?></td>
+                    <td class="num"><?= $e($block->money((float)$row['realised_profit'])) ?></td>
+                    <td class="num"><?= $e($pct($row['error_percent'] === null ? null : (float)$row['error_percent'])) ?></td>
+                    <td><?= $e($row['method'] . ', ' . $row['auction_result'] . ', ' . $row['comp_count'] . ' comps, '
+                        . $row['days_to_sell'] . ' days') ?></td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+    <?php endif; ?>
+</div>
