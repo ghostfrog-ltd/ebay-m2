@@ -81,6 +81,29 @@
                         <config_path>ghostfrog_ebay/ledger_sell/comps_days</config_path>
                     </field>
                 </group>
+                <group id="orders" translate="label" sortOrder="27" showInDefault="1">
+                    <label>Orders</label>
+                    <comment>Imported eBay sales become orders on the eBay website. No email is ever sent for them.</comment>
+                    <field id="payment_title" translate="label" type="text" sortOrder="10" showInDefault="1">
+                        <label>Payment Method Title</label>
+                        <config_path>payment/ebay/title</config_path>
+                    </field>
+                    <field id="shipping_title" translate="label" type="text" sortOrder="20" showInDefault="1">
+                        <label>Shipping Method Title</label>
+                        <config_path>carriers/ebayshipping/title</config_path>
+                    </field>
+                    <field id="tax_class_id" translate="label comment" type="select" sortOrder="30" showInDefault="1">
+                        <label>Tax Class for New Products</label>
+                        <comment>None unless you are VAT registered. Applies to products created after you change it.</comment>
+                        <source_model>Magento\Tax\Model\TaxClass\Source\Product</source_model>
+                        <config_path>ghostfrog_ebay/ledger_orders/tax_class_id</config_path>
+                    </field>
+                    <field id="order_status" translate="label" type="select" sortOrder="40" showInDefault="1">
+                        <label>Status for Imported Orders</label>
+                        <source_model>Magento\Sales\Model\Config\Source\Order\Status\Processing</source_model>
+                        <config_path>ghostfrog_ebay/ledger_orders/order_status</config_path>
+                    </field>
+                </group>
                 <group id="products" translate="label" sortOrder="30" showInDefault="1">
                     <label>Products</label>
                     <field id="sku_prefix" translate="label comment" type="text" sortOrder="10" showInDefault="1">

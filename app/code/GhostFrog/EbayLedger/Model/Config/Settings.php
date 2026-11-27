@@ -99,4 +99,14 @@ class Settings
     {
         return max(7, (int)$this->config->getValue('ghostfrog_ebay/ledger_sell/comps_days') ?: 365);
     }
+
+    public function productTaxClassId(): int
+    {
+        return (int)$this->config->getValue('ghostfrog_ebay/ledger_orders/tax_class_id');
+    }
+
+    public function importedOrderStatus(): string
+    {
+        return (string)$this->config->getValue('ghostfrog_ebay/ledger_orders/order_status') ?: 'processing';
+    }
 }

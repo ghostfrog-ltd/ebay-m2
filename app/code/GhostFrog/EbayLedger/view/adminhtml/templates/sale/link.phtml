@@ -1,0 +1,39 @@
+<?php
+/** @var \GhostFrog\EbayLedger\Block\Adminhtml\Sale\Link $block */
+/** @var \Magento\Framework\Escaper $escaper */
+$line = $block->getLine();
+if ($line === null): ?>
+    <p><?= $escaper->escapeHtml(__('This sale no longer exists.')) ?></p>
+    <?php return; endif; ?>
+<p>
+    <strong><?= $escaper->escapeHtml($line['title']) ?></strong><br>
+    <?= $escaper->escapeHtml(__('eBay order %1, sold %2 UTC for £%3 plus £%4 postage. Custom label: %5.', $line['ebay_order_id'],
+        $line['sold_at'], number_format((float)$line['line_price'], 2), number_format((float)$line['postage'], 2), $line['sku'] ?: __('none'))) ?><br>
+    <?php if ($line['match_note']): ?><em><?= $escaper->escapeHtml($line['match_note']) ?></em><?php endif; ?>
+</p>
+<?php if ($line['magento_order_id']): ?>
+    <p><?= $escaper->escapeHtml(__('This sale is already on a Magento order.')) ?></p>
+<?php else: ?>
+    <form method="post" action="<?= $escaper->escapeUrl($block->getUrl('*/*/linkPost')) ?>">
+        <input type="hidden" name="form_key" value="<?= $escaper->escapeHtmlAttr($block->getFormKey()) ?>">
+        <input type="hidden" name="sale_line_id" value="<?= (int)$line['sale_line_id'] ?>">
+        <p>
+            <label for="gf-link-product"><?= $escaper->escapeHtml(__('Which product sold?')) ?></label><br>
+            <select id="gf-link-product" name="ledger_product_id" class="admin__control-select">
+                <?php foreach ($block->getProducts() as $product): ?>
+                    <option value="<?= (int)$product['ledger_product_id'] ?>"><?= $escaper->escapeHtml(sprintf('%s – %s (%s), planned £%s',
+                        $product['sku'], $product['part_name'], $product['title'], number_format((float)$product['planned_price'], 2))) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </p>
+        <p>
+            <button type="submit" name="do" value="link" class="action-primary"><?= $escaper->escapeHtml(__('Link and Create Order')) ?></button>
+            <?php if ($line['match_status'] === 'ignored'): ?>
+                <button type="submit" name="do" value="unignore" class="action-secondary"><?= $escaper->escapeHtml(__('Stop Ignoring')) ?></button>
+            <?php else: ?>
+                <button type="submit" name="do" value="ignore" class="action-secondary"><?= $escaper->escapeHtml(__('Ignore: Not a Ledger Item')) ?></button>
+            <?php endif; ?>
+        </p>
+        <p class="note"><?= $escaper->escapeHtml(__('Tip: put the SKU in the eBay listing\'s Custom label so future sales match by themselves.')) ?></p>
+    </form>
+<?php endif; ?>

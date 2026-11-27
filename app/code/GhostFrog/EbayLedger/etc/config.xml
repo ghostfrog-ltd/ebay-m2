@@ -30,9 +30,33 @@ large:7.50</postage>
                 <min_confidence>medium</min_confidence>
                 <comps_days>365</comps_days>
             </ledger_sell>
+            <ledger_orders>
+                <tax_class_id>0</tax_class_id>
+                <order_status>processing</order_status>
+            </ledger_orders>
             <ledger_products>
                 <sku_prefix>GF-</sku_prefix>
             </ledger_products>
         </ghostfrog_ebay>
+        <payment>
+            <ebay>
+                <active>1</active>
+                <model>GhostFrog\EbayLedger\Model\Payment\Ebay</model>
+                <title>eBay</title>
+                <order_status>pending</order_status>
+                <allowspecific>0</allowspecific>
+                <group>offline</group>
+            </ebay>
+        </payment>
+        <carriers>
+            <ebayshipping>
+                <active>1</active>
+                <model>GhostFrog\EbayLedger\Model\Carrier\EbayShipping</model>
+                <title>eBay shipping</title>
+                <name>eBay</name>
+                <sallowspecific>0</sallowspecific>
+                <showmethod>0</showmethod>
+            </ebayshipping>
+        </carriers>
     </default>
 </config>

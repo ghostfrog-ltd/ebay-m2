@@ -13,6 +13,9 @@
         <add id="GhostFrog_EbayLedger::products" title="Products &amp; Plans" translate="title" module="GhostFrog_EbayLedger"
              sortOrder="30" parent="GhostFrog_EbayLedger::ledger" action="ghostfrog_ledger/product/index"
              resource="GhostFrog_EbayLedger::products"/>
+        <add id="GhostFrog_EbayLedger::sales" title="Sales" translate="title" module="GhostFrog_EbayLedger"
+             sortOrder="40" parent="GhostFrog_EbayLedger::ledger" action="ghostfrog_ledger/sale/index"
+             resource="GhostFrog_EbayLedger::sales"/>
         <add id="GhostFrog_EbayLedger::parts_templates" title="Parts Templates" translate="title" module="GhostFrog_EbayLedger"
              sortOrder="60" parent="GhostFrog_EbayLedger::ledger" action="ghostfrog_ledger/template/index"
              resource="GhostFrog_EbayLedger::parts_templates"/>

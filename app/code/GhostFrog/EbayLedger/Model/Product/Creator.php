@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GhostFrog\EbayLedger\Model\Product;
 
+use GhostFrog\EbayLedger\Model\Config\Settings;
 use GhostFrog\EbayLedger\Setup\Patch\Data\AddEbayStoreAndStockAttributes as Setup;
 use InvalidArgumentException;
 use Magento\Catalog\Api\Data\ProductInterface;
@@ -34,7 +35,8 @@ class Creator
         private readonly AttributeSetRepositoryInterface $attributeSets,
         private readonly SearchCriteriaBuilder $criteria,
         private readonly StoreManagerInterface $storeManager,
-        private readonly IndexerRegistry $indexers
+        private readonly IndexerRegistry $indexers,
+        private readonly Settings $settings
     ) {
     }
 
@@ -115,7 +117,7 @@ class Creator
             ->setStatus(ProductStatus::STATUS_ENABLED)
             ->setVisibility(Visibility::VISIBILITY_NOT_VISIBLE)
             ->setWebsiteIds([$websiteId])
-            ->setData('tax_class_id', 0)
+            ->setData('tax_class_id', $this->settings->productTaxClassId())
             ->setData('url_key', strtolower($row['sku']))
             ->setStockData(['use_config_manage_stock' => 0, 'manage_stock' => 1, 'qty' => 1, 'is_in_stock' => 1]);
         $product->setCustomAttribute('gf_stock_reference', $reference);

@@ -5,5 +5,8 @@
         <job name="ghostfrog_ebayledger_import_purchases" instance="GhostFrog\EbayLedger\Cron\ImportPurchases" method="execute">
             <config_path>ghostfrog_ebay/ledger_import/cron_expr</config_path>
         </job>
+        <job name="ghostfrog_ebayledger_import_sales" instance="GhostFrog\EbayLedger\Cron\ImportSales" method="execute">
+            <config_path>ghostfrog_ebay/ledger_import/cron_expr</config_path>
+        </job>
     </group>
 </config>

@@ -1,0 +1,32 @@
+<?php
+/** @var \GhostFrog\EbayLedger\Block\Adminhtml\Sale\OrderInfo $block */
+/** @var \Magento\Framework\Escaper $escaper */
+$lines = $block->getLines();
+if ($lines === []) {
+    return;
+} ?>
+<section class="admin__page-section">
+    <div class="admin__page-section-title"><span class="title"><?= $escaper->escapeHtml(__('eBay')) ?></span></div>
+    <table class="data-table admin__table-primary">
+        <thead><tr>
+            <th><?= $escaper->escapeHtml(__('eBay Order')) ?></th><th><?= $escaper->escapeHtml(__('Line')) ?></th>
+            <th><?= $escaper->escapeHtml(__('Item')) ?></th><th><?= $escaper->escapeHtml(__('SKU')) ?></th>
+            <th><?= $escaper->escapeHtml(__('Price')) ?></th><th><?= $escaper->escapeHtml(__('Postage')) ?></th>
+            <th><?= $escaper->escapeHtml(__('Refunded')) ?></th><th><?= $escaper->escapeHtml(__('eBay Status')) ?></th>
+        </tr></thead>
+        <tbody>
+        <?php foreach ($lines as $line): ?>
+            <tr>
+                <td><?= $escaper->escapeHtml($line['ebay_order_id']) ?></td>
+                <td><?= $escaper->escapeHtml($line['ebay_line_item_id']) ?></td>
+                <td><a href="<?= $escaper->escapeUrl('https://www.ebay.co.uk/itm/' . rawurlencode((string)$line['ebay_item_id'])) ?>" target="_blank" rel="noopener"><?= $escaper->escapeHtml($line['ebay_item_id']) ?></a></td>
+                <td><?= $escaper->escapeHtml($line['sku']) ?></td>
+                <td>£<?= $escaper->escapeHtml(number_format((float)$line['line_price'], 2)) ?></td>
+                <td>£<?= $escaper->escapeHtml(number_format((float)$line['postage'], 2)) ?></td>
+                <td>£<?= $escaper->escapeHtml(number_format((float)$line['refunded'], 2)) ?></td>
+                <td><?= $escaper->escapeHtml($line['fulfillment_status']) ?></td>
+            </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+</section>

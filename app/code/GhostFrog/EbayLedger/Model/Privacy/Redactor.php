@@ -16,7 +16,7 @@ final class Redactor
         'name', 'street', 'street1', 'street2', 'cityname', 'postalcode', 'stateorprovince', 'country',
         'countryname', 'companyname', 'staticalias', 'buyercheckoutmessage', 'username', 'fullname',
         'firstname', 'lastname', 'contactaddress', 'recipient', 'taxidentifier', 'buyerregistrationaddress',
-        'payee', 'payer', 'location', 'sellerinfo', 'buyerinfo',
+        'payee', 'payer', 'location', 'sellerinfo', 'buyerinfo', 'buyer', 'taxaddress', 'pickupstep',
     ];
     private const PATTERN = '/address|email|userid|phone|eiastoken|username|firstname|lastname|buyerinfo|shipto|recipient/i';
 

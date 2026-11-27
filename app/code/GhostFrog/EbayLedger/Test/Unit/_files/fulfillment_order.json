@@ -1,0 +1,22 @@
+{
+  "orderId": "12-34567-00001",
+  "legacyOrderId": "12-34567-00001",
+  "creationDate": "2026-12-08T19:12:01.000Z",
+  "orderFulfillmentStatus": "NOT_STARTED",
+  "orderPaymentStatus": "PAID",
+  "sellerId": "wrigley1980",
+  "buyer": {"username": "some_buyer_123", "taxAddress": {"postalCode": "AB1 2CD", "countryCode": "GB"},
+            "buyerRegistrationAddress": {"fullName": "Pat Buyer", "email": "pat@example.com", "primaryPhone": {"phoneNumber": "07700900000"}}},
+  "pricingSummary": {"priceSubtotal": {"value": "115.00", "currency": "GBP"}, "deliveryCost": {"value": "4.50", "currency": "GBP"}, "total": {"value": "119.50", "currency": "GBP"}},
+  "cancelStatus": {"cancelState": "NONE_REQUESTED", "cancelRequests": []},
+  "paymentSummary": {"refunds": [], "totalDueSeller": {"value": "106.91", "currency": "GBP"}},
+  "fulfillmentStartInstructions": [{"shippingStep": {"shipTo": {"fullName": "Pat Buyer", "contactAddress": {"addressLine1": "1 High St", "city": "Town", "postalCode": "AB1 2CD", "countryCode": "GB"}, "primaryPhone": {"phoneNumber": "07700900000"}, "email": "pat@example.com"}, "shippingServiceCode": "UK_RoyalMailSecondClassStandard"}}],
+  "lineItems": [
+    {"lineItemId": "10055500001", "legacyItemId": "256700000001", "sku": "GF-000001-01", "title": "Nintendo Switch console and dock",
+     "lineItemCost": {"value": "95.00", "currency": "GBP"}, "quantity": 1, "deliveryCost": {"shippingCost": {"value": "4.50", "currency": "GBP"}},
+     "lineItemFulfillmentStatus": "NOT_STARTED", "refunds": []},
+    {"lineItemId": "10055500002", "legacyItemId": "256700000002", "sku": " ", "title": "Joy-Con pair",
+     "lineItemCost": {"value": "20.00", "currency": "GBP"}, "quantity": 1, "deliveryCost": {"shippingCost": {"value": "0.00", "currency": "GBP"}},
+     "lineItemFulfillmentStatus": "FULFILLED", "refunds": [{"amount": {"value": "5.00", "currency": "GBP"}}]}
+  ]
+}

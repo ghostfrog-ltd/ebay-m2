@@ -5,6 +5,7 @@
         <arguments>
             <argument name="commands" xsi:type="array">
                 <item name="ghostfrog_ledger_import_purchases" xsi:type="object">GhostFrog\EbayLedger\Console\Command\ImportPurchases</item>
+                <item name="ghostfrog_ledger_import_sales" xsi:type="object">GhostFrog\EbayLedger\Console\Command\ImportSales</item>
             </argument>
         </arguments>
     </type>
@@ -45,4 +46,12 @@
             <argument name="uploader" xsi:type="object">GhostFrog\EbayLedger\Model\StockUnit\PhotoUploader</argument>
         </arguments>
     </type>
+    <type name="GhostFrog\EbayLedger\Console\Command\ImportSales">
+        <arguments>
+            <argument name="all" xsi:type="object">GhostFrog\EbayLedger\Model\Sale\ImportAll\Proxy</argument>
+            <argument name="importer" xsi:type="object">GhostFrog\EbayLedger\Model\Sale\Importer\Proxy</argument>
+            <argument name="tokens" xsi:type="object">GhostFrog\EbayLedger\Model\Account\Tokens\Proxy</argument>
+        </arguments>
+    </type>
+    <type name="GhostFrog\EbayLedger\Model\Carrier\Postage" shared="true"/>
 </config>

@@ -17,7 +17,8 @@
             "last_error": true,
             "purchases_imported_at": true,
             "created_at": true,
-            "updated_at": true
+            "updated_at": true,
+            "sales_imported_at": true
         },
         "constraint": {
             "PRIMARY": true,
@@ -163,6 +164,44 @@
         "constraint": {
             "PRIMARY": true,
             "FK_9F2FEA23312A8034B1DBA0F66BDA2036": true
+        }
+    },
+    "ghostfrog_ebayledger_sale_line": {
+        "column": {
+            "sale_line_id": true,
+            "account_id": true,
+            "ebay_order_id": true,
+            "ebay_line_item_id": true,
+            "ebay_item_id": true,
+            "sku": true,
+            "title": true,
+            "quantity": true,
+            "currency": true,
+            "line_price": true,
+            "postage": true,
+            "refunded": true,
+            "sold_at": true,
+            "payment_status": true,
+            "fulfillment_status": true,
+            "cancelled": true,
+            "match_status": true,
+            "match_note": true,
+            "ledger_product_id": true,
+            "magento_order_id": true,
+            "shipped": true,
+            "raw_payload": true,
+            "last_error": true,
+            "imported_at": true,
+            "updated_at": true
+        },
+        "index": {
+            "GHOSTFROG_EBAYLEDGER_SALE_LINE_MATCH_STATUS": true,
+            "GHOSTFROG_EBAYLEDGER_SALE_LINE_LEDGER_PRODUCT_ID": true,
+            "GHOSTFROG_EBAYLEDGER_SALE_LINE_MAGENTO_ORDER_ID": true
+        },
+        "constraint": {
+            "PRIMARY": true,
+            "GHOSTFROG_EBAYLEDGER_SALE_LINE_EBAY_ORDER_ID_EBAY_LINE_ITEM_ID": true
         }
     }
 }
