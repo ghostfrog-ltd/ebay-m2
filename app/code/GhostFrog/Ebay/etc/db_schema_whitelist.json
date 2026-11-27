@@ -118,7 +118,9 @@
             "text_condition_checked_at": true,
             "price_bin_current": true,
             "last_price_checked_at": true,
-            "candidate_attempted_at": true
+            "candidate_attempted_at": true,
+            "item_type": true,
+            "key_source": true
         },
         "index": {
             "GHOSTFROG_EBAY_AUCTION_LISTINGS_SOURCE_ID": true,
@@ -132,7 +134,8 @@
             "IDX_B726466D7624ACBC1376F82EEE27BD7C": true,
             "GHOSTFROG_EBAY_AUCTION_LISTINGS_STATUS_MODEL_KEY_CONDITION_GRADE": true,
             "GHOSTFROG_EBAY_AUCTION_LISTINGS_STATUS_LAST_SEEN_AT": true,
-            "GHOSTFROG_EBAY_AUCTION_LISTINGS_BACKFILL_CHECKED_AT": true
+            "GHOSTFROG_EBAY_AUCTION_LISTINGS_BACKFILL_CHECKED_AT": true,
+            "GHOSTFROG_EBAY_AUCTION_LISTINGS_ITEM_TYPE": true
         },
         "constraint": {
             "PRIMARY": true,

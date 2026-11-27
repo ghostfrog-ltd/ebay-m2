@@ -78,7 +78,7 @@ final class Worker
                 || in_array(strtolower(trim((string)$listing['model_key'])), ['', 'unknown'], true))
             ) {
                 $domain = $db->fetchOne($db->select()->from($sources, 'domain')->where('id = ?', $listing['source_id']));
-                $update = ['model_key' => $this->classifier->forListing((string)($domain ?: $listing['source']), $listing)];
+                $update = $this->classifier->columnsForListing((string)($domain ?: $listing['source']), $listing);
                 if ($pending) {
                     $update['raw_attrs'] = new Expression("JSON_REMOVE(raw_attrs, '" . Pending::PATH . "')");
                 }

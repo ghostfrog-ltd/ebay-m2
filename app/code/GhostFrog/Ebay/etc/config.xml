@@ -57,6 +57,54 @@
             <telegram>
                 <telegram_bot_token backend_model="Magento\Config\Model\Config\Backend\Encrypted"/>
             </telegram>
+            <rc>
+                <brand_aliases><![CDATA[Unbranded: No Brand, NoBrand, Non-Branded, Not Branded, Unbranded/Generic, Generic, N/A, NA, None, Unknown, Does not apply, Not specified, Other, Custom, Various, - Sans marque/Générique -, Sans marque, Markenlos, Senza marca, Sin marca
+Tamiya: Tamiya RC, Tamiya TRF
+Kyosho: Kyosho RC
+Yokomo: Team Yokomo
+Team Associated: Associated, Associated Electrics, Team Associated RC, Team Associated (AE), AE
+Losi: Team Losi, Team Losi Racing, TLR
+Schumacher: Schumacher Racing, Schumacher RC
+Xray: X-Ray, Team Xray
+Mugen Seiki: Mugen, Mugen Seiki Racing
+Tekno: Tekno RC, TeknoRC
+Serpent: Serpent RC, Team Serpent
+Infinity: Team Infinity
+Awesomatix
+Futaba: Futaba Denshi, Futaba RC
+Sanwa: Sanwa Denshi, Airtronics
+Hobbywing: Hobby Wing, HobbyWing Technology
+LRP: LRP Electronic
+Tekin
+Team Orion: Orion
+Savox: Savöx
+Spektrum: Spektrum RC
+FlySky: Fly Sky, Fly-Sky
+Muchmore: Much More, Muchmore Racing
+HPI: HPI Racing, Hobby Products International
+Traxxas
+Arrma: ARRMA RC
+Thunder Tiger: ThunderTiger, Thunder Tiger RC
+HoBao: Ho Bao, HoBao Racing, Hobao Hyper
+Hot Bodies: HotBodies, HB Racing
+Team Durango: Durango
+FTX
+Maverick: Maverick RC
+Axial: Axial Racing
+Carisma: Carisma RC
+Team Magic
+Corally: Team Corally
+Nikko
+Marui: Tokyo Marui
+Novarossi: Nova Rossi
+O.S.: OS, O.S, OS Engines, O.S. Engines, O.S. Engine, OS Engine, OS MAX, O.S. MAX
+Picco
+Sirio
+REDS: Reds Racing
+Super Tigre: SuperTigre, Super Tiger
+Dynamite: Dynamite RC]]></brand_aliases>
+                <excluded_types>engine-other,non-car-toy</excluded_types>
+            </rc>
         </ghostfrog_ebay>
     </default>
 </config>

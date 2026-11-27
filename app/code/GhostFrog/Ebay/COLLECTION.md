@@ -149,6 +149,54 @@ Generic condition grades belong in `condition_grade`. MotoMine keys have their
 own prefix so that parts and complete motorcycles use separate identities.
 Existing assigned keys are preserved.
 
+### RC listings: brand, item type and key
+
+The `ebay-rc` source is deliberately broad, so each RC listing is also given an
+item type, stored in `auction_listings.item_type`:
+
+| Item type | What it covers | Ranking |
+|---|---|---|
+| `car` | Complete cars, rollers and kits | Priced from the sold median |
+| `electronics` | Radios, servos, speed controllers and motors | Priced from the sold median |
+| `engine-car` | Nitro car engines | Priced from the sold median |
+| `part` | Parts and spares | Priced from the sold median |
+| `vintage` | Anything the seller or title calls vintage, except engines and toys | Priced from the sold median |
+| `engine-other` | Aircraft, boat and helicopter engines | Excluded |
+| `non-car-toy` | Aircraft, boats, tanks, drones, die-cast and toy-grade cars | Excluded |
+
+Keys are `rc-{kind}-{brand}-{model}`. Each segment has its separators removed,
+so `TS-4N`, `ts 4n` and `ts4n` are one model and a key always splits on `-`
+(`rc-car-thundertiger-ts4n`). The kind is the item type, the device for
+electronics (`radio`, `servo`, `esc`, `motor`), and `vintage` plus the kind for
+vintage items (`vintagecar`). Because the kind is part of the key, sold
+comparables only ever match listings of the same type. A car at 1/5, 1/6, 1/16,
+1/18 or 1/24 adds its scale (`-s16`).
+
+Item specifics are read first: Brand, Model, Type, Scale, Vintage, MPN and Model
+Grade. The title fills in whatever they leave out, and answers such as "N/A" or
+a car make in the Model field count as left out. `key_source` records where the
+brand and model came from: `specifics`, `title` or `mixed`. At collection there
+are no specifics yet, so the early key is always from the title and is corrected
+when enrichment stores them.
+
+Brands pass through an alias map before the key is built, and the canonical name
+is what the `brand` column holds; the seller's own spelling stays in
+`raw_attrs`. The map, and which item types are excluded from ranking, are set
+under **Stores → Configuration → GhostFrog eBay → RC
+Classification**. Changing the map changes keys, so run the backfill afterwards:
+
+```bash
+bin/magento ghostfrog:ebay:rc:reclassify --dry-run
+bin/magento ghostfrog:ebay:rc:reclassify
+```
+
+The command re-runs brand, type and key rules over every stored RC listing,
+whatever its status, so sold comparables move to the new keys together with the
+live listings. It reads only stored data, makes no eBay calls, and writes only
+rows that change, so a second run writes nothing. `--dry-run` prints a
+before/after summary: keyed and unknown counts, distinct and singleton keys,
+rows per item type, and the 20 busiest keys.
+
 ### Early keys from collection
 
 Collection also keys each new listing from its title and search evidence, so
@@ -197,6 +245,7 @@ affected opportunities in one database transaction.
 **GhostFrog → Opportunities** shows live listings from the
 `ghostfrog_ebay_opportunities` index, sorted by expected profit. Use the
 filters or row actions to find and inspect a listing.
+
 
 ### Faulty opportunities
 

@@ -295,6 +295,19 @@
                     <validate>required-entry validate-digits validate-number-range number-range-1-2</validate>
                 </field>
             </group>
+            <group id="rc" translate="label" sortOrder="56" showInDefault="1">
+                <label>RC Classification</label>
+                <field id="brand_aliases" translate="label comment" type="textarea" sortOrder="10" showInDefault="1">
+                    <label>Brand Aliases</label>
+                    <comment><![CDATA[One brand per line: <code>Canonical: alias, alias</code>. Matching ignores case and compares the whole brand, so multi-word brands stay intact. Brands not listed are kept as the seller wrote them. Model keys use the canonical name, so run <code>bin/magento ghostfrog:ebay:rc:reclassify</code> after changing this.]]></comment>
+                </field>
+                <field id="excluded_types" translate="label comment" type="multiselect" sortOrder="20" showInDefault="1">
+                    <label>Item Types Excluded from Ranking</label>
+                    <source_model>GhostFrog\Ebay\Model\Config\Source\RcItemTypes</source_model>
+                    <can_be_empty>1</can_be_empty>
+                    <comment>Still collected and their sales still recorded, but never ranked, queued or alerted on.</comment>
+                </field>
+            </group>
             <group id="opportunity_monitoring" translate="label" sortOrder="57" showInDefault="1">
                 <label>Opportunity Price Refresh and Alerts</label>
                 <field id="auction_24_hours" translate="label comment" type="text" sortOrder="10" showInDefault="1">

@@ -230,16 +230,18 @@ final class Queue
                         $raw[self::COMPLETED_KEY] = gmdate('Y-m-d\TH:i:s\Z');
                     }
                     $update = $result['fields'] + ['raw_attrs' => json_encode((object)$raw, JSON_THROW_ON_ERROR)];
-                    // Correct a key assigned at collection as soon as the item specifics arrive. It stays
-                    // marked as pending until the condition checks finish.
-                    if ($success && Pending::is($raw)) {
+                    if ($success) {
                         $domain = $db->fetchOne($db->select()
                             ->from($this->resource->getTableName('ghostfrog_ebay_sources'), 'domain')
                             ->where('id = ?', $row['source_id']));
-                        $update['model_key'] = $this->classifier->forListing(
-                            (string)($domain ?: $row['source']),
-                            $update + $row
-                        );
+                        $found = $this->classifier->columnsForListing((string)($domain ?: $row['source']), $update + $row);
+                        // Correct a key assigned at collection as soon as the item specifics arrive. It stays
+                        // marked as pending until the condition checks finish. A listing with no early key
+                        // waits for the model-key worker, but its item type and brand are known now.
+                        if (!Pending::is($raw)) {
+                            unset($found['model_key'], $found['key_source']);
+                        }
+                        $update = $found + $update;
                     }
                     $db->update($table, $update, ['id = ?' => $listingId]);
                     if ($success) {

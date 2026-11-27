@@ -39,7 +39,7 @@ class Collection extends SearchResult
     {
         $this->getSelect()->from(['main_table' => $this->getMainTable()], [
             'id', 'external_id', 'title', 'source', 'status', 'sale_type', 'price_current',
-            'bids_count', 'end_time', 'model_key', 'condition_grade',
+            'bids_count', 'end_time', 'model_key', 'condition_grade', 'item_type', 'key_source',
         ])->where(Source::activeListing($this->resourceConnection, 'main_table'));
         $this->getSelect()->columns(['source_colour' => Source::colourOf($this->resourceConnection, 'main_table')]);
         return $this;
