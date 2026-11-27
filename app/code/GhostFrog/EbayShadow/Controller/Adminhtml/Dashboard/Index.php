@@ -22,7 +22,7 @@ class Index extends Action implements HttpGetActionInterface
     public function execute(): Page
     {
         $page = $this->pageFactory->create();
-        $page->setActiveMenu('GhostFrog_EbayShadow::dashboard');
+        $page->setActiveMenu('GhostFrog_EbayShadow::shadow_dashboard');
         $page->getConfig()->getTitle()->prepend(__('Shadow Trading Dashboard'));
         return $page;
     }

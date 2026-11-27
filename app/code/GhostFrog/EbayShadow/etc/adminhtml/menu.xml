@@ -4,7 +4,7 @@
     <menu>
         <add id="GhostFrog_EbayShadow::shadow" title="Shadow Trading" translate="title" module="GhostFrog_EbayShadow"
              sortOrder="60" parent="GhostFrog_Ebay::ghostfrog" resource="GhostFrog_EbayShadow::shadow"/>
-        <add id="GhostFrog_EbayShadow::dashboard" title="Dashboard" translate="title" module="GhostFrog_EbayShadow"
+        <add id="GhostFrog_EbayShadow::shadow_dashboard" title="Dashboard" translate="title" module="GhostFrog_EbayShadow"
              sortOrder="10" parent="GhostFrog_EbayShadow::shadow" action="ghostfrog_shadow/dashboard/index"
              resource="GhostFrog_EbayShadow::dashboard"/>
         <add id="GhostFrog_EbayShadow::buys" title="Shadow Buys" translate="title" module="GhostFrog_EbayShadow"
