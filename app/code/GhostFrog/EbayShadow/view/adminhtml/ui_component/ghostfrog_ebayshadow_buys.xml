@@ -144,7 +144,6 @@
                 <options class="Magento\Config\Model\Config\Source\Yesno"/>
                 <filter>select</filter>
                 <dataType>select</dataType>
-                <visible>false</visible>
                 <label translate="true">Exclude Skipped</label>
             </settings>
         </column>
