@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GhostFrog\Ebay\Controller\Adminhtml\Source;
 
+use GhostFrog\Ebay\Model\Comps\Pricing;
 use GhostFrog\Ebay\Model\ResourceModel\Source;
 use Magento\Backend\App\Action;
 use Magento\Backend\App\Action\Context;
@@ -20,7 +21,8 @@ class Edit extends Action implements HttpGetActionInterface
     public function __construct(
         Context $context,
         private readonly PageFactory $pageFactory,
-        private readonly Source $sources
+        private readonly Source $sources,
+        private readonly Pricing $pricing
     ) {
         parent::__construct($context);
     }
@@ -45,6 +47,9 @@ class Edit extends Action implements HttpGetActionInterface
             'source' => $source,
             'search' => Source::search($source['domain']),
             'revision' => $this->sources->revision($source),
+            'targets' => $this->pricing->targets(),
+            'shipping' => $this->pricing->shipping(),
+            'selling_fee' => $this->pricing->sellingFee(),
         ]);
         return $page;
     }

@@ -1,0 +1,16 @@
+/* Rows of a source with a display colour: a tint of the colour across the row, the full colour on the left edge. */
+.data-grid tbody tr.gf-source-coloured > td {
+    background-color: color-mix(in srgb, var(--gf-source-colour) 22%, #ffffff);
+}
+.data-grid tbody tr.gf-source-coloured._odd-row > td {
+    background-color: color-mix(in srgb, var(--gf-source-colour) 28%, #ffffff);
+}
+.data-grid tbody tr.gf-source-coloured:hover > td {
+    background-color: color-mix(in srgb, var(--gf-source-colour) 40%, #ffffff);
+}
+.data-grid tbody tr.gf-source-coloured > td:first-child {
+    box-shadow: inset 4px 0 0 var(--gf-source-colour);
+}
+.data-grid tbody td.gf-strong {
+    font-weight: 700;
+}

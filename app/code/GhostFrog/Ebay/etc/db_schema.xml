@@ -231,6 +231,8 @@
         <column xsi:type="int" name="samples" nullable="true" comment="Samples"/>
         <column xsi:type="datetime" name="computed_at" nullable="true" on_update="false" comment="Computed at"/>
         <column xsi:type="varchar" name="condition_grade" nullable="false" length="16" default="B" comment="Condition grade"/>
+        <column xsi:type="decimal" name="bin_median_final_price" nullable="true" precision="24" scale="8" comment="Median final price of Buy It Now sales"/>
+        <column xsi:type="int" name="bin_samples" nullable="false" default="0" comment="Buy It Now sales in the cohort"/>
         <constraint xsi:type="primary" referenceId="PRIMARY">
             <column name="model_key"/>
             <column name="condition_grade"/>
@@ -243,6 +245,7 @@
         <column xsi:type="varchar" name="model_key" nullable="false" length="255" comment="Model key"/>
         <column xsi:type="varchar" name="condition_grade" nullable="false" length="16" comment="Effective condition grade"/>
         <column xsi:type="decimal" name="final_price" nullable="false" precision="12" scale="2" comment="Final sale price in GBP"/>
+        <column xsi:type="varchar" name="sale_type" nullable="true" length="16" comment="Sale type of the selected listing"/>
         <constraint xsi:type="primary" referenceId="PRIMARY">
             <column name="item_id"/>
         </constraint>
@@ -268,8 +271,10 @@
         <column xsi:type="datetime" name="last_seen_at" nullable="true" on_update="false" comment="Observation time for the indexed price"/>
         <column xsi:type="datetime" name="last_price_checked_at" nullable="true" on_update="false" comment="Last successful Browse price check in UTC"/>
         <column xsi:type="decimal" name="sold_median" nullable="false" precision="24" scale="3" comment="Median sold price in GBP"/>
+        <column xsi:type="decimal" name="working_median" nullable="true" precision="24" scale="3" comment="Working grade B median for a faulty listing in GBP"/>
         <column xsi:type="int" name="comp_count" nullable="false" comment="Comparable sales count"/>
         <column xsi:type="decimal" name="max_safe_buy" nullable="false" precision="21" scale="2" comment="Maximum safe purchase price in GBP"/>
+        <column xsi:type="decimal" name="shipping" nullable="false" precision="12" scale="2" default="0" comment="Inbound plus outbound shipping in GBP"/>
         <column xsi:type="decimal" name="expected_profit" nullable="false" precision="21" scale="2" comment="Expected profit in GBP"/>
         <column xsi:type="decimal" name="expected_roi_percent" nullable="false" precision="24" scale="2" comment="Expected ROI percent"/>
         <column xsi:type="datetime" name="end_time" nullable="true" on_update="false" comment="Listing end time in UTC"/>
@@ -710,6 +715,12 @@
         <column xsi:type="int" name="scrape_interval_seconds" nullable="false" default="300" comment="Scrape interval seconds"/>
         <column xsi:type="datetime" name="last_scraped_at" nullable="true" on_update="false" comment="Last scraped at"/>
         <column xsi:type="longtext" name="domain" nullable="true" comment="Domain"/>
+        <column xsi:type="decimal" name="min_profit" nullable="true" precision="12" scale="2" comment="Minimum profit in GBP, or null for the global target"/>
+        <column xsi:type="decimal" name="min_roi_percent" nullable="true" precision="7" scale="2" comment="Minimum ROI percent, or null for the global target"/>
+        <column xsi:type="decimal" name="shipping" nullable="true" precision="12" scale="2" comment="Inbound plus outbound shipping in GBP, or null for the global setting"/>
+        <column xsi:type="varchar" name="colour" nullable="true" length="7" comment="Display colour as #rrggbb"/>
+        <column xsi:type="int" name="min_comps" nullable="false" unsigned="true" default="15" comment="Sold comps a model and grade needs before its listings are valued"/>
+        <column xsi:type="decimal" name="selling_fee_percent" nullable="true" precision="5" scale="2" comment="Selling fee percent on resale, or null for the global setting"/>
         <constraint xsi:type="primary" referenceId="PRIMARY">
             <column name="id"/>
         </constraint>

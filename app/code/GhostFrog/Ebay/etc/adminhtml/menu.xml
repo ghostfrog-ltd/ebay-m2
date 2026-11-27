@@ -40,6 +40,14 @@
              parent="GhostFrog_Ebay::ghostfrog"
              action="ghostfrog_ebay/opportunities/index"
              resource="GhostFrog_Ebay::opportunities"/>
+        <add id="GhostFrog_Ebay::faulty_opportunities"
+             title="Faulty Opportunities"
+             translate="title"
+             module="GhostFrog_Ebay"
+             sortOrder="31"
+             parent="GhostFrog_Ebay::ghostfrog"
+             action="ghostfrog_ebay/faulty/index"
+             resource="GhostFrog_Ebay::opportunities"/>
         <add id="GhostFrog_Ebay::sources"
              title="Sources"
              translate="title"

@@ -137,14 +137,15 @@ final class OpportunityIndexingTest extends TestCase
 
         $this->change($id, ['model_key' => $this->modelKey(self::PHONE)]);
         $this->updateViews();
-        self::assertSame(144.0, (float)$this->opportunity($id)['expected_profit']);
-        self::assertSame(144.0, (float)$this->opportunity($id)['expected_roi_percent']);
-        self::assertSame(194.0, (float)$this->opportunity($id)['max_safe_buy']);
+        // Net 244 less a £100 buy and its £4.70 Buyer Protection fee.
+        self::assertSame(139.3, (float)$this->opportunity($id)['expected_profit']);
+        self::assertSame(139.3, (float)$this->opportunity($id)['expected_roi_percent']);
+        self::assertSame(185.87, (float)$this->opportunity($id)['max_safe_buy']);
         $this->assertGrid($better, $id);
 
         $this->change($id, ['price_current' => 180]);
         $this->updateViews();
-        self::assertSame(64.0, (float)$this->opportunity($id)['expected_profit']);
+        self::assertSame(56.1, (float)$this->opportunity($id)['expected_profit']);
         $this->change($id, ['price_current' => 200]);
         $this->updateViews();
         self::assertFalse($this->opportunity($id));

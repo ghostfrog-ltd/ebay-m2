@@ -12,8 +12,8 @@ final class RetroPc
     {
         $texts = Evidence::texts($attrs, $title, 'Brand', 'Model', 'MPN', 'Type', 'Memory Size',
             'Compatible Port/Slot', 'Bus Type', 'Clock Speed', 'Processor Model', 'Chipset Model');
-        if (Evidence::any('~\b(?:rtx|gtx|ryzen|ddr[45]|nvme|pcie|gaming pc|for parts|parts only|spares or repair|'
-            . 'repair only|untested|faulty|box only|empty box|heatsink only|cooler only|fan only|bracket only|manual only|compatible with|job lot)\b~', $texts)
+        if (Evidence::any('~\b(?:rtx|gtx|ryzen|ddr[45]|nvme|pcie|gaming pc|'
+            . 'box only|empty box|heatsink only|cooler only|fan only|bracket only|manual only|compatible with|job lot)\b~', $texts)
         ) {
             return 'unknown';
         }

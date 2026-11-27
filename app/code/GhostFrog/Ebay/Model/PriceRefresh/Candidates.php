@@ -116,7 +116,6 @@ final class Candidates
                 'o.listing_id = a.id AND o.eligible_until > UTC_TIMESTAMP()', [])
             ->joinLeft(['q' => $this->resource->getTableName(Queue::TABLE)], 'q.listing_id = a.id', ['queued' => 'listing_id'])
             ->where('o.listing_id IS NULL')
-            ->where("COALESCE(NULLIF(s.domain, ''), a.source) = ?", 'ebay-apple')
             ->where("a.sale_type IN ('auction', 'both') AND a.end_time <= UTC_TIMESTAMP() + INTERVAL $hours HOUR")
             ->where('(' . Listings::FRESH_OBSERVATION . ') IS NOT TRUE');
     }

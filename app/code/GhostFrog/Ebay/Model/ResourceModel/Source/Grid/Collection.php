@@ -15,7 +15,7 @@ class Collection extends SearchResult
         $minutes = new Expression('ROUND(main_table.scrape_interval_seconds / 60)');
         $this->getSelect()->from(['main_table' => $this->getMainTable()], [
             'id', 'name', 'domain', 'niche', 'enabled' => $enabled, 'interval_minutes' => $minutes,
-            'last_scraped_at', 'updated_at_utc',
+            'min_profit', 'min_roi_percent', 'shipping', 'selling_fee_percent', 'min_comps', 'last_scraped_at', 'updated_at_utc',
         ]);
         // A NULL flag means collection skips the source, so filter it as disabled.
         $this->addFilterToMap('enabled', $enabled);

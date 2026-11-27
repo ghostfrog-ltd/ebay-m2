@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace GhostFrog\Ebay\Model\Enrichment;
 
 use GhostFrog\Ebay\Model\Condition\Settings;
+use GhostFrog\Ebay\Model\ModelKey\Classifier;
+use GhostFrog\Ebay\Model\ModelKey\Pending;
+use GhostFrog\Ebay\Model\Opportunities\Rows;
 use GhostFrog\Ebay\Model\ResourceModel\Source;
 use Magento\Framework\App\ResourceConnection;
 use Magento\MysqlMq\Model\QueueManagement;
@@ -22,7 +25,8 @@ final class Queue
         private readonly ResourceConnection $resource,
         private readonly QueueManagement $queue,
         private readonly Settings $condition,
-        private readonly MessageResource $messages
+        private readonly MessageResource $messages,
+        private readonly Classifier $classifier
     ) {
     }
 
@@ -42,10 +46,23 @@ final class Queue
      * QueueManagement::readMessages() with deliveries for paused sources left untouched, so they
      * neither block the oldest-first queue nor use retries, and resume once the source is enabled.
      * Bodies that are not a stored listing ID are still claimed so the worker can reject them.
+     *
+     * Listings that currently value as opportunities jump the queue, so their item details and condition
+     * checks finish in minutes: Buy It Now first, then auctions by end time. The rest stay oldest-first.
+     * Backfill queues keep plain oldest-first order.
      */
     public function claim(int $limit, string $name = self::NAME): array
     {
         $db = $this->resource->getConnection();
+        $order = ['queue_message_status.updated_at ASC', 'queue_message_status.id ASC'];
+        if (!str_ends_with($name, '_backfill')) {
+            array_unshift(
+                $order,
+                new \Magento\Framework\DB\Sql\Expression('candidate.listing_id IS NULL ASC'),
+                new \Magento\Framework\DB\Sql\Expression("COALESCE(candidate.sale_type, '') = 'auction' ASC"),
+                new \Magento\Framework\DB\Sql\Expression('candidate.end_time ASC')
+            );
+        }
         $select = $db->select()
             ->from(['queue_message' => $this->resource->getTableName('queue_message')], [
                 QueueManagement::MESSAGE_TOPIC => 'topic_name',
@@ -79,8 +96,15 @@ final class Queue
             ])
             ->where('queue.name = ?', $name)
             ->where('listing.id IS NULL OR ' . Source::activeListing($this->resource, 'listing'))
-            ->order(['queue_message_status.updated_at ASC', 'queue_message_status.id ASC'])
+            ->order($order)
             ->limit($limit);
+        if (count($order) > 2) {
+            $select->joinLeft(
+                ['candidate' => $this->resource->getTableName(Rows::TABLE)],
+                'candidate.listing_id = listing.id',
+                []
+            );
+        }
 
         $selected = $db->fetchAll($select);
         // Another worker may take a delivery between the read and the update; keep only ours.
@@ -190,6 +214,7 @@ final class Queue
             if ($result !== null) {
                 $row = $db->fetchRow($db->select()->from($table, [
                     'raw_attrs', 'text_condition_checked', 'visual_condition_checked',
+                    'title', 'source', 'source_id', 'brand', 'model_name', 'storage_gb', 'colour', 'epid',
                 ])
                     ->where('id = ?', $listingId)->forUpdate());
                 if ($row && !$this->isComplete($row['raw_attrs'])) {
@@ -204,9 +229,19 @@ final class Queue
                     if ($success && $next === null) {
                         $raw[self::COMPLETED_KEY] = gmdate('Y-m-d\TH:i:s\Z');
                     }
-                    $db->update($table, $result['fields'] + [
-                        'raw_attrs' => json_encode((object)$raw, JSON_THROW_ON_ERROR),
-                    ], ['id = ?' => $listingId]);
+                    $update = $result['fields'] + ['raw_attrs' => json_encode((object)$raw, JSON_THROW_ON_ERROR)];
+                    // Correct a key assigned at collection as soon as the item specifics arrive. It stays
+                    // marked as pending until the condition checks finish.
+                    if ($success && Pending::is($raw)) {
+                        $domain = $db->fetchOne($db->select()
+                            ->from($this->resource->getTableName('ghostfrog_ebay_sources'), 'domain')
+                            ->where('id = ?', $row['source_id']));
+                        $update['model_key'] = $this->classifier->forListing(
+                            (string)($domain ?: $row['source']),
+                            $update + $row
+                        );
+                    }
+                    $db->update($table, $update, ['id = ?' => $listingId]);
                     if ($success) {
                         $this->enqueue($listingId, $next?->queue() ?? self::MODEL_KEY_QUEUE);
                     }

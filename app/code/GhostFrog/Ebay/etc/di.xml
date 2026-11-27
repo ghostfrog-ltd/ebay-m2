@@ -26,6 +26,7 @@
                 <item name="ghostfrog_ebay_api_health" xsi:type="object">GhostFrog\Ebay\Console\Command\ApiHealth</item>
                 <item name="ghostfrog_ebay_collect" xsi:type="object">GhostFrog\Ebay\Console\Command\CollectListings</item>
                 <item name="ghostfrog_ebay_condition_requeue" xsi:type="object">GhostFrog\Ebay\Console\Command\RequeueCondition</item>
+                <item name="ghostfrog_ebay_model_key_rebuild" xsi:type="object">GhostFrog\Ebay\Console\Command\RebuildModelKeys</item>
                 <item name="ghostfrog_ebay_preview_auction_candidates" xsi:type="object">GhostFrog\Ebay\Console\Command\PreviewAuctionCandidates</item>
             </argument>
         </arguments>

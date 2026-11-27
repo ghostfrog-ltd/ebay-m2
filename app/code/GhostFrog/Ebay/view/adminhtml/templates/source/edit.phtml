@@ -1,11 +1,14 @@
 <?php
 
+use GhostFrog\Ebay\Model\Comps\Valuation;
 use GhostFrog\Ebay\Model\ResourceModel\Source;
 use Magento\Backend\Block\Template;
 use Magento\Framework\Escaper;
+use Magento\Framework\View\Helper\SecureHtmlRenderer;
 
 /** @var Template $block */
 /** @var Escaper $escaper */
+/** @var SecureHtmlRenderer $secureRenderer */
 $source = $block->getData('source');
 $search = $block->getData('search');
 $enabled = (int)$source['enabled'] === 1;
@@ -21,6 +24,11 @@ $details = [
     'updated_at_utc' => __('Updated (UTC)'),
 ];
 $url = (string)$source['base_url'];
+[$globalProfit, $globalRoi] = $block->getData('targets');
+$globalShipping = (float)$block->getData('shipping');
+$globalFee = (float)$block->getData('selling_fee');
+$minimum = static fn($value): string => $value === null ? '' : rtrim(rtrim((string)$value, '0'), '.');
+$colour = (string)($source['colour'] ?? '');
 ?>
 <form class="admin__scope-old"
       method="post"
@@ -83,6 +91,135 @@ $url = (string)$source['base_url'];
                             <?= $escaper->escapeHtml(__('Currently %1 seconds; saving rounds it to whole minutes.', $seconds)) ?>
                         <?php endif; ?>
                     </div>
+                </div>
+            </div>
+        </fieldset>
+        <fieldset class="admin__fieldset">
+            <legend class="admin__legend"><span><?= $escaper->escapeHtml(__('Opportunity Rules')) ?></span></legend>
+            <div class="admin__field admin__field-wide">
+                <label class="admin__field-label" for="source-min-profit">
+                    <span><?= $escaper->escapeHtml(__('Minimum Profit (GBP)')) ?></span>
+                </label>
+                <div class="admin__field-control">
+                    <input class="admin__control-text" type="number" id="source-min-profit"
+                           name="source[min_profit]" min="0" step="0.01"
+                           value="<?= $escaper->escapeHtmlAttr($minimum($source['min_profit'] ?? null)) ?>"
+                           placeholder="<?= $escaper->escapeHtmlAttr(number_format($globalProfit, 2)) ?>"
+                           aria-describedby="source-min-profit-note">
+                    <div class="admin__field-note" id="source-min-profit-note">
+                        <?= $escaper->escapeHtml(__(
+                            'Leave blank to use the global target of £%1.',
+                            number_format($globalProfit, 2)
+                        )) ?>
+                    </div>
+                </div>
+            </div>
+            <div class="admin__field admin__field-wide">
+                <label class="admin__field-label" for="source-min-roi">
+                    <span><?= $escaper->escapeHtml(__('Minimum ROI (%)')) ?></span>
+                </label>
+                <div class="admin__field-control">
+                    <input class="admin__control-text" type="number" id="source-min-roi"
+                           name="source[min_roi_percent]" min="0" max="1000" step="0.01"
+                           value="<?= $escaper->escapeHtmlAttr($minimum($source['min_roi_percent'] ?? null)) ?>"
+                           placeholder="<?= $escaper->escapeHtmlAttr($minimum(number_format($globalRoi, 2, '.', ''))) ?>"
+                           aria-describedby="source-min-roi-note">
+                    <div class="admin__field-note" id="source-min-roi-note">
+                        <?= $escaper->escapeHtml(__(
+                            'Profit must also be at least this share of the buy price, so a £500 item at 20% needs £100. Leave blank to use the global %1%.',
+                            $minimum(number_format($globalRoi, 2, '.', '')) ?: '0'
+                        )) ?>
+                    </div>
+                </div>
+            </div>
+            <div class="admin__field admin__field-wide">
+                <label class="admin__field-label" for="source-shipping">
+                    <span><?= $escaper->escapeHtml(__('Shipping (GBP)')) ?></span>
+                </label>
+                <div class="admin__field-control">
+                    <input class="admin__control-text" type="number" id="source-shipping"
+                           name="source[shipping]" min="0" step="0.01"
+                           value="<?= $escaper->escapeHtmlAttr($minimum($source['shipping'] ?? null)) ?>"
+                           placeholder="<?= $escaper->escapeHtmlAttr(number_format($globalShipping, 2)) ?>"
+                           aria-describedby="source-shipping-note">
+                    <div class="admin__field-note" id="source-shipping-note">
+                        <?= $escaper->escapeHtml(__(
+                            'Inbound plus outbound postage for a typical item, used when a listing shows no postage. When it does, that postage is paid in and again out, with half this figure as the least the outbound leg costs. Leave blank to use the global £%1.',
+                            number_format($globalShipping, 2)
+                        )) ?>
+                    </div>
+                </div>
+            </div>
+            <div class="admin__field admin__field-wide">
+                <label class="admin__field-label" for="source-selling-fee">
+                    <span><?= $escaper->escapeHtml(__('Selling Fee (%)')) ?></span>
+                </label>
+                <div class="admin__field-control">
+                    <input class="admin__control-text" type="number" id="source-selling-fee"
+                           name="source[selling_fee_percent]" min="0" max="100" step="0.01"
+                           value="<?= $escaper->escapeHtmlAttr($minimum($source['selling_fee_percent'] ?? null)) ?>"
+                           placeholder="<?= $escaper->escapeHtmlAttr($minimum(number_format($globalFee, 2, '.', ''))) ?>"
+                           aria-describedby="source-selling-fee-note">
+                    <div class="admin__field-note" id="source-selling-fee-note">
+                        <?= $escaper->escapeHtml(__(
+                            'Share of the resale price eBay keeps when you sell. Categories differ, so set this to your rate for what this source buys. Leave blank to use the global %1%.',
+                            $minimum(number_format($globalFee, 2, '.', '')) ?: '0'
+                        )) ?>
+                    </div>
+                </div>
+            </div>
+            <div class="admin__field admin__field-wide _required">
+                <label class="admin__field-label" for="source-min-comps">
+                    <span><?= $escaper->escapeHtml(__('Minimum Sold Comps')) ?></span>
+                </label>
+                <div class="admin__field-control">
+                    <input class="admin__control-text" type="number" id="source-min-comps"
+                           name="source[min_comps]" required min="1" step="1"
+                           max="<?= (int)Source::MAX_MIN_COMPS ?>"
+                           value="<?= (int)($source['min_comps'] ?? Valuation::DEFAULT_MINIMUM) ?>"
+                           aria-describedby="source-min-comps-note">
+                    <div class="admin__field-note" id="source-min-comps-note">
+                        <?= $escaper->escapeHtml(__(
+                            'Sales of the same model and condition grade in the last year needed before a listing is valued. Lower trusts thinner evidence.'
+                        )) ?>
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+        <fieldset class="admin__fieldset">
+            <legend class="admin__legend"><span><?= $escaper->escapeHtml(__('Display')) ?></span></legend>
+            <div class="admin__field admin__field-wide">
+                <label class="admin__field-label" for="source-colour">
+                    <span><?= $escaper->escapeHtml(__('Colour')) ?></span>
+                </label>
+                <div class="admin__field-control">
+                    <input type="hidden" name="source[colour]" id="source-colour-value"
+                           value="<?= $escaper->escapeHtmlAttr($colour) ?>">
+                    <input type="color" id="source-colour"
+                           value="<?= $escaper->escapeHtmlAttr($colour !== '' ? $colour : '#888888') ?>"
+                           aria-describedby="source-colour-note">
+                    <code id="source-colour-hex"><?= $escaper->escapeHtml($colour !== '' ? $colour : __('none')) ?></code>
+                    <button type="button" class="action-default" id="source-colour-clear">
+                        <span><?= $escaper->escapeHtml(__('Clear')) ?></span>
+                    </button>
+                    <div class="admin__field-note" id="source-colour-note">
+                        <?= $escaper->escapeHtml(__('Saved as a hex value.')) ?>
+                    </div>
+                    <?= /* @noEscape */ $secureRenderer->renderTag('script', [], <<<JS
+                        (function () {
+                            var picker = document.getElementById('source-colour');
+                            var value = document.getElementById('source-colour-value');
+                            var hex = document.getElementById('source-colour-hex');
+                            picker.addEventListener('input', function () {
+                                value.value = picker.value;
+                                hex.textContent = picker.value;
+                            });
+                            document.getElementById('source-colour-clear').addEventListener('click', function () {
+                                value.value = '';
+                                hex.textContent = '{$escaper->escapeJs(__('none'))}';
+                            });
+                        })();
+                        JS, false) ?>
                 </div>
             </div>
         </fieldset>

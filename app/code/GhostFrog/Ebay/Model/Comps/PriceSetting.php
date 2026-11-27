@@ -13,9 +13,11 @@ class PriceSetting extends Value
     {
         $field = basename((string)$this->getPath());
         if (!Pricing::validSetting($this->getValue(), $field)) {
-            throw new LocalizedException($field === Pricing::SELLING_FEE
-                ? __('Enter a fee percentage from 0 to 100 with up to two decimal places.')
-                : __('Enter a non-negative GBP amount with up to two decimal places.'));
+            throw new LocalizedException(match ($field) {
+                Pricing::SELLING_FEE => __('Enter a fee percentage from 0 to 100 with up to two decimal places.'),
+                Pricing::TARGET_ROI => __('Enter an ROI percentage from 0 to 1000 with up to two decimal places.'),
+                default => __('Enter a non-negative GBP amount with up to two decimal places.'),
+            });
         }
 
         $this->setValue(trim((string)$this->getValue()));

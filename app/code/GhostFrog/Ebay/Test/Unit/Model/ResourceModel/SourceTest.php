@@ -35,6 +35,11 @@ final class SourceTest extends TestCase
         return [['0'], ['-5'], ['10081'], ['1.5'], ['abc'], [''], [null], [['60']]];
     }
 
+    public function testMotomineIsCollectedForPriceHistoryOnly(): void
+    {
+        self::assertSame(['motomine'], \GhostFrog\Ebay\Model\Collection\SourceSearches::collectOnly());
+    }
+
     public function testSearchSummaryMatchesCodeDefinitions(): void
     {
         $apple = Source::search('ebay-apple');
@@ -167,6 +172,122 @@ final class SourceTest extends TestCase
         $db->expects(self::never())->method('update');
 
         $this->source($db)->save(6, ['enabled' => '0', 'interval_minutes' => '60'], 'stale');
+    }
+
+    public function testMinimumsAndColourAreNormalised(): void
+    {
+        self::assertNull(Source::minimum(' ', 'min_profit'));
+        self::assertSame('20.00', Source::minimum('20', 'min_profit'));
+        self::assertSame('16.50', Source::minimum('16.5', 'shipping'));
+        self::assertNull(Source::minimum('', 'shipping'));
+        self::assertSame('12.50', Source::minimum(' 12.5 ', 'min_roi_percent'));
+        self::assertNull(Source::colour(''));
+        self::assertSame('#1a73e8', Source::colour('#1A73E8'));
+    }
+
+    #[DataProvider('invalidSourceValues')]
+    public function testInvalidMinimumsAndColoursAreRejected(callable $parse): void
+    {
+        $this->expectException(LocalizedException::class);
+        $parse();
+    }
+
+    public static function invalidSourceValues(): array
+    {
+        return [
+            'negative profit' => [static fn() => Source::minimum('-1', 'min_profit')],
+            'three decimals' => [static fn() => Source::minimum('1.005', 'min_profit')],
+            'roi over 1000' => [static fn() => Source::minimum('1001', 'min_roi_percent')],
+            'short hex' => [static fn() => Source::colour('#fff')],
+            'named colour' => [static fn() => Source::colour('red')],
+        ];
+    }
+
+    public function testChangingAMinimumWritesItAndInvalidatesOpportunities(): void
+    {
+        $row = $this->row(['min_profit' => null, 'min_roi_percent' => '20.00', 'colour' => null]);
+        $db = $this->connection($row);
+        $db->expects(self::once())->method('update')->with(
+            'ghostfrog_ebay_sources',
+            self::callback(static fn(array $values): bool => $values['min_profit'] === '25.00'
+                && !array_key_exists('min_roi_percent', $values) && !array_key_exists('colour', $values)),
+            ['id = ?' => 6]
+        );
+        $indexer = $this->createMock(IndexerInterface::class);
+        $indexer->expects(self::once())->method('invalidate');
+        $indexers = $this->createMock(IndexerRegistry::class);
+        $indexers->method('get')->willReturn($indexer);
+
+        $source = $this->source($db, $indexers);
+        $source->save(6, [
+            'enabled' => '1', 'interval_minutes' => '60',
+            'min_profit' => '25', 'min_roi_percent' => '20', 'colour' => '',
+        ], $source->revision($row));
+    }
+
+    public function testMinCompsIsAWholeNumberInRange(): void
+    {
+        self::assertSame(15, Source::minComps(' 15 '));
+        foreach (['0', '1001', '2.5', '', 'abc'] as $invalid) {
+            try {
+                Source::minComps($invalid);
+                self::fail("Accepted $invalid");
+            } catch (LocalizedException) {
+                self::addToAssertionCount(1);
+            }
+        }
+    }
+
+    public function testChangingMinCompsInvalidatesOpportunities(): void
+    {
+        $row = $this->row(['min_comps' => '15']);
+        $db = $this->connection($row);
+        $db->expects(self::once())->method('update')->with(
+            'ghostfrog_ebay_sources',
+            self::callback(static fn(array $values): bool => $values['min_comps'] === 8),
+            ['id = ?' => 6]
+        );
+        $indexer = $this->createMock(IndexerInterface::class);
+        $indexer->expects(self::once())->method('invalidate');
+        $indexers = $this->createStub(IndexerRegistry::class);
+        $indexers->method('get')->willReturn($indexer);
+
+        $source = $this->source($db, $indexers);
+        $source->save(6, ['enabled' => '1', 'interval_minutes' => '60', 'min_comps' => '8'], $source->revision($row));
+    }
+
+    public function testColourOnlyChangeLeavesOpportunitiesAlone(): void
+    {
+        $row = $this->row(['colour' => null]);
+        $db = $this->connection($row);
+        $db->expects(self::once())->method('update')->with(
+            'ghostfrog_ebay_sources',
+            self::callback(static fn(array $values): bool => $values['colour'] === '#ff6600'),
+            ['id = ?' => 6]
+        );
+        $indexers = $this->createMock(IndexerRegistry::class);
+        $indexers->expects(self::never())->method('get');
+
+        $source = $this->source($db, $indexers);
+        $source->save(6, ['enabled' => '1', 'interval_minutes' => '60', 'colour' => '#FF6600'], $source->revision($row));
+    }
+
+    public function testBlankMinimumClearsAnOverride(): void
+    {
+        $row = $this->row(['min_profit' => '20.00']);
+        $db = $this->connection($row);
+        $db->expects(self::once())->method('update')->with(
+            'ghostfrog_ebay_sources',
+            self::callback(static fn(array $values): bool => array_key_exists('min_profit', $values)
+                && $values['min_profit'] === null),
+            ['id = ?' => 6]
+        );
+
+        $indexers = $this->createStub(IndexerRegistry::class);
+        $indexers->method('get')->willReturn($this->createStub(IndexerInterface::class));
+
+        $source = $this->source($db, $indexers);
+        $source->save(6, ['enabled' => '1', 'interval_minutes' => '60', 'min_profit' => ''], $source->revision($row));
     }
 
     public function testIncompleteFormIsRejected(): void

@@ -7,6 +7,7 @@ namespace GhostFrog\Ebay\Model\ModelKey;
 use GhostFrog\Ebay\Model\Enrichment\Queue;
 use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Framework\App\ResourceConnection;
+use Magento\Framework\DB\Sql\Expression;
 use Magento\Framework\Lock\LockManagerInterface;
 use Magento\MysqlMq\Model\QueueManagement;
 use Psr\Log\LoggerInterface;
@@ -71,13 +72,17 @@ final class Worker
                 'source', 'source_id', 'title', 'model_key', 'raw_attrs',
                 'brand', 'model_name', 'storage_gb', 'colour', 'epid',
             ])->where('id = ?', $listingId)->forUpdate());
-            if ($listing && in_array(strtolower(trim((string)$listing['model_key'])), ['', 'unknown'], true)) {
+            // An early key from collection is recomputed with the full evidence and its pending mark cleared.
+            $pending = $listing && Pending::is($listing['raw_attrs']);
+            if ($listing && ($pending
+                || in_array(strtolower(trim((string)$listing['model_key'])), ['', 'unknown'], true))
+            ) {
                 $domain = $db->fetchOne($db->select()->from($sources, 'domain')->where('id = ?', $listing['source_id']));
-                $attrs = json_decode((string)$listing['raw_attrs'], true);
-                $fields = array_intersect_key($listing, array_flip(['brand', 'model_name', 'storage_gb', 'colour', 'epid']));
-                $key = $this->classifier->key((string)($domain ?: $listing['source']), (string)$listing['title'],
-                    (is_array($attrs) ? $attrs : []) + $fields);
-                $db->update($listings, ['model_key' => $key], ['id = ?' => $listingId]);
+                $update = ['model_key' => $this->classifier->forListing((string)($domain ?: $listing['source']), $listing)];
+                if ($pending) {
+                    $update['raw_attrs'] = new Expression("JSON_REMOVE(raw_attrs, '" . Pending::PATH . "')");
+                }
+                $db->update($listings, $update, ['id = ?' => $listingId]);
             }
             $this->queue->acknowledge($delivery);
             $db->commit();

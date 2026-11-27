@@ -149,6 +149,31 @@ Generic condition grades belong in `condition_grade`. MotoMine keys have their
 own prefix so that parts and complete motorcycles use separate identities.
 Existing assigned keys are preserved.
 
+### Early keys from collection
+
+Collection also keys each new listing from its title and search evidence, so
+it can be valued and reach Opportunities within a minute instead of after the
+whole pipeline. A live listing that was collected earlier and never classified
+is keyed the next time a search sees it. Listings the title cannot identify
+wait for the pipeline as before.
+
+A title-only key is right about 85% of the time for Apple and 96% for Samsung,
+measured against the key after item specifics. The listing therefore carries a
+`_checks_pending` mark in `raw_attrs` until the pipeline has finished:
+
+- The enrichment, condition and model-key queues take listings that are
+  currently in the Opportunities index first: Buy It Now, then auctions by
+  end time. Everything else stays oldest-first, as do the backfill queues.
+- Trading GetItem recomputes the key with the item specifics as soon as they
+  arrive. A listing whose key becomes `unknown` drops out of Opportunities.
+- The model-key worker recomputes the key once more after the condition
+  stages and removes the mark.
+- While the mark is set the listing shows **Checks Pending: Yes** in the
+  Opportunities grid, sends no alerts and does not count as a sold comparable.
+
+A listing whose Trading lookup fails keeps the mark, so it can stay in the grid
+as pending but never alerts.
+
 ## Sold comparables
 
 The GhostFrog eBay Comps indexer rebuilds the Magento comps table from the
@@ -171,7 +196,51 @@ affected opportunities in one database transaction.
 
 **GhostFrog → Opportunities** shows live listings from the
 `ghostfrog_ebay_opportunities` index, sorted by expected profit. Use the
-filters or row actions to find and inspect a listing. The current price for
+filters or row actions to find and inspect a listing.
+
+### Faulty opportunities
+
+Faulty listings are valued on their own and never mix with working ones. A
+listing is faulty when its title says so (for parts, spares or repair,
+faulty, not working, untested, cracked screen and similar) or when eBay lists
+its condition as "For parts or not working". It joins its model key with
+grade `F`, so its comps are other faulty sales of the same model. The A, B
+and C groups never include a faulty sale.
+
+**GhostFrog → Faulty Opportunities** lists them, valued as a resale in the
+same faulty condition. **Working Median £** shows what a working grade B one
+fetches, for judging repair upside. It plays no part in the valuation.
+Faulty opportunities do not send alerts. Condition checks do not apply.
+
+Fault wording found only in the seller's description counts as neither
+working nor faulty. Refurbishers' grading notes mention dead pixels and
+sellers write "no cracked screen", so that text is too loose to sort by.
+Accessories, boxes, parts of a device, job lots and locked devices stay out of
+both. Every source has a faulty track, though MotoMine is collected for price
+history only (`collect_only` in `SourceSearches`): it builds comps but never
+appears in either Opportunities list, gets no price checks and sends no
+alerts. In a game title "dead" does not count
+as a fault, because it is usually part of the name (Evil Dead, Red Dead). The
+source rules still give no key to wording the faulty check does not catch,
+such as a bare "spares", "cracked" or "damaged disc", so such listings cannot
+reach working comps.
+
+After upgrading, run `ghostfrog:ebay:model-key:rebuild` for each source so
+faulty listings that were left `unknown` get keys, then reindex comps. A live
+listing that has not finished its checks gets a pending key from the rebuild,
+as it would at collection.
+
+The selling fee is the share of the resale price eBay keeps. Set the global
+rate under **Comps and Pricing**, and override it per source under
+**GhostFrog → Sources** when a category is charged differently.
+
+**Resale Price Basis** chooses the sold prices a resale is valued from. **All
+sales** uses the median of every sale of the model and grade. **Buy It Now**
+uses the median of its Buy It Now sales when there are at least five, and
+all sales otherwise. Combined auction and Buy It Now sales count only towards
+all sales. The source's sold-comp minimum always applies to all sales. Run a
+full comps reindex after upgrading so existing cohorts get their Buy It Now
+median. The current price for
 an auction is the observed bid when available. The final purchase price can
 be higher.
 
@@ -286,11 +355,11 @@ Run the monitoring cron group in DDEV to check registration and execution.
 
     ddev exec php bin/magento cron:run --group=ghostfrog_ebay_monitoring
 
-### Stale Apple auction checks
+### Stale near-close auction checks
 
-The optional **Check Stale Near-Close Apple Auctions** setting defaults to
-off. After `setup:upgrade`, the same monitoring cron can check stale Apple
-auctions missing from the active Opportunities index. It uses the current
+The optional **Check Stale Near-Close Auctions** setting defaults to
+off. After `setup:upgrade`, the same monitoring cron can check stale auctions
+from any source missing from the active Opportunities index. It uses the current
 eligibility rules, effective grade, sold comps and configured profit target.
 Combined listings need a stored auction bid. Candidates are ranked within a
 bounded, rotating scan by time remaining and indicative profit at that bid.

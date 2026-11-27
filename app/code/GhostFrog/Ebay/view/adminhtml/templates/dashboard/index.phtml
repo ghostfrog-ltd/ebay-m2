@@ -36,6 +36,14 @@ $chartData = [
         'Missing' => $t['mk_missing'],
     ],
     'roi' => $o['roi_buckets'],
+    ...array_combine(
+        array_map(static fn ($r) => 'modelKey-src-' . $r['id'], $l['model_key_by_source']),
+        array_map(static fn ($r) => [
+            'Usable model key' => $r['mk_valid'],
+            'Unknown / generic' => $r['mk_unknown'],
+            'Missing' => $r['mk_missing'],
+        ], $l['model_key_by_source'])
+    ),
     'oppSource' => $o['by_source'],
 ];
 ?>
@@ -177,6 +185,23 @@ $chartData = [
         </div>
         <div class="gf-card gf-card--wide">
             <h3><?= $escaper->escapeHtml(__('Best-supported comps')) ?></h3>
+            <?php
+            $compTabs = [['id' => 'all', 'name' => (string)__('All sources'), 'rows' => $c['top_models']]];
+            foreach ($c['top_models_by_source'] as $src) {
+                $compTabs[] = ['id' => 'src-' . $src['id'], 'name' => $src['name'], 'rows' => $src['rows']];
+            }
+            ?>
+            <div class="gf-tabs" role="tablist">
+                <?php foreach ($compTabs as $i => $tab): ?>
+                    <button type="button" role="tab" class="gf-tab<?= $i === 0 ? ' gf-tab--active' : '' ?>"
+                            aria-selected="<?= $i === 0 ? 'true' : 'false' ?>"
+                            data-gf-tab="comps-<?= $escaper->escapeHtmlAttr($tab['id']) ?>">
+                        <?= $escaper->escapeHtml($tab['name']) ?>
+                    </button>
+                <?php endforeach; ?>
+            </div>
+            <?php foreach ($compTabs as $i => $tab): ?>
+            <div class="gf-tabpanel" role="tabpanel" data-gf-panel="comps-<?= $escaper->escapeHtmlAttr($tab['id']) ?>"<?= $i === 0 ? '' : ' hidden' ?>>
             <table class="gf-table">
                 <thead><tr>
                     <th><?= $escaper->escapeHtml(__('Model key')) ?></th>
@@ -185,7 +210,7 @@ $chartData = [
                     <th class="gf-num"><?= $escaper->escapeHtml(__('Median sold')) ?></th>
                 </tr></thead>
                 <tbody>
-                <?php foreach ($c['top_models'] as $row): ?>
+                <?php foreach ($tab['rows'] as $row): ?>
                     <tr>
                         <td><code><?= $escaper->escapeHtml($row['model_key']) ?></code></td>
                         <td><?= $escaper->escapeHtml($row['condition_grade']) ?></td>
@@ -193,8 +218,13 @@ $chartData = [
                         <td class="gf-num"><?= $money($row['median_final_price']) ?></td>
                     </tr>
                 <?php endforeach; ?>
+                <?php if (!$tab['rows']): ?>
+                    <tr><td colspan="4"><?= $escaper->escapeHtml(__('No comps from this source yet.')) ?></td></tr>
+                <?php endif; ?>
                 </tbody>
             </table>
+            </div>
+            <?php endforeach; ?>
         </div>
     </div>
 
@@ -202,7 +232,28 @@ $chartData = [
     <div class="gf-dash__grid">
         <div class="gf-card">
             <h3><?= $escaper->escapeHtml(__('Model key coverage')) ?></h3>
-            <div class="gf-chart"><canvas data-chart="modelKey"></canvas></div>
+            <div class="gf-tabs" role="tablist">
+                <button type="button" role="tab" class="gf-tab gf-tab--active" aria-selected="true" data-gf-tab="mk-all">
+                    <?= $escaper->escapeHtml(__('All sources')) ?>
+                    <span class="gf-tab__meta"><?= $pct($t['mk_valid'], $t['total']) ?></span>
+                </button>
+                <?php foreach ($l['model_key_by_source'] as $src): ?>
+                    <button type="button" role="tab" class="gf-tab" aria-selected="false" data-gf-tab="mk-src-<?= (int)$src['id'] ?>">
+                        <?= $escaper->escapeHtml($src['name']) ?>
+                        <span class="gf-tab__meta"><?= $pct($src['mk_valid'], $src['total']) ?></span>
+                    </button>
+                <?php endforeach; ?>
+            </div>
+            <div class="gf-tabpanel" role="tabpanel" data-gf-panel="mk-all">
+                <div class="gf-chart"><canvas data-chart="modelKey"></canvas></div>
+            </div>
+            <?php foreach ($l['model_key_by_source'] as $src): ?>
+                <div class="gf-tabpanel" role="tabpanel" data-gf-panel="mk-src-<?= (int)$src['id'] ?>" hidden>
+                    <div class="gf-chart"><canvas data-chart="modelKey-src-<?= (int)$src['id'] ?>"></canvas></div>
+                    <p class="gf-note"><?= $escaper->escapeHtml(__('%1 listings from this source.', $n($src['total']))) ?></p>
+                </div>
+            <?php endforeach; ?>
+            <p class="gf-note"><?= $escaper->escapeHtml(__('Tab figures show the share of listings with a usable model key.')) ?></p>
         </div>
         <div class="gf-card">
             <h3><?= $escaper->escapeHtml(__('Stages completed (all listings)')) ?></h3>
