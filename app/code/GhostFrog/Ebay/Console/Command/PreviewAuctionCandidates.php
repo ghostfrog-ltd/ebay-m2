@@ -24,7 +24,7 @@ class PreviewAuctionCandidates extends Command
     protected function configure(): void
     {
         $this->setName('ghostfrog:ebay:opportunities:preview-auctions')
-            ->setDescription('Preview stale Apple auction candidates from stored data without calling eBay');
+            ->setDescription('Preview stale near-close auction candidates from stored data without calling eBay');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int

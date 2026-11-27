@@ -6,9 +6,17 @@ namespace GhostFrog\Ebay\Model\Collection;
 
 final class SourceSearches
 {
+    /** Source domains collected for price history only, with no opportunities, price checks or alerts. */
+    public static function collectOnly(): array
+    {
+        return array_keys(array_filter(self::DEFINITIONS, static fn(array $definition): bool => !empty($definition['collect_only'])));
+    }
+
     // Search seeds from the Python retrieve adapters, keyed by sources.domain.
     public const DEFINITIONS = [
         'motomine' => [
+            // Collected for price tracking only: never valued as an opportunity, price-checked or alerted.
+            'collect_only' => true,
             'seller' => 'motomine',
             'page_limit' => 4,
             'listing_limit' => 250,
@@ -77,8 +85,28 @@ final class SourceSearches
             ],
         ],
         'ebay-consoles' => [
-            'categories' => [139971, 54968, 139973],
-            'queries' => ['a'],
+            // Consoles (139971) and games (139973). Browse matches q against title words,
+            // so the old 'a' seed only returned titles containing "A". Accessories (54968)
+            // are left out because none of them classify to a model key. Each query is one
+            // 50-result page per sale type, so the terms are split by console family to
+            // keep each page dense. They cover the families the Consoles rules can key.
+            'categories' => [139971, 139973],
+            'category_queries' => [
+                139971 => [
+                    '(ps5, "playstation 5")',
+                    '(ps4, "playstation 4")',
+                    '(ps3, "playstation 3", "ps vita", "playstation vita")',
+                    '"xbox series"',
+                    '("xbox one", "xbox 360")',
+                    '("switch oled", "switch lite", "switch 2")',
+                    '"nintendo switch"',
+                ],
+                139973 => [
+                    '(switch, "switch 2")',
+                    '(ps5, ps4, ps3, ps2, ps1)',
+                    '(xbox, gamecube, wii, 3ds, ds, gameboy)',
+                ],
+            ],
         ],
         'ebay-retro-pc' => [
             'categories' => [
@@ -117,8 +145,19 @@ final class SourceSearches
             'queries' => ['a'],
         ],
         'ebay-samsung' => [
+            // Mobile phones (9355) covers every brand, and the old 'a' seed only matched
+            // titles containing "A", which skewed results to budget Galaxy A phones and other
+            // brands. Model terms keep the pages on Samsung, led by the higher-value S, Z
+            // and recent mid-range A models.
             'categories' => [9355],
-            'queries' => ['a'],
+            'queries' => [
+                '("galaxy s26", "galaxy s25")',
+                '("galaxy s24", "galaxy s23", "galaxy s22")',
+                '("galaxy s21", "galaxy s20", "galaxy note")',
+                '("z fold", "galaxy fold")',
+                '("z flip", "galaxy flip")',
+                '("galaxy a57", "galaxy a56", "galaxy a55", "galaxy a36", "galaxy a35")',
+            ],
         ],
         'ebay-headphones' => [
             'categories' => [112529],

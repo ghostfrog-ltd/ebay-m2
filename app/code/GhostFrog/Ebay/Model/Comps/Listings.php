@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace GhostFrog\Ebay\Model\Comps;
 
+use GhostFrog\Ebay\Model\Collection\SourceSearches;
 use GhostFrog\Ebay\Model\Condition\Stage;
+use GhostFrog\Ebay\Model\ModelKey\Pending;
 use GhostFrog\Ebay\Model\ResourceModel\Listing;
 use Magento\Framework\App\ResourceConnection;
 use Magento\Framework\DB\Select;
@@ -40,15 +42,19 @@ final class Listings
 
     private function soldSelect(string $from, string $until, bool $includeEvidence = true): Select
     {
-        $select = $includeEvidence ? $this->select() : $this->resource->getConnection()->select()
-            ->from(['a' => $this->resource->getTableName(Listing::TABLE)], ['external_id']);
+        $select = $includeEvidence
+            ? $this->select()->columns(['sale_type' => 'a.sale_type'])
+            : $this->resource->getConnection()->select()
+                ->from(['a' => $this->resource->getTableName(Listing::TABLE)], ['external_id']);
         return $select
             ->where('a.status = ?', 'sold')
             ->where('a.finalized = 1')
             ->where('a.final_price > 0')
             ->where('a.end_time >= ?', $from)
             ->where('a.end_time <= ?', $until)
-            ->where("a.model_key IS NOT NULL AND a.model_key NOT IN ('', 'unknown')");
+            ->where("a.model_key IS NOT NULL AND a.model_key NOT IN ('', 'unknown')")
+            // A sale keyed at collection joins its cohort once the checks have confirmed the key.
+            ->where('NOT (' . Pending::sql('a') . ')');
     }
 
     public static function itemId(string $externalId): string
@@ -106,7 +112,9 @@ final class Listings
             ->where('(a.end_time > UTC_TIMESTAMP() OR (a.end_time IS NULL AND a.sale_type = ?))', 'bin')
             ->where('a.price_current > 0')
             // Paused sources drop out of opportunities, price checks and alerts.
-            ->where('s.id IS NULL OR COALESCE(s.enabled, 0) = 1');
+            ->where('s.id IS NULL OR COALESCE(s.enabled, 0) = 1')
+            // So do collect-only sources, which are kept for their price history.
+            ->where('s.domain IS NULL OR s.domain NOT IN (?)', SourceSearches::collectOnly());
         return $requireFresh ? $select->where(self::FRESH_OBSERVATION) : $select;
     }
 
@@ -129,7 +137,14 @@ final class Listings
             'price_current', 'end_time', 'brand', 'model_name', 'storage_gb', 'colour', 'epid',
         ])
             ->joinLeft(['s' => $this->resource->getTableName('ghostfrog_ebay_sources')],
-                's.id = a.source_id', ['source_domain' => 'domain']);
+                's.id = a.source_id', [
+                    'source_domain' => 'domain',
+                    'source_min_profit' => 'min_profit',
+                    'source_min_roi_percent' => 'min_roi_percent',
+                    'source_shipping' => 'shipping',
+                    'source_min_comps' => 'min_comps',
+                    'source_selling_fee_percent' => 'selling_fee_percent',
+                ]);
         foreach (Stage::cases() as $stage) {
             $alias = $stage->value . '_condition';
             $table = $this->resource->getTableName('ghostfrog_ebay_listing_' . $stage->value . '_conditions');

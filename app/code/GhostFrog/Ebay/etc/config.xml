@@ -28,8 +28,10 @@
             </heartbeat>
             <comps>
                 <target_profit>50.00</target_profit>
+                <target_roi_percent>0.00</target_roi_percent>
                 <selling_fee_percent>13.00</selling_fee_percent>
                 <shipping>12.00</shipping>
+                <resale_basis>all</resale_basis>
             </comps>
             <opportunity_monitoring>
                 <auction_24_hours>30</auction_24_hours>

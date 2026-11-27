@@ -392,6 +392,240 @@ final class ClassifierTest extends TestCase
             [],
             'microsoft-xbox-series-s-512gb',
         ];
+        yield 'Catalogue Series X title without storage is 1TB' => [
+            'ebay-consoles',
+            'Microsoft Xbox Series X Home Console Black with USB-A Connectivity',
+            ['Type' => 'Home Console', 'Model' => 'Microsoft Xbox Series X'],
+            'microsoft-xbox-series-x-1tb',
+        ];
+        yield 'Series X|S platform name does not hide a Series S' => [
+            'ebay-consoles',
+            'Microsoft Xbox Series S Home Console White/Black USB-A Microsoft Xbox Series X/S',
+            ['Type' => 'Home Console', 'Platform' => 'Microsoft Xbox Series X|S'],
+            'microsoft-xbox-series-s-512gb',
+        ];
+        yield 'Carbon Black Series S is 1TB' => [
+            'ebay-consoles',
+            'Microsoft Xbox Series S Carbon Black Console',
+            [],
+            'microsoft-xbox-series-s-1tb',
+        ];
+        yield 'Terabyte spelled out' => [
+            'ebay-consoles',
+            'Microsoft Xbox Series X Home Console Black 1 terabyte HDMI USB-A',
+            [],
+            'microsoft-xbox-series-x-1tb',
+        ];
+        yield 'One X without storage is 1TB' => [
+            'ebay-consoles',
+            'Microsoft Xbox One X Home Console Black',
+            [],
+            'microsoft-xbox-one-x-1tb',
+        ];
+        yield 'One S without storage stays unknown' => [
+            'ebay-consoles',
+            'Microsoft Xbox One S White Home Console with HDMI USB-A Connectivity',
+            [],
+            'unknown',
+        ];
+        yield 'Headphone jack is not a headset' => [
+            'ebay-consoles',
+            'Microsoft Xbox Series S Home Console 512GB White USB-A Headphone Jack',
+            [],
+            'microsoft-xbox-series-s-512gb',
+        ];
+        yield 'Storage expansion card is not a console' => [
+            'ebay-consoles',
+            'Seagate Storage Expansion Card 1TB for Xbox Series X|S',
+            [],
+            'unknown',
+        ];
+        yield 'Series X controller is not a console' => [
+            'ebay-consoles',
+            'Microsoft Xbox Series X Wireless Controller Carbon Black',
+            [],
+            'unknown',
+        ];
+        yield 'Switch console with Joy-Con controllers stays a console' => [
+            'ebay-consoles',
+            'Nintendo Switch Console w/ Dock & Joy-Con Controllers, Mario Kart 8 Deluxe Box',
+            [],
+            'nintendo-switch-base',
+        ];
+        yield 'Joy-Con controller alone is not a console' => [
+            'ebay-consoles',
+            'Nintendo Switch Joy-Con Controller Pair Neon Red Blue',
+            [],
+            'unknown',
+        ];
+        yield 'Dust sleeve for a Series X is not a console' => [
+            'ebay-consoles',
+            'Oxford cloth Dust Cover Protective Sleeve for Xbox Series X Game Console Black A',
+            [],
+            'unknown',
+        ];
+        yield 'Cooling fan for a Series X is not a console' => [
+            'ebay-consoles',
+            '5V/2A USB Vertical Dual Silent Fan External Cooler For Xbox Series X Console C',
+            [],
+            'unknown',
+        ];
+        yield 'Wall bracket for a Series X is not a console' => [
+            'ebay-consoles',
+            'VIVO Steel Wall Mount Bracket Designed for Xbox Series X Gaming Console, Horizon',
+            [],
+            'unknown',
+        ];
+        yield 'Joy-Con for a Switch console is not a console' => [
+            'ebay-consoles',
+            'Wireless Joy-Con Controller for Nintendo Switch Console, Blue/Red',
+            [],
+            'unknown',
+        ];
+        yield 'Series X mini fridge is not a console' => [
+            'ebay-consoles',
+            'Microsoft Xbox Series X Home Console, Black, HDMI & USB-A style mini fridge',
+            [],
+            'unknown',
+        ];
+        yield 'Series X game naming the console is not a console' => [
+            'ebay-consoles',
+            'A Plague Tale: Requiem Xbox Series X Console Action-Adventure XSX Video Game',
+            [],
+            'unknown',
+        ];
+        yield 'Series X bundled with video games stays a console' => [
+            'ebay-consoles',
+            'Xbox Series X - Console, Video Games, and A Controller',
+            [],
+            'microsoft-xbox-series-x-1tb',
+        ];
+        yield 'Series X bundle with a wired controller stays a console' => [
+            'ebay-consoles',
+            'Xbox Series X Bundle + Turtle Beach Wired Controller & Astro A10 Headset',
+            [],
+            'microsoft-xbox-series-x-1tb',
+        ];
+        yield 'PS3 with a wired controller stays a console' => [
+            'ebay-consoles',
+            'Sony Playstation 3 PS3 Slim 120GB CECH-2003A & Wired Controller (U)',
+            [],
+            'sony-playstation-3',
+        ];
+        yield 'Wired controller is not an Xbox 360' => [
+            'ebay-consoles',
+            'Microsoft Xbox 360 Wired Controller Black',
+            [],
+            'unknown',
+        ];
+        yield 'PS3 games bundle is not a console' => [
+            'ebay-consoles',
+            'Bundle of 10 Games for the Sony PS3 PlayStation 3 FREE POSTAGE',
+            [],
+            'unknown',
+        ];
+        yield 'PS3 game bundle is not a console' => [
+            'ebay-consoles',
+            'Sony PS3 PlayStation 3 Game Bundle x5 Call of Duty',
+            [],
+            'unknown',
+        ];
+        yield 'Switch game bundle is not a console' => [
+            'ebay-consoles',
+            'Maximum Games Doctor Who: Duo Bundle Nintendo Switch PAL (2022) PEGI 12',
+            [],
+            'unknown',
+        ];
+        yield 'PS3 game titles bundle is not a console' => [
+            'ebay-consoles',
+            'Ratchet & Clank PS3 PAL Bundle: A Crack in Time + Tools of Destruction Manual',
+            [],
+            'unknown',
+        ];
+        yield 'microSD card for Switch 2 is not a console' => [
+            'ebay-consoles',
+            'SanDisk 256GB microSD Express Card for Nintendo Switch 2',
+            [],
+            'unknown',
+        ];
+        yield 'PS3 hard drive is not a console' => [
+            'ebay-consoles',
+            '320GB Hard Drive for Sony PS3 Slim',
+            [],
+            'unknown',
+        ];
+        yield 'PS3 with a legacy drive size is a console' => [
+            'ebay-consoles',
+            'Sony PlayStation 3 PS3 Slim 160GB Black PAL HDMI Wi-Fi CECH-2503A FIFA 12',
+            [],
+            'sony-playstation-3',
+        ];
+        yield 'Switch Lite battery is not a console' => [
+            'ebay-consoles',
+            'BATTERIE 3200mAh HDH-0003 HDH-A-BPHAT-C0 For Nintendo Switch Lite, HDH-001',
+            ['Platform' => ['Nintendo Switch LiTE'], 'Compatible Model' => ['Nintendo Switch']],
+            'unknown',
+        ];
+        yield 'Listing outside the consoles category is not a console' => [
+            'ebay-consoles',
+            '2 PACK Nintendo Switch OLED 2021 Genuine 100% Tempered Glass Screen Protector',
+            ['Browse categoryId' => '171837'],
+            'unknown',
+        ];
+        yield 'Listing in the consoles category still keys' => [
+            'ebay-consoles',
+            'Nintendo Switch Lite Turquoise',
+            ['Browse categoryId' => '139971'],
+            'nintendo-switch-lite',
+        ];
+        yield 'Game outside the consoles category still keys as a game' => [
+            'ebay-consoles',
+            'Nintendo Pokémon: Let\'s Go, Pikachu! Nintendo Switch',
+            ['Game Name' => 'Pokémon: Let\'s Go, Pikachu!', 'Platform' => 'Nintendo Switch', 'Trading PrimaryCategoryID' => '139973'],
+            'game-switch-pokemon-lets-go-pikachu',
+        ];
+        yield 'PlayVital accessory is not a PS Vita' => [
+            'ebay-consoles',
+            'PlayVital Back Cover for Nintendo Switch Console NS Joycon Chameleon Scarlet Red',
+            [],
+            'unknown',
+        ];
+        yield 'PS Vita' => [
+            'ebay-consoles',
+            'Sony PS Vita PCH-2000 Aqua Blue Handheld Console',
+            [],
+            'sony-playstation-vita',
+        ];
+        yield 'Switch 2 camera is not a console' => [
+            'ebay-consoles',
+            'Nintendo Switch 2 Camera/Web-Cam USB with Stand, Privacy Shutter, Black',
+            [],
+            'unknown',
+        ];
+        yield 'Switch 2 power case is not a console' => [
+            'ebay-consoles',
+            'Venom Nintendo Switch 2 Power Case with 10,000mAh Power Bank and Game Storage',
+            [],
+            'unknown',
+        ];
+        yield 'Switch Lite with a new battery fitted stays a console' => [
+            'ebay-consoles',
+            'Nintendo Switch Lite Console, New Battery Fitted, Coral',
+            [],
+            'nintendo-switch-lite',
+        ];
+        yield 'Switch V2 with an improved battery stays a console' => [
+            'ebay-consoles',
+            'Nintendo Switch Console 32gb V2 Improved Battery Complete Boxed Red & Blue',
+            [],
+            'nintendo-switch-base',
+        ];
+        yield 'Xbox listed with a battery pack stays a console' => [
+            'ebay-consoles',
+            'XBOX Series S 512GB ** Battery Pack ** 100% Fully Working ** Free Next Day',
+            [],
+            'microsoft-xbox-series-s-512gb',
+        ];
         yield 'Toggle switch is not a Nintendo Switch' => [
             'ebay-consoles',
             'On OFF On 3 Position Momentary Toggle Switch 6 Pin 12mm 15A 250VAC',
@@ -590,9 +824,22 @@ final class ClassifierTest extends TestCase
             [],
             'unknown',
         ];
+        // Faulty listings keep their identity; comps eligibility values them against faulty sales only.
         yield 'repair-only Apple' => [
             'ebay-apple',
             'MacBook Air M2 A2681 8GB RAM 256GB SSD Parts Or Repair',
+            [],
+            'apple-macbook-air-a2681-136in-m2-8gb-256gb',
+        ];
+        yield 'faulty iPhone for parts' => [
+            'ebay-apple',
+            'Apple iPhone 13 128GB Midnight Faulty For Parts',
+            [],
+            'apple-iphone-13-128gb',
+        ];
+        yield 'locked iPhone for parts' => [
+            'ebay-apple',
+            'Apple iPhone 13 128GB iCloud locked for parts',
             [],
             'unknown',
         ];

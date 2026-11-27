@@ -185,7 +185,9 @@
             "mean_final_price": true,
             "samples": true,
             "computed_at": true,
-            "condition_grade": true
+            "condition_grade": true,
+            "bin_median_final_price": true,
+            "bin_samples": true
         },
         "constraint": {
             "PRIMARY": true
@@ -535,7 +537,13 @@
             "niche": true,
             "scrape_interval_seconds": true,
             "last_scraped_at": true,
-            "domain": true
+            "domain": true,
+            "min_profit": true,
+            "min_roi_percent": true,
+            "shipping": true,
+            "colour": true,
+            "min_comps": true,
+            "selling_fee_percent": true
         },
         "index": {
             "GHOSTFROG_EBAY_SOURCES_LAST_SCRAPED_AT": true
@@ -551,7 +559,8 @@
             "listing_id": true,
             "model_key": true,
             "condition_grade": true,
-            "final_price": true
+            "final_price": true,
+            "sale_type": true
         },
         "index": {
             "GHOSTFROG_EBAY_COMP_SALES_LISTING_ID": true,
@@ -571,8 +580,10 @@
             "condition_grade": true,
             "current_price": true,
             "sold_median": true,
+            "working_median": true,
             "comp_count": true,
             "max_safe_buy": true,
+            "shipping": true,
             "expected_profit": true,
             "expected_roi_percent": true,
             "end_time": true,

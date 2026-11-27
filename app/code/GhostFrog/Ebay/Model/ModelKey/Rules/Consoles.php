@@ -46,10 +46,10 @@ final class Consoles extends Rule
     {
         $attrStorage = implode(' ', array_map(static fn($key) => self::asText(($attrs[$key] ?? null)), ['Storage Capacity', 'Storage', 'Size', 'Hard Drive Capacity', 'storage_gb']));
         $text = $attrStorage . ' ' . self::asText($title);
-        if (self::search('\\b2\\s?tb\\b', $text)) {
+        if (self::search('\\b2\\s?(?:tb|terabytes?)\\b', $text)) {
             return '2tb';
         }
-        if (self::search('\\b1\\s?tb\\b', $text)) {
+        if (self::search('\\b1\\s?(?:tb|terabytes?)\\b', $text)) {
             return '1tb';
         }
         if (self::search('\\b825\\s?gb\\b', $text)) {
@@ -96,8 +96,15 @@ final class Consoles extends Rule
         return false;
     }
 
+    /** "Dust Cover for Xbox Series X Console": what follows "for" is the platform it fits, not the item. */
+    private static function itemPart(string $titleText): string
+    {
+        return preg_split('~\\b(?:for|designed\\s+for|compatible\\s+with|fits)\\b~u', $titleText, 2)[0];
+    }
+
     private static function hasConsoleHardwareSignal(string $titleText, string $text): bool
     {
+        $titleText = self::itemPart($titleText);
         return (self::containsAny($titleText, [
             'console',
             'system',
@@ -109,7 +116,10 @@ final class Consoles extends Rule
             'blu-ray',
             'tablet only',
             'oled model',
-        ]) ?: (bool)((self::search('\\b(128|256|500|512|825)\\s?gb\\b|\\b(1|2)\\s?tb\\b', $titleText) ?: self::search('\\bnintendo\\s+switch\\s+(lite|oled)\\b', $titleText) ?: self::search('\\b(?:with|including|incl\\.?)\\s+(?:a\\s+)?(?:console|system)\\b', $text))));
+        ]) ?: (bool)((self::search('\\b(12|20|60|120|128|160|250|256|320|500|512|825)\\s?gb\\b|\\b(1|2)\\s?tb\\b', $titleText)
+            // "Xbox Series X Bundle + Wired Controller". Other platforms' "bundle" is as often games as hardware.
+            ?: self::search('\\bseries\\s*[xs]\\s+bundle\\b', $titleText)
+            ?: self::search('\\bnintendo\\s+switch\\s+(lite|oled)\\b', $titleText) ?: self::search('\\b(?:with|including|incl\\.?)\\s+(?:a\\s+)?(?:console|system)\\b', $text))));
     }
 
     private static function looksLikeAccessoryOrSoftwareIntent(string $titleText, string $text, array $attrs): bool
@@ -129,7 +139,7 @@ final class Consoles extends Rule
             '\\b(dock\\s+only|dock\\s+for|screen\\s+protector|sd\\s+card|memory\\s+card|stand\\s+for|grip\\s+for)\\b',
             '\\b(replacement\\s+part|replacement\\s+shell|replacement\\s+case)\\b',
             '\\b(console\\s+game|game\\s+cartridge|game\\s+card|video\\s+game|software\\s+only)\\b',
-            '\\b(charger|cable|controller|gamepad|case|bag|dock|stand|grip|game|software)\\b.{0,40}\\b(for|compatible with)\\b',
+            '\\b(charger|cable|controller|gamepad|case|cover|shell|skin|sleeve|bag|dock|stand|mount|bracket|fan|cooler|remote|grip|game|software)\\b.{0,40}\\b(for|compatible with)\\b',
         ];
         return (!$hardwareSignal && self::any($accessoryPatterns, static fn($pattern) => self::search($pattern, $titleText)));
     }
@@ -141,10 +151,23 @@ final class Consoles extends Rule
      */
     private static function isPeripheral(string $titleText): bool
     {
+        // Batteries, cameras and styluses are sold alone for every model, but sellers also list consoles with
+        // an "Improved Battery" (the Switch V2) or a "Battery Pack". They are the item only when nothing before
+        // them already names a console.
+        $part = self::search('(?<!\\bimproved\\s)(?<!\\bextended\\s)\\b(?:batter(?:y|ies|ie)|\\d+\\s?mah|'
+            . 'stylus(?:es)?|touch\\s+pens?|web-?cams?|cameras?|power\\s+banks?)\\b', $titleText);
+        if ($part) {
+            $before = mb_substr($titleText, 0, $part->start());
+            if (!self::hasConsoleHardwareSignal($before, $before)
+                && !self::search('\\b(?:with|plus|bundle|includ\\w*|incl?)\\b|\\bw/|\\+', $before)) {
+                return true;
+            }
+        }
         $peripheral = self::search('(?<!\\bno\\s)(?<!\\bwithout\\s)\\b(?:headsets?|headphones?|earbuds?|earphones?|mixamp|'
             . 'racing\\s+wheel|steering\\s+wheel|usb\\s+hub|cooling\\s+fans?|charging\\s+(?:station|base|stand|dock)|'
             . 'keyboard|disc\\s+drive\\s+for|optical\\s+disc\\s+drive|chargers?|adapters?|hubs?|'
-            . 'power\\s+(?:supply|supplies|suply|bricks?))\\b(?!\\s+port)', $titleText);
+            . 'power\\s+(?:supply|supplies|suply|bricks?)|(?:storage\\s+)?expansion\\s+cards?)\\b'
+            . '(?!\\s+(?:port|jack|socket|input))', $titleText);
         if (!$peripheral) {
             return false;
         }
@@ -165,6 +188,8 @@ final class Consoles extends Rule
             'case only',
             'no console',
             'empty box',
+            'insert only',
+            'inserts only',
             'packaging only',
             'controller only',
             'controller pair',
@@ -175,6 +200,11 @@ final class Consoles extends Rule
             'sports accessories',
             'replacement shell',
             'replacement case',
+            'mini fridge',
+            'hard drive for',
+            'hdd for',
+            'replacement hard drive',
+            'internal hard drive',
             'housing shell',
             'faceplate',
             'cover plate',
@@ -198,7 +228,6 @@ final class Consoles extends Rule
             'joy-cons only',
             'joycon pair',
             'joy-con pair',
-            'joy-con controller',
             'disc drive attachment',
             'disc drive blu ray attachment',
             'game only',
@@ -215,6 +244,8 @@ final class Consoles extends Rule
         }
         $accessoryUnlessHardware = self::containsAny($text, [
             'wireless controller',
+            'wired controller',
+            'joy-con controller',
             'power a controller',
             'wall charger',
             'usb-c charger',
@@ -264,7 +295,7 @@ final class Consoles extends Rule
             'console only',
             'tablet only',
             'oled model',
-        ]) ?: (bool)((self::search('\\b(500|512|825)\\s?gb\\b|\\b(1|2)\\s?tb\\b', $text) ?: self::search('\\bnintendo\\s+switch\\s+(lite|oled)\\b', $text))));
+        ]) ?: (bool)((self::search('\\b(12|20|60|120|160|250|320|500|512|825)\\s?gb\\b|\\b(1|2)\\s?tb\\b', $text) ?: self::search('\\bnintendo\\s+switch\\s+(lite|oled)\\b', $text) ?: self::search('\\bseries\\s*[xs]\\s+bundle\\b', $text))));
         $platformOnly = self::containsAny($text, [
             'playstation 5',
             'playstation 4',
@@ -299,7 +330,8 @@ final class Consoles extends Rule
 
     private static function playstationKey(array $attrs, string $titleText, string $text, string $storage): string
     {
-        if (!self::containsAny($text, ['playstation', 'ps5', 'ps4', 'ps3', 'vita'])) {
+        $vita = (bool)self::search('\\bvita\\b', $text);
+        if (!$vita && !self::containsAny($text, ['playstation', 'ps5', 'ps4', 'ps3'])) {
             return self::UNKNOWN_KEY;
         }
         if (self::search('\\b(playstation\\s*1|ps1|ps\\s*one)\\b', $titleText)) {
@@ -308,7 +340,8 @@ final class Consoles extends Rule
         if (self::search('\\b(playstation\\s*2|ps2)\\b', $titleText)) {
             return self::UNKNOWN_KEY;
         }
-        if ((str_contains($text, 'vita')) || (str_contains($text, 'ps vita')) || (str_contains($text, 'playstation vita'))) {
+        // A whole word, so "PlayVital" accessories are not a PS Vita.
+        if ($vita) {
             return 'sony-playstation-vita';
         }
         if ((str_contains($text, 'ps3')) || (str_contains($text, 'playstation 3'))) {
@@ -358,9 +391,15 @@ final class Consoles extends Rule
         return self::UNKNOWN_KEY;
     }
 
+    /** "Series X|S", "Series X/S" and "X & S" name the platform family, not the console being sold. */
+    private static function withoutFamilyName(string $text): string
+    {
+        return preg_replace('~\\b((?:series|one)\\s*)?x\\s*(?:\\||/|&|and)\\s*s\\b~iu', ' ', $text) ?? $text;
+    }
+
     private static function xboxSeriesVariant(string $titleText, string $text): string
     {
-        foreach ([$titleText, $text] as $candidate) {
+        foreach (array_map(self::withoutFamilyName(...), [$titleText, $text]) as $candidate) {
             $seriesX = (bool)(self::search('\\bseries\\s*x\\b|\\bxbox\\s*x\\b', $candidate));
             $seriesS = (bool)(self::search('\\bseries\\s*s\\b|\\bxbox\\s*s\\b', $candidate));
             if ($seriesX && !$seriesS) {
@@ -375,7 +414,7 @@ final class Consoles extends Rule
 
     private static function xboxOneVariant(string $titleText, string $text): string
     {
-        foreach ([$titleText, $text] as $candidate) {
+        foreach (array_map(self::withoutFamilyName(...), [$titleText, $text]) as $candidate) {
             $oneX = (bool)(self::search('\\bone\\s*x\\b', $candidate));
             $oneS = (bool)(self::search('\\bone\\s*s\\b', $candidate));
             if ($oneX && !$oneS) {
@@ -386,6 +425,13 @@ final class Consoles extends Rule
             }
         }
         return 'base';
+    }
+
+    /** A size can be assumed only when the title is the console, not a game or an accessory that names it. */
+    private static function namesConsoleItself(string $titleText): bool
+    {
+        return self::hasConsoleHardwareSignal($titleText, $titleText)
+            && !self::search('\\bvideo\\s+game\\b|\\bgame\\s+(?:disc|disk)\\b', $titleText);
     }
 
     private static function xboxKey(string $titleText, string $text, string $storage): string
@@ -400,12 +446,14 @@ final class Consoles extends Rule
             return 'microsoft-xbox-360';
         }
         if (str_contains($text, 'series')) {
-            if (!$storage) {
-                return self::UNKNOWN_KEY;
-            }
             $variant = self::xboxSeriesVariant($titleText, $text);
             if (!$variant) {
                 return self::UNKNOWN_KEY;
+            }
+            // eBay catalogue titles leave out the drive. A Series X is 1TB unless it says 2TB; a Series S is
+            // 512GB unless it is the 1TB Carbon Black. Without a size, the title must still name a console.
+            if (!$storage && self::namesConsoleItself($titleText)) {
+                $storage = ($variant === 'x' ? '1tb' : (str_contains($titleText, 'carbon black') ? '1tb' : '512gb'));
             }
             if (($variant === 'x') && (!in_array($storage, ['1tb', '2tb'], true))) {
                 return self::UNKNOWN_KEY;
@@ -416,10 +464,14 @@ final class Consoles extends Rule
             return 'microsoft-xbox-series-' . $variant . '-' . $storage;
         }
         if (str_contains($text, 'one')) {
+            $variant = self::xboxOneVariant($titleText, $text);
+            // The One X only shipped with 1TB; the One and One S came in several sizes.
+            if (!$storage && $variant === 'x' && self::namesConsoleItself($titleText)) {
+                $storage = '1tb';
+            }
             if (!$storage) {
                 return self::UNKNOWN_KEY;
             }
-            $variant = self::xboxOneVariant($titleText, $text);
             if (!in_array($storage, ['500gb', '1tb', '2tb'], true)) {
                 return self::UNKNOWN_KEY;
             }
@@ -478,11 +530,32 @@ final class Consoles extends Rule
         return 'nintendo-switch-base';
     }
 
+    /** eBay's Video Game Consoles category. */
+    private const CONSOLE_CATEGORY = '139971';
+
+    /**
+     * Enriched listings carry eBay's own category. One outside Video Game Consoles is an accessory, part or
+     * game whatever its title names, such as a Switch Lite battery or a Switch OLED screen protector.
+     */
+    private static function inOtherCategory(array $attrs): bool
+    {
+        foreach (['Browse categoryId', 'Trading PrimaryCategoryID'] as $key) {
+            $id = $attrs[$key] ?? null;
+            if (is_scalar($id) && trim((string)$id) !== '') {
+                return trim((string)$id) !== self::CONSOLE_CATEGORY;
+            }
+        }
+        return false;
+    }
+
     public static function consoleOrGameModelKey(array $attrs, string $title): ?string
     {
         $game = Games::key($attrs, $title);
         if ($game !== self::UNKNOWN_KEY) {
             return $game;
+        }
+        if (self::inOtherCategory($attrs)) {
+            return self::UNKNOWN_KEY;
         }
         $titleText = self::asText($title);
         $text = self::blob($attrs, $title);

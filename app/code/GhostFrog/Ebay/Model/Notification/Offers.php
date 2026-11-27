@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace GhostFrog\Ebay\Model\Notification;
 
+use GhostFrog\Ebay\Model\Comps\Eligibility;
 use GhostFrog\Ebay\Model\Comps\Listings;
 use GhostFrog\Ebay\Model\Comps\Pricing;
 use GhostFrog\Ebay\Model\Comps\Valuation;
+use GhostFrog\Ebay\Model\ModelKey\Pending;
 use GhostFrog\Ebay\Model\PriceRefresh\Settings;
 
 final class Offers
@@ -22,12 +24,14 @@ final class Offers
     public function forListing(int $id): array
     {
         $listing = $this->listings->live($id);
-        if ($listing === null) {
+        // An early key from collection can be wrong, so alerts wait until the checks confirm it.
+        if ($listing === null || Pending::is($listing['raw_attrs'])) {
             return [];
         }
 
         $value = $this->valuation->forLiveBatch([$listing])[$id] ?? [];
-        if (!isset($value['meets_target'])) {
+        // Faulty opportunities are listed in their own grid and do not alert.
+        if (!isset($value['meets_target']) || $value['condition_grade'] === Eligibility::FAULTY_GRADE) {
             return [];
         }
         $now = time();
@@ -46,7 +50,7 @@ final class Offers
             if ($price <= 0) {
                 continue;
             }
-            $pricing = $this->pricing->calculate((float)$value['sold_median'], (float)$price);
+            $pricing = $this->pricing->calculate((float)$value['sold_median'], (float)$price, $listing);
             if ($pricing['meets_target'] && $pricing['expected_profit'] > 0) {
                 $maxAge = $type === 'auction' ? $this->settings->auctionAlertAge() : $this->settings->binInterval();
                 $checked = Settings::timestamp($listing['last_price_checked_at']);

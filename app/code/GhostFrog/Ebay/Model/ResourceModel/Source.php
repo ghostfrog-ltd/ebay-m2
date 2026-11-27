@@ -5,17 +5,21 @@ declare(strict_types=1);
 namespace GhostFrog\Ebay\Model\ResourceModel;
 
 use GhostFrog\Ebay\Model\Collection\SourceSearches;
+use GhostFrog\Ebay\Model\Comps\Pricing;
+use GhostFrog\Ebay\Model\Comps\Valuation;
 use GhostFrog\Ebay\Model\Opportunities\Index;
 use GhostFrog\Ebay\Model\Opportunities\Rows;
 use Magento\Framework\App\ResourceConnection;
+use Magento\Framework\DB\Sql\Expression;
 use Magento\Framework\Exception\LocalizedException;
 use Magento\Framework\Exception\NoSuchEntityException;
 use Magento\Framework\Indexer\IndexerRegistry;
 use Throwable;
 
 /**
- * Admin access to collection sources. Only the enabled flag and scrape interval are editable:
- * the name is copied onto collected listings and the domain selects the search definition.
+ * Admin access to collection sources. The enabled flag, scrape interval, profit and sold-comp minimums,
+ * shipping cost and display colour are editable: the name is copied onto collected listings and the domain selects the search
+ * definition. A blank minimum or shipping cost falls back to the global Comps and Pricing setting.
  *
  * A disabled source pauses all of its listing work, not just collection. Workers apply
  * activeListing() or claim around it, so queued jobs wait and resume when it is re-enabled.
@@ -25,6 +29,8 @@ class Source
     public const TABLE = 'ghostfrog_ebay_sources';
     public const MIN_INTERVAL_MINUTES = 1;
     public const MAX_INTERVAL_MINUTES = 10080;
+    private const PRICING_FIELDS = ['min_profit', 'min_roi_percent', 'shipping', 'selling_fee_percent', 'min_comps'];
+    public const MAX_MIN_COMPS = 1000;
 
     public function __construct(
         private readonly ResourceConnection $resource,
@@ -44,6 +50,16 @@ class Source
             $resource->getConnection()->quoteIdentifier($resource->getTableName(self::TABLE)),
             $listingAlias
         );
+    }
+
+    /** Scalar subquery for the display colour of a listing's source, matched on source_id. */
+    public static function colourOf(ResourceConnection $resource, string $listingAlias = 'a'): Expression
+    {
+        return new Expression(sprintf(
+            '(SELECT gf_colour_source.colour FROM %s AS gf_colour_source WHERE gf_colour_source.id = %s.source_id)',
+            $resource->getConnection()->quoteIdentifier($resource->getTableName(self::TABLE)),
+            $listingAlias
+        ));
     }
 
     public function get(int $id): array
@@ -92,6 +108,57 @@ class Source
         return $value * 60;
     }
 
+    /** Normalises a blank-or-amount minimum, shipping cost or fee to a two-decimal string, or null for the global setting. */
+    public static function minimum(mixed $value, string $field): ?string
+    {
+        $value = is_string($value) ? trim($value) : $value;
+        if ($value === null || $value === '') {
+            return null;
+        }
+        $setting = match ($field) {
+            'min_roi_percent' => Pricing::TARGET_ROI,
+            'shipping' => Pricing::SHIPPING,
+            'selling_fee_percent' => Pricing::SELLING_FEE,
+            default => 'target_profit',
+        };
+        if (!Pricing::validSetting($value, $setting)) {
+            throw new LocalizedException(match ($field) {
+                'min_roi_percent' => __('Enter a minimum ROI from 0 to %1%, or leave it blank.', (int)Pricing::MAX_ROI_PERCENT),
+                'shipping' => __('Enter a non-negative shipping cost in GBP, or leave it blank.'),
+                'selling_fee_percent' => __('Enter a selling fee from 0 to 100%, or leave it blank.'),
+                default => __('Enter a non-negative minimum profit in GBP, or leave it blank.'),
+            });
+        }
+        return number_format((float)$value, 2, '.', '');
+    }
+
+    /** Parses the sold-comp minimum a model and grade needs before its listings are valued. */
+    public static function minComps(mixed $value): int
+    {
+        $value = is_string($value) ? trim($value) : $value;
+        $value = filter_var($value, FILTER_VALIDATE_INT, ['options' => [
+            'min_range' => 1,
+            'max_range' => self::MAX_MIN_COMPS,
+        ]]);
+        if ($value === false) {
+            throw new LocalizedException(__('Enter a minimum of sold comps between 1 and %1.', self::MAX_MIN_COMPS));
+        }
+        return $value;
+    }
+
+    /** Normalises a #rrggbb colour to lower case, or null when blank. */
+    public static function colour(mixed $value): ?string
+    {
+        $value = is_string($value) ? strtolower(trim($value)) : $value;
+        if ($value === null || $value === '') {
+            return null;
+        }
+        if (!is_string($value) || !preg_match('/\A#[0-9a-f]{6}\z/', $value)) {
+            throw new LocalizedException(__('Enter the colour as a hex value such as #1a73e8.'));
+        }
+        return $value;
+    }
+
     public function save(int $id, array $input, string $revision): void
     {
         if (!in_array($input['enabled'] ?? null, ['0', '1'], true) || !array_key_exists('interval_minutes', $input)) {
@@ -101,12 +168,27 @@ class Source
             'enabled' => (int)$input['enabled'],
             'scrape_interval_seconds' => self::intervalSeconds($input['interval_minutes']),
         ];
+        foreach (self::PRICING_FIELDS as $field) {
+            if (array_key_exists($field, $input)) {
+                $values[$field] = $field === 'min_comps'
+                    ? self::minComps($input[$field])
+                    : self::minimum($input[$field], $field);
+            }
+        }
+        if (array_key_exists('colour', $input)) {
+            $values['colour'] = self::colour($input['colour']);
+        }
 
         $db = $this->resource->getConnection();
         $db->beginTransaction();
         try {
             $source = $this->load($id, true);
-            $changes = array_diff_assoc($values, $this->editValues($source));
+            $current = $this->editValues($source);
+            $changes = array_filter(
+                $values,
+                static fn($value, string $field): bool => $value !== $current[$field],
+                ARRAY_FILTER_USE_BOTH
+            );
             if ($changes !== []) {
                 if (!hash_equals($this->revision($source), $revision)) {
                     throw new LocalizedException(
@@ -127,7 +209,8 @@ class Source
             $db->rollBack();
             throw $exception;
         }
-        if (($changes['enabled'] ?? null) === 1) {
+        $repriced = array_intersect_key($changes, array_flip(self::PRICING_FIELDS)) !== [];
+        if (($changes['enabled'] ?? null) === 1 || ($repriced && ($changes['enabled'] ?? $current['enabled']) === 1)) {
             $this->rebuildOpportunities();
         }
     }
@@ -184,7 +267,7 @@ class Source
         $source = $db->fetchRow($db->select()
             ->from($this->resource->getTableName(self::TABLE), [
                 'id', 'name', 'domain', 'type', 'niche', 'base_url', 'enabled', 'scrape_interval_seconds',
-                'last_scraped_at', 'created_at_utc', 'updated_at_utc',
+                'min_profit', 'min_roi_percent', 'shipping', 'selling_fee_percent', 'min_comps', 'colour', 'last_scraped_at', 'created_at_utc', 'updated_at_utc',
             ])
             ->where('id = ?', $id)
             ->forUpdate($lock));
@@ -196,9 +279,16 @@ class Source
 
     private function editValues(array $source): array
     {
-        return [
+        $values = [
             'enabled' => (int)$source['enabled'] === 1 ? 1 : 0,
             'scrape_interval_seconds' => (int)$source['scrape_interval_seconds'],
         ];
+        foreach (['min_profit', 'min_roi_percent', 'shipping', 'selling_fee_percent'] as $field) {
+            $value = $source[$field] ?? null;
+            $values[$field] = $value === null ? null : number_format((float)$value, 2, '.', '');
+        }
+        $values['min_comps'] = (int)($source['min_comps'] ?? Valuation::DEFAULT_MINIMUM);
+        $values['colour'] = isset($source['colour']) && $source['colour'] !== '' ? strtolower($source['colour']) : null;
+        return $values;
     }
 }

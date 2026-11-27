@@ -123,6 +123,7 @@ class Index implements ActionInterface, MviewActionInterface
             }
             if ($old === null || $new === null || $old['model_key'] !== $new['model_key']
                 || $old['condition_grade'] !== $new['condition_grade'] || $old['final_price'] !== $new['final_price']
+                || $old['sale_type'] !== $new['sale_type']
             ) {
                 foreach (array_filter([$old, $new]) as $sale) {
                     $affected[$sale['model_key']][$sale['condition_grade']] = true;
@@ -156,6 +157,7 @@ class Index implements ActionInterface, MviewActionInterface
                         'model_key' => $group[0],
                         'condition_grade' => $group[1],
                         'final_price' => $listing['final_price'],
+                        'sale_type' => self::saleType($listing['sale_type'] ?? null),
                     ],
                     'end_time' => $listing['end_time'],
                 ];
@@ -167,27 +169,45 @@ class Index implements ActionInterface, MviewActionInterface
     private function statistics(array $sales, string $computedAt): array
     {
         $groups = [];
+        $bin = [];
         foreach ($sales as $sale) {
             $groups[$sale['model_key']][$sale['condition_grade']][] = (float)$sale['final_price'];
+            if (($sale['sale_type'] ?? null) === 'bin') {
+                $bin[$sale['model_key']][$sale['condition_grade']][] = (float)$sale['final_price'];
+            }
         }
 
         $rows = [];
         foreach ($groups as $key => $grades) {
             foreach ($grades as $grade => $prices) {
-                sort($prices, SORT_NUMERIC);
-                $count = count($prices);
-                $middle = intdiv($count, 2);
+                $binPrices = $bin[$key][$grade] ?? [];
                 $rows[] = [
                     'model_key' => $key,
                     'condition_grade' => $grade,
-                    'median_final_price' => ($prices[intdiv($count - 1, 2)] + $prices[$middle]) / 2,
-                    'mean_final_price' => round(array_sum($prices) / $count, 8),
-                    'samples' => $count,
+                    'median_final_price' => self::median($prices),
+                    'mean_final_price' => round(array_sum($prices) / count($prices), 8),
+                    'samples' => count($prices),
                     'computed_at' => $computedAt,
+                    'bin_median_final_price' => $binPrices === [] ? null : self::median($binPrices),
+                    'bin_samples' => count($binPrices),
                 ];
             }
         }
         return $rows;
+    }
+
+    private static function median(array $prices): float
+    {
+        sort($prices, SORT_NUMERIC);
+        $count = count($prices);
+        return ($prices[intdiv($count - 1, 2)] + $prices[intdiv($count, 2)]) / 2;
+    }
+
+    /** Auction, bin or both, as stored on the listing; anything else is kept as unknown (null). */
+    private static function saleType(mixed $type): ?string
+    {
+        $type = strtolower(trim((string)$type));
+        return in_array($type, ['auction', 'bin', 'both'], true) ? $type : null;
     }
 
     private function changedValuations(array $before, array $after): array
@@ -204,6 +224,8 @@ class Index implements ActionInterface, MviewActionInterface
             $previous = $old[$key][$grade] ?? [];
             if ((int)($previous['samples'] ?? 0) !== $row['samples']
                 || (float)($previous['median_final_price'] ?? 0) !== $row['median_final_price']
+                || (int)($previous['bin_samples'] ?? 0) !== $row['bin_samples']
+                || (float)($previous['bin_median_final_price'] ?? 0) !== (float)$row['bin_median_final_price']
             ) {
                 $affected[$key][$grade] = true;
             }

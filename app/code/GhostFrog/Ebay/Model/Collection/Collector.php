@@ -58,7 +58,7 @@ final class Collector
                     continue;
                 }
                 try {
-                    $results[$key] = ['status' => 'collected', 'listings' => $this->collect($source, $now)];
+                    $results[$key] = ['status' => 'collected'] + $this->collect($source, $now);
                 } catch (QuotaUnavailable $exception) {
                     $results[$key] = [
                         'status' => 'deferred_api_quota',
@@ -129,13 +129,16 @@ final class Collector
         ];
     }
 
-    private function collect(array $source, DateTimeImmutable $now): int
+    private function collect(array $source, DateTimeImmutable $now): array
     {
         $definition = SourceSearches::DEFINITIONS[$source['domain']];
         $sellerMode = isset($definition['seller']);
         $rows = [];
         $unavailable = [];
-        foreach ($this->browse->search($definition, $now) as [$saleType, $item]) {
+        $lastRun = $source['last_scraped_at'] === null
+            ? null : new DateTimeImmutable($source['last_scraped_at'], new DateTimeZone('UTC'));
+        $search = $this->browse->search($definition, $now, $lastRun, (int)$source['scrape_interval_seconds']);
+        foreach ($search as [$saleType, $item]) {
             $id = $this->summary->externalId($item, $sellerMode);
             if ($id === '') {
                 continue;
@@ -153,7 +156,40 @@ final class Collector
         // Overlapping searches may return both an unavailable and a live observation.
         $unavailable = array_keys(array_diff_key($unavailable, $rows));
         $staleMinutes = max(1, (int)$this->setting('listings/gf_listing_stale_minutes', '180'));
-        return $this->listings->save($source, $rows, $unavailable, $now, $now->modify("-$staleMinutes minutes"));
+        $saved = $this->listings->save($source, $rows, $unavailable, $now, $now->modify("-$staleMinutes minutes"));
+        return ['listings' => $saved] + $this->searchReport($source['domain'], $search->getReturn() ?? []);
+    }
+
+    /**
+     * Logs each category search's pages and stop reason. A capped search still had
+     * unseen listings, and a high repeat share means its pages mostly re-read old ones.
+     */
+    private function searchReport(string $domain, array $stats): array
+    {
+        if ($stats === []) {
+            return [];
+        }
+        $calls = 0;
+        $items = 0;
+        $repeats = 0;
+        $capped = [];
+        foreach ($stats as $row) {
+            $calls += $row['pages'];
+            $items += $row['items'];
+            $repeats += $row['repeats'];
+            if (in_array($row['stop'], [SearchPaging::CAPPED, SearchPaging::QUOTA], true)) {
+                $capped[] = sprintf('%s %s "%s" (%s)', $row['sale_type'], $row['category'], $row['query'], $row['stop']);
+            }
+            $this->logger->info('GhostFrog search {source} {sale_type} {category} "{query}": '
+                . '{pages} pages, {items} listings, {repeats} repeats, stopped {stop}.', ['source' => $domain] + $row);
+        }
+        return [
+            'searches' => count($stats),
+            'search_calls' => $calls,
+            'results' => $items,
+            'bin_repeats' => $repeats,
+            'incomplete' => $capped,
+        ];
     }
 
     private function setting(string $path, string $default): string

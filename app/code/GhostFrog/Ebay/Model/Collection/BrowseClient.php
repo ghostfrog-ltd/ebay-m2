@@ -16,6 +16,9 @@ final class BrowseClient
     private const API = 'https://api.ebay.com';
     private const BROWSE = '/buy/browse/v1/';
     private const PAGE_SIZE = 50;
+    // Extra search pages stop when the Browse balance above the discovery reserve falls
+    // below this, so they cannot use up item refreshes or later runs' first pages.
+    private const FOLLOW_UP_HEADROOM = 500;
 
     public function __construct(
         private readonly CurlFactory $curlFactory,
@@ -28,9 +31,18 @@ final class BrowseClient
     /**
      * Yield summaries with their requested sale type. Collection commits after the
      * entire source succeeds, so a failed query cannot count as a completed run.
+     *
+     * Category searches page until they reach what the previous run covered (see
+     * SearchPaging). The generator returns one stats row per category search.
      */
-    public function search(array $definition, DateTimeImmutable $now): iterable
-    {
+    public function search(
+        array $definition,
+        DateTimeImmutable $now,
+        ?DateTimeImmutable $lastRun = null,
+        int $intervalSeconds = 3600
+    ): iterable {
+        $stats = [];
+        $maxPages = max(1, (int)($definition['max_pages'] ?? SearchPaging::DEFAULT_MAX_PAGES));
         $saleTypes = $definition['sale_types'] ?? ['bin', 'auction'];
         foreach ($saleTypes as $saleType) {
             $params = [
@@ -46,20 +58,60 @@ final class BrowseClient
 
             $extra = $definition['filters'][$saleType] ?? '';
             $categoryFilter = $extra === '' ? $buyingFilter : $buyingFilter . ',' . $extra;
+            $boundary = SearchPaging::boundary($saleType, $now, $lastRun, $intervalSeconds);
             foreach ($definition['categories'] as $category) {
                 $queries = $definition['category_queries'][$category] ?? $definition['queries'];
                 foreach ($queries as $query) {
-                    $payload = $this->get($params + [
-                        'q' => $query,
-                        'category_ids' => $category,
-                        'filter' => $categoryFilter,
-                    ], Usage::CATEGORY_SEARCH);
-                    foreach ($this->summaries($payload) as $item) {
-                        yield [$saleType, $item];
+                    $row = [
+                        'sale_type' => $saleType,
+                        'category' => $category,
+                        'query' => $query,
+                        'pages' => 0,
+                        'items' => 0,
+                        'repeats' => 0,
+                        'stop' => null,
+                    ];
+                    while ($row['stop'] === null) {
+                        if ($row['pages'] > 0 && !$this->followUpAllowed()) {
+                            $row['stop'] = SearchPaging::QUOTA;
+                            break;
+                        }
+                        $payload = $this->get($params + [
+                            'q' => $query,
+                            'category_ids' => $category,
+                            'filter' => $categoryFilter,
+                            'offset' => self::PAGE_SIZE * $row['pages'],
+                        ], Usage::CATEGORY_SEARCH);
+                        $items = $this->summaries($payload);
+                        $row['pages']++;
+                        $row['items'] += count($items);
+                        $row['repeats'] += SearchPaging::repeats($saleType, $items, $lastRun);
+                        foreach ($items as $item) {
+                            yield [$saleType, $item];
+                        }
+                        $row['stop'] = SearchPaging::stopReason(
+                            $saleType,
+                            $items,
+                            $boundary,
+                            !empty($payload['next']),
+                            $row['pages'],
+                            $maxPages
+                        );
                     }
+                    $stats[] = $row;
                 }
             }
         }
+        return $stats;
+    }
+
+    private function followUpAllowed(): bool
+    {
+        $quota = $this->usage->quota(Usage::BROWSE);
+        $headroom = $quota['refresh_remaining'] ?? null;
+        return $headroom === null
+            ? ($quota['remaining'] ?? 0) >= 2 * self::FOLLOW_UP_HEADROOM
+            : $headroom >= self::FOLLOW_UP_HEADROOM;
     }
 
     private function sellerSearch(

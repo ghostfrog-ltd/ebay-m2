@@ -417,7 +417,7 @@ final class Components extends Rule
         if (self::hasAny($text, self::BOX_ONLY_TERMS) || self::hasAny($text, self::LENS_ACCESSORY_TERMS)) {
             return self::UNKNOWN_KEY;
         }
-        if (self::hasAny($text, self::BUNDLE_TERMS) || self::search('\\b(faulty|spares|for parts|for repair)\\b', $text)) {
+        if (self::hasAny($text, self::BUNDLE_TERMS) || self::search('\\bspares\\b', $text)) {
             return self::UNKNOWN_KEY;
         }
         $focal = self::extractLensFocal($text);
@@ -540,7 +540,7 @@ final class Components extends Rule
         if (self::hasAny($text, self::BOX_ONLY_TERMS) || self::hasAny($text, self::INDUSTRIAL_ACCESSORY_TERMS)) {
             return self::UNKNOWN_KEY;
         }
-        if (self::hasAny($text, self::BUNDLE_TERMS) || self::search('\\b(faulty|spares|for parts|for repair|untested)\\b', $text)) {
+        if (self::hasAny($text, self::BUNDLE_TERMS) || self::search('\\bspares\\b', $text)) {
             return self::UNKNOWN_KEY;
         }
         $industrialPatterns = [

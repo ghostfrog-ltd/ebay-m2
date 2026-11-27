@@ -62,7 +62,7 @@ final class Games
     private const JUNK = '~\b(?:manual only|case only|box only|cover only|inlay|artwork|poster|strategy guide|guide ?book|'
         . 'art ?book|soundtrack|steelbook only|replacement case|no game|empty|disc \d of \d|download code|digital code|'
         . 'code only|code in a box|code-in-a-box|dlc|voucher|amiibo|figure|figurine|reproduction|repro|'
-        . 'wata|vga|cgc|ukg|graded|psa \d|not working|faulty|damaged disc|cracked)\b~';
+        . 'wata|vga|cgc|ukg|graded|psa \d|damaged disc|cracked)\b~';
 
     private const EDITIONS = [
         'collectors' => "collector'?s(?: edition)?",

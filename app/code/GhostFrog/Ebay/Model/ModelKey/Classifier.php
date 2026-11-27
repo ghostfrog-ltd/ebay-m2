@@ -30,17 +30,26 @@ final class Classifier
     ) {
     }
 
+    /** Key for a stored listing row, from its title, raw_attrs (JSON or decoded) and enrichment columns. */
+    public function forListing(string $source, array $listing): string
+    {
+        $attrs = $listing['raw_attrs'] ?? [];
+        if (is_string($attrs)) {
+            $attrs = json_decode($attrs, true);
+        }
+        $fields = array_intersect_key($listing, array_flip(['brand', 'model_name', 'storage_gb', 'colour', 'epid']));
+        return $this->key($source, (string)($listing['title'] ?? ''), (is_array($attrs) ? $attrs : []) + $fields);
+    }
+
     public function key(string $source, string $title, array $attrs): string
     {
         if (trim($title) === '') {
             return 'unknown';
         }
         $source = strtolower(trim($source));
-        // Packaging, empty boxes and explicit repair listings are unsafe product identities.
-        // RC keeps faulty listings identified; comps eligibility still excludes them.
-        if ($source !== 'ebay-rc' && preg_match('~\b(?:box only|empty box|packaging only|case only|charger only|'
-            . 'for parts|parts only|parts (?:or|and) repair|spares (?:or|and) repair|repair only)\b~i', $title)
-        ) {
+        // Packaging and empty boxes are not the product. Faulty and repair listings keep their identity:
+        // comps eligibility values them only against other faulty sales.
+        if ($source !== 'ebay-rc' && preg_match('~\b(?:box only|empty box|packaging only|case only|charger only)\b~i', $title)) {
             return 'unknown';
         }
         foreach (['Brand' => 'brand', 'Model' => 'model_name', 'Colour' => 'colour', 'ePID' => 'epid'] as $key => $column) {
@@ -99,7 +108,7 @@ final class Classifier
         $junk = '~\b(?:case for|cover for|screen protector|tempered glass|replacement (?:screen|keyboard|battery)|'
             . 'screen assembly|lcd assembly|digitizer|logic ?board|motherboard|housing|back glass|front glass|'
             . 'sim tray|flex cable|(?:charger|cable|case|box) only|empty box|dummy phone|display phone|'
-            . 'for parts|spares (?:and|or) repair|repair only|activation lock(?:ed)?|icloud locked|mdm locked|job lot)\b~';
+            . 'activation lock(?:ed)?|icloud locked|mdm locked|job lot)\b~';
         if (Evidence::any($junk, $texts)) {
             return 'unknown';
         }

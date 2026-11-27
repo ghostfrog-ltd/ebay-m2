@@ -336,12 +336,12 @@
                     <comment>Requires a Slack Webhook URL in the Slack configuration below. Alerts are disabled by default.</comment>
                 </field>
                 <field id="prequalification_enabled" translate="label comment" type="select" sortOrder="90" showInDefault="1">
-                    <label>Check Stale Near-Close Apple Auctions</label>
+                    <label>Check Stale Near-Close Auctions</label>
                     <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
                     <comment>Disabled by default. Uses stored bids to select listings for a one-time Browse price check.</comment>
                 </field>
                 <field id="prequalification_hours" translate="label" type="text" sortOrder="100" showInDefault="1">
-                    <label>Apple Auction Window (Hours)</label>
+                    <label>Near-Close Auction Window (Hours)</label>
                     <validate>required-entry validate-digits validate-number-range number-range-1-24</validate>
                 </field>
                 <field id="prequalification_batch" translate="label" type="text" sortOrder="110" showInDefault="1">
@@ -355,19 +355,32 @@
             </group>
             <group id="comps" translate="label" sortOrder="56" showInDefault="1">
                 <label>Comps and Pricing</label>
-                <field id="target_profit" translate="label" type="text" sortOrder="10" showInDefault="1">
+                <field id="target_profit" translate="label comment" type="text" sortOrder="10" showInDefault="1">
                     <label>Target Profit (GBP)</label>
+                    <comment>Minimum profit for every source without its own minimum.</comment>
                     <backend_model>GhostFrog\Ebay\Model\Comps\PriceSetting</backend_model>
                     <validate>required-entry validate-number validate-not-negative-number</validate>
                 </field>
-                <field id="selling_fee_percent" translate="label" type="text" sortOrder="20" showInDefault="1">
+                <field id="target_roi_percent" translate="label comment" type="text" sortOrder="15" showInDefault="1">
+                    <label>Target ROI (%)</label>
+                    <comment>Profit must also be at least this share of the buy price, so dearer items need more profit. 0 turns it off. A source can set its own minimums.</comment>
+                    <backend_model>GhostFrog\Ebay\Model\Comps\PriceSetting</backend_model>
+                    <validate>required-entry validate-number validate-not-negative-number</validate>
+                </field>
+                <field id="selling_fee_percent" translate="label comment" type="text" sortOrder="20" showInDefault="1">
                     <label>Selling Fee (%)</label>
+                    <comment>Share of the resale price eBay keeps when you sell. A source can set its own fee.</comment>
                     <backend_model>GhostFrog\Ebay\Model\Comps\PriceSetting</backend_model>
                     <validate>required-entry validate-number validate-number-range number-range-0-100</validate>
                 </field>
+                <field id="resale_basis" translate="label comment" type="select" sortOrder="25" showInDefault="1">
+                    <label>Resale Price Basis</label>
+                    <comment>The sold prices a resale is valued from. Choose Buy It Now if you relist at a fixed price: it uses the median of the model and grade's Buy It Now sales when there are at least 5, and all sales otherwise.</comment>
+                    <source_model>GhostFrog\Ebay\Model\Comps\ResaleBasis</source_model>
+                </field>
                 <field id="shipping" translate="label comment" type="text" sortOrder="30" showInDefault="1">
                     <label>Shipping (GBP)</label>
-                    <comment>Combined inbound and outbound shipping. The estimate also deducts £5 for packaging and reserve.</comment>
+                    <comment>Combined inbound and outbound shipping, used when a listing shows no postage of its own. The estimate also deducts £5 for packaging and reserve, and eBay's Buyer Protection fee on the buy price. A source can set its own shipping.</comment>
                     <backend_model>GhostFrog\Ebay\Model\Comps\PriceSetting</backend_model>
                     <validate>required-entry validate-number validate-not-negative-number</validate>
                 </field>

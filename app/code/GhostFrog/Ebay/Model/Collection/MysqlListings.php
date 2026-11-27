@@ -7,6 +7,8 @@ namespace GhostFrog\Ebay\Model\Collection;
 use DateTimeImmutable;
 use DateTimeZone;
 use GhostFrog\Ebay\Model\Enrichment\Queue;
+use GhostFrog\Ebay\Model\ModelKey\Classifier;
+use GhostFrog\Ebay\Model\ModelKey\Pending;
 use Magento\Framework\App\ResourceConnection;
 use Magento\Framework\DB\Adapter\AdapterInterface;
 use Magento\Framework\DB\Sql\Expression;
@@ -22,7 +24,8 @@ final class MysqlListings
     public function __construct(
         private readonly ResourceConnection $resource,
         private readonly LockManagerInterface $lock,
-        private readonly Queue $enrichmentQueue
+        private readonly Queue $enrichmentQueue,
+        private readonly Classifier $classifier
     ) {
     }
 
@@ -131,7 +134,7 @@ final class MysqlListings
         string $seen
     ): bool {
         $existing = $db->fetchRow($db->select()->from($table, [
-            'id', 'status', 'finalized', 'last_seen_at', 'raw_attrs',
+            'id', 'status', 'finalized', 'last_seen_at', 'raw_attrs', 'model_key',
         ])->where('external_id = ?', $externalId)->forUpdate());
 
         $row['status'] = 'live';
@@ -140,7 +143,7 @@ final class MysqlListings
             $row['end_time'] = $this->utcDateTime(new DateTimeImmutable($row['end_time']));
         }
         if (!$existing) {
-            $db->insert($table, $row + [
+            $db->insert($table, $this->withEarlyKey($source, $row) + [
                 'source' => isset(SourceSearches::DEFINITIONS[$source['domain']]['seller'])
                     ? $source['domain'] : $source['name'],
                 'source_id' => $source['id'],
@@ -170,8 +173,27 @@ final class MysqlListings
             $incoming = (array)json_decode($row['raw_attrs'], false, 512, JSON_THROW_ON_ERROR);
             $row['raw_attrs'] = json_encode((object)array_replace((array)$attrs, $incoming), JSON_THROW_ON_ERROR);
         }
+        // A blank key means the listing has never been classified; "unknown" is a finished answer.
+        if (trim((string)$existing['model_key']) === '') {
+            $row = $this->withEarlyKey($source, $row);
+        }
         $db->update($table, $row, ['id = ?' => $existing['id']]);
         return true;
+    }
+
+    /**
+     * Keys the listing from its title and search evidence so it can be valued before enrichment and
+     * condition checks finish. The key stays marked as pending until the model-key worker confirms it.
+     */
+    private function withEarlyKey(array $source, array $row): array
+    {
+        $key = $this->classifier->forListing((string)$source['domain'], $row);
+        if (str_starts_with($key, 'unknown')) {
+            return $row;
+        }
+        $attrs = (array)json_decode((string)$row['raw_attrs'], false, 512, JSON_THROW_ON_ERROR);
+        $attrs[Pending::FLAG] = true;
+        return ['model_key' => $key, 'raw_attrs' => json_encode((object)$attrs, JSON_THROW_ON_ERROR)] + $row;
     }
 
     private function assertDecimalPrices(AdapterInterface $db, string $listings, string $history): void
