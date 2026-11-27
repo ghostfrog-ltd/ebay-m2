@@ -11,6 +11,7 @@
       <ShippingAddress><Name>Somebody</Name><Street1>1 High St</Street1><PostalCode>AB1 2CD</PostalCode></ShippingAddress>
       <SellerUserID>switch_seller_99</SellerUserID>
       <SellerEmail>seller@example.com</SellerEmail>
+      <MonetaryDetails><Payments><Payment><Payee type="eBayUser">payee_seller_77</Payee><Payer type="eBayUser">payer_me_88</Payer><PaymentAmount currencyID="GBP">175.00</PaymentAmount></Payment></Payments></MonetaryDetails>
       <ShippingServiceSelected>
         <ShippingService>UK_RoyalMailSecondClassStandard</ShippingService>
         <ShippingServiceCost currencyID="GBP">4.99</ShippingServiceCost>
@@ -24,6 +25,7 @@
           <Item>
             <ItemID>256789012345</ItemID>
             <Title>Nintendo Switch OLED White Boxed</Title>
+            <Location>Smalltown</Location>
             <ListingType>Chinese</ListingType>
           </Item>
           <QuantityPurchased>1</QuantityPurchased>

@@ -67,6 +67,7 @@ class Importer
             foreach ($parsed as [$units, $raw]) {
                 foreach ($units as $unit) {
                     $counts['fetched']++;
+                    $unit = self::withCoreMethod($unit, $predictions[$unit['ebay_item_id']] ?? null);
                     try {
                         $result = $this->store->upsert((int)$account->getId(), $unit,
                             $predictions[$unit['ebay_item_id']] ?? null, $raw);
@@ -110,6 +111,20 @@ class Importer
             $from = min($now - $this->settings->refreshDays() * 86400, $last - 86400);
         }
         return [gmdate('Y-m-d H:i:s', max($from, $now - self::MAX_LOOKBACK_SECONDS)), gmdate('Y-m-d H:i:s', $now)];
+    }
+
+    /**
+     * eBay's buyer view rarely says how an item was sold. When it does not, core's record of the listing can:
+     * a listing core saw only as an auction was won at auction. Buy It Now and Best Offer stay unknown, since a
+     * Buy It Now listing that accepts offers could have gone either way.
+     */
+    public static function withCoreMethod(array $unit, ?array $prediction): array
+    {
+        if ($unit['purchase_method'] === OrderParser::METHOD_UNKNOWN && ($prediction['sale_type'] ?? null) === 'auction') {
+            $unit['purchase_method'] = OrderParser::METHOD_AUCTION;
+            $unit['purchase_method_source'] = 'core';
+        }
+        return $unit;
     }
 
     private function predictions(array $itemIds): array

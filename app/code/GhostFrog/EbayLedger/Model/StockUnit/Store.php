@@ -68,7 +68,6 @@ class Store
         $row = $unit + [
             'account_id' => $accountId,
             'status' => $unit['shipped_at'] !== null ? Status::IN_TRANSIT : Status::PURCHASED,
-            'purchase_method_source' => $unit['purchase_method'] === 'unknown' ? null : 'ebay',
             'raw_payload' => $raw,
             'imported_at' => gmdate('Y-m-d H:i:s'),
         ];
@@ -112,7 +111,7 @@ class Store
             ]));
             if ($existing['purchase_method_source'] !== 'manual') {
                 $changes['purchase_method'] = $unit['purchase_method'];
-                $changes['purchase_method_source'] = $unit['purchase_method'] === 'unknown' ? null : 'ebay';
+                $changes['purchase_method_source'] = $unit['purchase_method_source'];
             }
             if ($existing['status'] === Status::PURCHASED && $unit['shipped_at'] !== null) {
                 $changes['status'] = Status::IN_TRANSIT;

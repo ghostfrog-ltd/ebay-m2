@@ -16,7 +16,7 @@ class RedactorTest extends TestCase
         $order = Xml::list(Xml::toArray($xml)['OrderArray']['Order'])[0];
         $json = json_encode(Redactor::clean($order));
 
-        foreach (['Somebody', 'High St', 'AB1 2CD', 'switch_seller_99', 'example.com', 'UserFirstName'] as $personal) {
+        foreach (['Somebody', 'High St', 'AB1 2CD', 'switch_seller_99', 'example.com', 'UserFirstName', 'payee_seller_77', 'payer_me_88', 'Smalltown'] as $personal) {
             $this->assertStringNotContainsString($personal, $json);
         }
         foreach (['12-34567-89012', '256789012345', '186.07', 'Nintendo Switch OLED'] as $kept) {
