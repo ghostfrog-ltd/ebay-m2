@@ -26,6 +26,9 @@ $fields = [
     .gfs-view th, .gfs-view td { border-bottom: 1px solid #e3e3e3; padding: .35rem .8rem; text-align: left; vertical-align: top; }
     .gfs-view th { width: 14rem; color: #514943; font-weight: 600; }
     .gfs-view pre { background: #f8f8f8; border: 1px solid #e3e3e3; padding: 1rem; max-height: 32rem; overflow: auto; font-size: 12px; }
+    .gfs-view .gfs-why { max-width: 60rem; background: #f1f8fd; border-left: 4px solid #1979c3; padding: .6rem 1.2rem; margin-bottom: 1.5rem; }
+    .gfs-view .gfs-why h3 { margin: .3rem 0 .5rem; }
+    .gfs-view .gfs-why p { margin: 0 0 .5rem; line-height: 1.5; }
     .gfs-view .gfs-note { background: #fffbe5; border: 1px solid #e8d48b; padding: .6rem 1rem; margin-bottom: 1.5rem; }
 </style>
 <div class="gfs-view">
@@ -35,6 +38,12 @@ $fields = [
             <a href="<?= $escaper->escapeUrl($url) ?>" target="_blank" rel="noopener noreferrer">(<?= $escaper->escapeHtml(__('eBay')) ?>)</a>
         <?php endif; ?>
     </h2>
+    <div class="gfs-why">
+        <h3><?= $escaper->escapeHtml(__('Why')) ?></h3>
+        <?php foreach ($block->explanation($decision) as $line): ?>
+            <p><?= $escaper->escapeHtml($line) ?></p>
+        <?php endforeach; ?>
+    </div>
     <table>
         <?php foreach ($fields as $label => $value): ?>
             <tr><th><?= $escaper->escapeHtml(__($label)) ?></th><td><?= $escaper->escapeHtml((string)$value) ?></td></tr>
