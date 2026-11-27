@@ -15,7 +15,7 @@ class StockUnitCollection extends SearchResult
             'ebay_item_id', 'unit_index', 'line_quantity', 'title', 'currency', 'item_price', 'postage_paid',
             'other_costs', 'total_cost', 'purchase_method', 'purchased_at', 'paid_at', 'shipped_at',
             'ebay_order_status', 'status', 'listing_id', 'model_key', 'predicted_grade', 'predicted_resale',
-            'predicted_comp_count', 'imported_at',
+            'predicted_comp_count', 'imported_at', 'received_at', 'actual_grade', 'refund_amount',
         ])->joinLeft(['account' => $this->getTable('ghostfrog_ebayledger_account')],
             'account.account_id = main_table.account_id', ['account_label' => 'label']);
         $this->addFilterToMap('account_id', 'main_table.account_id');

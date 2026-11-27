@@ -56,7 +56,16 @@
             "prediction": true,
             "raw_payload": true,
             "imported_at": true,
-            "updated_at": true
+            "updated_at": true,
+            "received_at": true,
+            "actual_grade": true,
+            "contents": true,
+            "faults": true,
+            "notes": true,
+            "photos": true,
+            "refund_amount": true,
+            "refunded_at": true,
+            "inspected_at": true
         },
         "index": {
             "GHOSTFROG_EBAYLEDGER_STOCK_UNIT_STATUS": true,

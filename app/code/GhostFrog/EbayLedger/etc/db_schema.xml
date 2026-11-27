@@ -56,6 +56,15 @@
         <column xsi:type="int" name="predicted_comp_count" unsigned="true" nullable="true"/>
         <column xsi:type="json" name="prediction" nullable="true" comment="Core's view of the item when imported"/>
         <column xsi:type="json" name="raw_payload" nullable="true" comment="eBay order, personal details removed"/>
+        <column xsi:type="date" name="received_at" nullable="true"/>
+        <column xsi:type="varchar" name="actual_grade" length="10" nullable="true" comment="Your grade once it arrived"/>
+        <column xsi:type="json" name="contents" nullable="true" comment="Parts that arrived, as a list"/>
+        <column xsi:type="text" name="faults" nullable="true"/>
+        <column xsi:type="text" name="notes" nullable="true"/>
+        <column xsi:type="json" name="photos" nullable="true" comment="Files under pub/media/ghostfrog_ledger/stock"/>
+        <column xsi:type="decimal" name="refund_amount" scale="2" precision="12" nullable="false" default="0" comment="Refunded by the seller"/>
+        <column xsi:type="date" name="refunded_at" nullable="true"/>
+        <column xsi:type="datetime" name="inspected_at" nullable="true" comment="UTC, when the receive form was last saved"/>
         <column xsi:type="datetime" name="imported_at" nullable="false" comment="UTC"/>
         <column xsi:type="timestamp" name="updated_at" nullable="false" default="CURRENT_TIMESTAMP" on_update="true"/>
         <constraint xsi:type="primary" referenceId="PRIMARY">
