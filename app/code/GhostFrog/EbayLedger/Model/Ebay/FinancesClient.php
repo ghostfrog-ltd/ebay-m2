@@ -47,6 +47,10 @@ class FinancesClient
             ] + $this->keys->sign('GET', $url));
             $client->get($url);
             $status = (int)$client->getStatus();
+            if ($status === 204) {
+                // eBay answers 204 No Content when nothing falls in the window.
+                break;
+            }
             $data = json_decode((string)$client->getBody(), true);
             if ($status !== 200 || !is_array($data)) {
                 $message = is_array($data) ? (string)($data['errors'][0]['message'] ?? '') : '';
