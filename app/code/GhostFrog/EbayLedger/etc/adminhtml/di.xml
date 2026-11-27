@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <type name="Magento\Framework\View\Element\UiComponent\DataProvider\CollectionFactory">
+        <arguments>
+            <argument name="collections" xsi:type="array">
+                <item name="ghostfrog_ebayledger_accounts_data_source" xsi:type="string">GhostFrog\EbayLedger\Model\ResourceModel\Grid\AccountCollection</item>
+                <item name="ghostfrog_ebayledger_stock_units_data_source" xsi:type="string">GhostFrog\EbayLedger\Model\ResourceModel\Grid\StockUnitCollection</item>
+            </argument>
+        </arguments>
+    </type>
+    <type name="GhostFrog\EbayLedger\Model\ResourceModel\Grid\AccountCollection">
+        <arguments>
+            <argument name="mainTable" xsi:type="string">ghostfrog_ebayledger_account</argument>
+            <argument name="identifierName" xsi:type="string">account_id</argument>
+        </arguments>
+    </type>
+    <type name="GhostFrog\EbayLedger\Model\ResourceModel\Grid\StockUnitCollection">
+        <arguments>
+            <argument name="mainTable" xsi:type="string">ghostfrog_ebayledger_stock_unit</argument>
+            <argument name="identifierName" xsi:type="string">stock_unit_id</argument>
+        </arguments>
+    </type>
+</config>

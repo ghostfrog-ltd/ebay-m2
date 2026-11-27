@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <type name="Magento\Framework\Console\CommandListInterface">
+        <arguments>
+            <argument name="commands" xsi:type="array">
+                <item name="ghostfrog_ledger_import_purchases" xsi:type="object">GhostFrog\EbayLedger\Console\Command\ImportPurchases</item>
+            </argument>
+        </arguments>
+    </type>
+    <type name="GhostFrog\EbayLedger\Console\Command\ImportPurchases">
+        <arguments>
+            <argument name="all" xsi:type="object">GhostFrog\EbayLedger\Model\Purchase\ImportAll\Proxy</argument>
+            <argument name="importer" xsi:type="object">GhostFrog\EbayLedger\Model\Purchase\Importer\Proxy</argument>
+            <argument name="tokens" xsi:type="object">GhostFrog\EbayLedger\Model\Account\Tokens\Proxy</argument>
+        </arguments>
+    </type>
+</config>

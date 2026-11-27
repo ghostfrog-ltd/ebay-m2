@@ -1,0 +1,107 @@
+<?xml version="1.0"?>
+<schema xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:Setup/Declaration/Schema/etc/schema.xsd">
+    <table name="ghostfrog_ebayledger_account" resource="default" engine="innodb" comment="Connected eBay accounts">
+        <column xsi:type="int" name="account_id" unsigned="true" nullable="false" identity="true"/>
+        <column xsi:type="varchar" name="label" length="100" nullable="false"/>
+        <column xsi:type="varchar" name="role" length="10" nullable="false" default="both" comment="buyer, seller or both"/>
+        <column xsi:type="smallint" name="enabled" unsigned="true" nullable="false" default="1"/>
+        <column xsi:type="varchar" name="status" length="20" nullable="false" default="not_connected"/>
+        <column xsi:type="varchar" name="ebay_username" length="64" nullable="true"/>
+        <column xsi:type="varchar" name="ebay_user_id" length="64" nullable="true"/>
+        <column xsi:type="text" name="access_token" nullable="true" comment="Encrypted"/>
+        <column xsi:type="datetime" name="access_expires_at" nullable="true" comment="UTC"/>
+        <column xsi:type="text" name="refresh_token" nullable="true" comment="Encrypted"/>
+        <column xsi:type="datetime" name="refresh_expires_at" nullable="true" comment="UTC"/>
+        <column xsi:type="text" name="scopes" nullable="true"/>
+        <column xsi:type="datetime" name="connected_at" nullable="true" comment="UTC"/>
+        <column xsi:type="text" name="last_error" nullable="true"/>
+        <column xsi:type="datetime" name="purchases_imported_at" nullable="true" comment="UTC, last successful import"/>
+        <column xsi:type="timestamp" name="created_at" nullable="false" default="CURRENT_TIMESTAMP"/>
+        <column xsi:type="timestamp" name="updated_at" nullable="false" default="CURRENT_TIMESTAMP" on_update="true"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="account_id"/>
+        </constraint>
+        <constraint xsi:type="unique" referenceId="GHOSTFROG_EBAYLEDGER_ACCOUNT_EBAY_USER_ID">
+            <column name="ebay_user_id"/>
+        </constraint>
+    </table>
+    <table name="ghostfrog_ebayledger_stock_unit" resource="default" engine="innodb" comment="Real items bought on eBay">
+        <column xsi:type="int" name="stock_unit_id" unsigned="true" nullable="false" identity="true"/>
+        <column xsi:type="varchar" name="reference" length="32" nullable="true" comment="GF-000001, set once"/>
+        <column xsi:type="int" name="account_id" unsigned="true" nullable="false"/>
+        <column xsi:type="varchar" name="ebay_order_id" length="64" nullable="false"/>
+        <column xsi:type="varchar" name="ebay_line_item_id" length="64" nullable="false" comment="OrderLineItemID"/>
+        <column xsi:type="varchar" name="ebay_transaction_id" length="32" nullable="true"/>
+        <column xsi:type="varchar" name="ebay_item_id" length="32" nullable="false"/>
+        <column xsi:type="smallint" name="unit_index" unsigned="true" nullable="false" default="1" comment="1..quantity bought on the line"/>
+        <column xsi:type="smallint" name="line_quantity" unsigned="true" nullable="false" default="1"/>
+        <column xsi:type="varchar" name="title" length="255" nullable="false"/>
+        <column xsi:type="varchar" name="currency" length="3" nullable="false" default="GBP"/>
+        <column xsi:type="decimal" name="item_price" scale="2" precision="12" nullable="false" default="0"/>
+        <column xsi:type="decimal" name="postage_paid" scale="2" precision="12" nullable="false" default="0"/>
+        <column xsi:type="decimal" name="other_costs" scale="2" precision="12" nullable="false" default="0" comment="Buyer protection and other charges on the order"/>
+        <column xsi:type="decimal" name="total_cost" scale="2" precision="12" nullable="false" default="0"/>
+        <column xsi:type="varchar" name="purchase_method" length="20" nullable="false" default="unknown"/>
+        <column xsi:type="varchar" name="purchase_method_source" length="10" nullable="true" comment="ebay or manual"/>
+        <column xsi:type="datetime" name="purchased_at" nullable="false" comment="UTC"/>
+        <column xsi:type="datetime" name="paid_at" nullable="true" comment="UTC"/>
+        <column xsi:type="datetime" name="shipped_at" nullable="true" comment="UTC"/>
+        <column xsi:type="varchar" name="ebay_order_status" length="32" nullable="true"/>
+        <column xsi:type="varchar" name="status" length="20" nullable="false" default="purchased"/>
+        <column xsi:type="bigint" name="listing_id" unsigned="true" nullable="true" comment="Core listing, when core collected it"/>
+        <column xsi:type="varchar" name="model_key" length="255" nullable="true"/>
+        <column xsi:type="varchar" name="predicted_grade" length="10" nullable="true"/>
+        <column xsi:type="decimal" name="predicted_resale" scale="2" precision="12" nullable="true"/>
+        <column xsi:type="int" name="predicted_comp_count" unsigned="true" nullable="true"/>
+        <column xsi:type="json" name="prediction" nullable="true" comment="Core's view of the item when imported"/>
+        <column xsi:type="json" name="raw_payload" nullable="true" comment="eBay order, personal details removed"/>
+        <column xsi:type="datetime" name="imported_at" nullable="false" comment="UTC"/>
+        <column xsi:type="timestamp" name="updated_at" nullable="false" default="CURRENT_TIMESTAMP" on_update="true"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="stock_unit_id"/>
+        </constraint>
+        <constraint xsi:type="unique" referenceId="GHOSTFROG_EBAYLEDGER_STOCK_UNIT_REFERENCE">
+            <column name="reference"/>
+        </constraint>
+        <constraint xsi:type="unique" referenceId="GHOSTFROG_EBAYLEDGER_STOCK_UNIT_EBAY_LINE_UNIT">
+            <column name="ebay_order_id"/>
+            <column name="ebay_line_item_id"/>
+            <column name="unit_index"/>
+        </constraint>
+        <constraint xsi:type="foreign" referenceId="GHOSTFROG_EBAYLEDGER_STOCK_UNIT_ACCOUNT"
+                    table="ghostfrog_ebayledger_stock_unit" column="account_id"
+                    referenceTable="ghostfrog_ebayledger_account" referenceColumn="account_id" onDelete="NO ACTION"/>
+        <index referenceId="GHOSTFROG_EBAYLEDGER_STOCK_UNIT_STATUS" indexType="btree">
+            <column name="status"/>
+        </index>
+        <index referenceId="GHOSTFROG_EBAYLEDGER_STOCK_UNIT_PURCHASED_AT" indexType="btree">
+            <column name="purchased_at"/>
+        </index>
+        <index referenceId="GHOSTFROG_EBAYLEDGER_STOCK_UNIT_ITEM" indexType="btree">
+            <column name="ebay_item_id"/>
+        </index>
+    </table>
+    <table name="ghostfrog_ebayledger_import_run" resource="default" engine="innodb" comment="eBay import runs">
+        <column xsi:type="int" name="run_id" unsigned="true" nullable="false" identity="true"/>
+        <column xsi:type="int" name="account_id" unsigned="true" nullable="true"/>
+        <column xsi:type="varchar" name="kind" length="20" nullable="false" comment="purchases, sales, finances"/>
+        <column xsi:type="varchar" name="trigger" length="10" nullable="false" comment="cron, manual or cli"/>
+        <column xsi:type="varchar" name="status" length="10" nullable="false" default="running"/>
+        <column xsi:type="datetime" name="window_from" nullable="true" comment="UTC"/>
+        <column xsi:type="datetime" name="window_to" nullable="true" comment="UTC"/>
+        <column xsi:type="int" name="fetched" unsigned="true" nullable="false" default="0"/>
+        <column xsi:type="int" name="created" unsigned="true" nullable="false" default="0"/>
+        <column xsi:type="int" name="updated" unsigned="true" nullable="false" default="0"/>
+        <column xsi:type="text" name="message" nullable="true"/>
+        <column xsi:type="datetime" name="started_at" nullable="false" comment="UTC"/>
+        <column xsi:type="datetime" name="finished_at" nullable="true" comment="UTC"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="run_id"/>
+        </constraint>
+        <index referenceId="GHOSTFROG_EBAYLEDGER_IMPORT_RUN_ACCOUNT_KIND" indexType="btree">
+            <column name="account_id"/>
+            <column name="kind"/>
+        </index>
+    </table>
+</schema>

@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Backend:etc/menu.xsd">
+    <menu>
+        <add id="GhostFrog_EbayLedger::ledger" title="Ledger" translate="title" module="GhostFrog_EbayLedger"
+             sortOrder="50" parent="GhostFrog_Ebay::ghostfrog" resource="GhostFrog_EbayLedger::ledger"/>
+        <add id="GhostFrog_EbayLedger::accounts" title="Accounts" translate="title" module="GhostFrog_EbayLedger"
+             sortOrder="10" parent="GhostFrog_EbayLedger::ledger" action="ghostfrog_ledger/account/index"
+             resource="GhostFrog_EbayLedger::accounts"/>
+        <add id="GhostFrog_EbayLedger::stock_units" title="Stock Units" translate="title" module="GhostFrog_EbayLedger"
+             sortOrder="20" parent="GhostFrog_EbayLedger::ledger" action="ghostfrog_ledger/stockunit/index"
+             resource="GhostFrog_EbayLedger::stock_units"/>
+    </menu>
+</config>

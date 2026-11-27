@@ -1,0 +1,96 @@
+{
+    "ghostfrog_ebayledger_account": {
+        "column": {
+            "account_id": true,
+            "label": true,
+            "role": true,
+            "enabled": true,
+            "status": true,
+            "ebay_username": true,
+            "ebay_user_id": true,
+            "access_token": true,
+            "access_expires_at": true,
+            "refresh_token": true,
+            "refresh_expires_at": true,
+            "scopes": true,
+            "connected_at": true,
+            "last_error": true,
+            "purchases_imported_at": true,
+            "created_at": true,
+            "updated_at": true
+        },
+        "constraint": {
+            "PRIMARY": true,
+            "GHOSTFROG_EBAYLEDGER_ACCOUNT_EBAY_USER_ID": true
+        }
+    },
+    "ghostfrog_ebayledger_stock_unit": {
+        "column": {
+            "stock_unit_id": true,
+            "reference": true,
+            "account_id": true,
+            "ebay_order_id": true,
+            "ebay_line_item_id": true,
+            "ebay_transaction_id": true,
+            "ebay_item_id": true,
+            "unit_index": true,
+            "line_quantity": true,
+            "title": true,
+            "currency": true,
+            "item_price": true,
+            "postage_paid": true,
+            "other_costs": true,
+            "total_cost": true,
+            "purchase_method": true,
+            "purchase_method_source": true,
+            "purchased_at": true,
+            "paid_at": true,
+            "shipped_at": true,
+            "ebay_order_status": true,
+            "status": true,
+            "listing_id": true,
+            "model_key": true,
+            "predicted_grade": true,
+            "predicted_resale": true,
+            "predicted_comp_count": true,
+            "prediction": true,
+            "raw_payload": true,
+            "imported_at": true,
+            "updated_at": true
+        },
+        "index": {
+            "GHOSTFROG_EBAYLEDGER_STOCK_UNIT_STATUS": true,
+            "GHOSTFROG_EBAYLEDGER_STOCK_UNIT_PURCHASED_AT": true,
+            "GHOSTFROG_EBAYLEDGER_STOCK_UNIT_EBAY_ITEM_ID": true
+        },
+        "constraint": {
+            "PRIMARY": true,
+            "GHOSTFROG_EBAYLEDGER_STOCK_UNIT_REFERENCE": true,
+            "UNQ_888EB94DE567A25819FE8B90A384F0EA": true,
+            "FK_4B373662877FB6BE89470DA3FED1C0EF": true
+        }
+    },
+    "ghostfrog_ebayledger_import_run": {
+        "column": {
+            "run_id": true,
+            "account_id": true,
+            "kind": true,
+            "trigger": true,
+            "status": true,
+            "window_from": true,
+            "window_to": true,
+            "fetched": true,
+            "created": true,
+            "updated": true,
+            "message": true,
+            "started_at": true,
+            "finished_at": true
+        },
+        "index": {
+            "GHOSTFROG_EBAYLEDGER_IMPORT_RUN_ACCOUNT_ID_KIND": true
+        },
+        "constraint": {
+            "PRIMARY": true
+        }
+    }
+}

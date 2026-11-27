@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:App/etc/routes.xsd">
+    <!-- Only eBay's OAuth redirect lands here: the RuName's accept URL is /ghostfrog_ledger/oauth/callback. -->
+    <router id="standard">
+        <route id="ghostfrog_ledger" frontName="ghostfrog_ledger">
+            <module name="GhostFrog_EbayLedger"/>
+        </route>
+    </router>
+</config>

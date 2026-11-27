@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GetOrdersResponse xmlns="urn:ebay:apis:eBLBaseComponents">
+  <Ack>Success</Ack>
+  <OrderArray>
+    <Order>
+      <OrderID>12-34567-89012</OrderID>
+      <OrderStatus>Completed</OrderStatus>
+      <AmountPaid currencyID="GBP">186.07</AmountPaid>
+      <CreatedTime>2026-11-27T09:12:44.000Z</CreatedTime>
+      <PaidTime>2026-11-27T09:13:02.000Z</PaidTime>
+      <ShippingAddress><Name>Somebody</Name><Street1>1 High St</Street1><PostalCode>AB1 2CD</PostalCode></ShippingAddress>
+      <SellerUserID>switch_seller_99</SellerUserID>
+      <SellerEmail>seller@example.com</SellerEmail>
+      <ShippingServiceSelected>
+        <ShippingService>UK_RoyalMailSecondClassStandard</ShippingService>
+        <ShippingServiceCost currencyID="GBP">4.99</ShippingServiceCost>
+      </ShippingServiceSelected>
+      <Subtotal currencyID="GBP">175.00</Subtotal>
+      <Total currencyID="GBP">186.07</Total>
+      <TransactionArray>
+        <Transaction>
+          <Buyer><Email>me@example.com</Email><UserFirstName>Me</UserFirstName></Buyer>
+          <CreatedDate>2026-11-27T09:12:44.000Z</CreatedDate>
+          <Item>
+            <ItemID>256789012345</ItemID>
+            <Title>Nintendo Switch OLED White Boxed</Title>
+            <ListingType>Chinese</ListingType>
+          </Item>
+          <QuantityPurchased>1</QuantityPurchased>
+          <TransactionID>2345678901001</TransactionID>
+          <TransactionPrice currencyID="GBP">175.00</TransactionPrice>
+          <OrderLineItemID>256789012345-2345678901001</OrderLineItemID>
+        </Transaction>
+      </TransactionArray>
+    </Order>
+    <Order>
+      <OrderID>12-99999-11111</OrderID>
+      <OrderStatus>Completed</OrderStatus>
+      <CreatedTime>2026-11-20T18:00:00.000Z</CreatedTime>
+      <PaidTime>2026-11-20T18:05:00.000Z</PaidTime>
+      <ShippedTime>2026-11-21T10:00:00.000Z</ShippedTime>
+      <ShippingServiceSelected>
+        <ShippingServiceCost currencyID="GBP">3.00</ShippingServiceCost>
+      </ShippingServiceSelected>
+      <Total currencyID="GBP">43.01</Total>
+      <TransactionArray>
+        <Transaction>
+          <Item><ItemID>111</ItemID><Title>Joy-Con pair</Title><ListingType>FixedPriceItem</ListingType></Item>
+          <QuantityPurchased>2</QuantityPurchased>
+          <TransactionID>1</TransactionID>
+          <TransactionPrice currencyID="GBP">10.00</TransactionPrice>
+          <OrderLineItemID>111-1</OrderLineItemID>
+          <BestOfferSale>true</BestOfferSale>
+        </Transaction>
+        <Transaction>
+          <Item><ItemID>222</ItemID><Title>Switch dock</Title><ListingType>FixedPriceItem</ListingType></Item>
+          <QuantityPurchased>1</QuantityPurchased>
+          <TransactionID>2</TransactionID>
+          <TransactionPrice currencyID="GBP">19.99</TransactionPrice>
+          <OrderLineItemID>222-2</OrderLineItemID>
+        </Transaction>
+      </TransactionArray>
+    </Order>
+  </OrderArray>
+  <HasMoreOrders>false</HasMoreOrders>
+</GetOrdersResponse>

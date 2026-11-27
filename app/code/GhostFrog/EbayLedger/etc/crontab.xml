@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Cron:etc/crontab.xsd">
+    <group id="default">
+        <job name="ghostfrog_ebayledger_import_purchases" instance="GhostFrog\EbayLedger\Cron\ImportPurchases" method="execute">
+            <config_path>ghostfrog_ebay/ledger_import/cron_expr</config_path>
+        </job>
+    </group>
+</config>

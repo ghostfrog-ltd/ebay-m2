@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Store:etc/config.xsd">
+    <default>
+        <ghostfrog_ebay>
+            <ledger_connection>
+                <runame></runame>
+                <scopes>https://api.ebay.com/oauth/api_scope
+https://api.ebay.com/oauth/api_scope/commerce.identity.readonly
+https://api.ebay.com/oauth/api_scope/sell.fulfillment.readonly
+https://api.ebay.com/oauth/api_scope/sell.finances
+https://api.ebay.com/oauth/api_scope/sell.order.read
+https://api.ebay.com/oauth/api_scope/sell.cancellation.read
+https://api.ebay.com/oauth/api_scope/sell.return.read
+https://api.ebay.com/oauth/api_scope/sell.refund.read</scopes>
+            </ledger_connection>
+            <ledger_import>
+                <enabled>1</enabled>
+                <cron_expr>*/30 * * * *</cron_expr>
+                <first_run_days>90</first_run_days>
+                <refresh_days>30</refresh_days>
+            </ledger_import>
+            <ledger_products>
+                <sku_prefix>GF-</sku_prefix>
+            </ledger_products>
+        </ghostfrog_ebay>
+    </default>
+</config>

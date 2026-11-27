@@ -1,0 +1,185 @@
+<?xml version="1.0"?>
+<listing xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Ui:etc/ui_configuration.xsd">
+    <argument name="data" xsi:type="array">
+        <item name="js_config" xsi:type="array">
+            <item name="provider" xsi:type="string">ghostfrog_ebayledger_stock_units.ghostfrog_ebayledger_stock_units_data_source</item>
+        </item>
+    </argument>
+    <settings>
+        <buttons>
+            <button name="import">
+                <url path="ghostfrog_ledger/account/import"/>
+                <class>primary</class>
+                <label translate="true">Import Purchases Now</label>
+            </button>
+        </buttons>
+        <spinner>ghostfrog_ebayledger_stock_units_columns</spinner>
+        <deps>
+            <dep>ghostfrog_ebayledger_stock_units.ghostfrog_ebayledger_stock_units_data_source</dep>
+        </deps>
+    </settings>
+    <dataSource name="ghostfrog_ebayledger_stock_units_data_source" component="Magento_Ui/js/grid/provider">
+        <settings>
+            <storageConfig>
+                <param name="indexField" xsi:type="string">stock_unit_id</param>
+            </storageConfig>
+            <updateUrl path="mui/index/render"/>
+        </settings>
+        <aclResource>GhostFrog_EbayLedger::stock_units</aclResource>
+        <dataProvider class="Magento\Framework\View\Element\UiComponent\DataProvider\DataProvider" name="ghostfrog_ebayledger_stock_units_data_source">
+            <settings>
+                <requestFieldName>stock_unit_id</requestFieldName>
+                <primaryFieldName>stock_unit_id</primaryFieldName>
+            </settings>
+        </dataProvider>
+    </dataSource>
+    <listingToolbar name="listing_top">
+        <settings>
+            <sticky>true</sticky>
+        </settings>
+        <bookmark name="bookmarks"/>
+        <columnsControls name="columns_controls"/>
+        <filters name="listing_filters"/>
+        <exportButton name="export_button"/>
+        <paging name="listing_paging"/>
+    </listingToolbar>
+    <columns name="ghostfrog_ebayledger_stock_units_columns">
+        <column name="reference" sortOrder="10">
+            <settings>
+                <filter>text</filter><sorting>asc</sorting>
+                <label translate="true">Reference</label>
+            </settings>
+        </column>
+        <column name="purchased_at" class="Magento\Ui\Component\Listing\Columns\Date" component="Magento_Ui/js/grid/columns/date" sortOrder="20">
+            <settings>
+                <filter>dateRange</filter>
+                <dataType>date</dataType>
+                <dateFormat>yyyy-MM-dd HH:mm</dateFormat>
+                <label translate="true">Bought</label>
+            </settings>
+        </column>
+        <column name="account_id" component="Magento_Ui/js/grid/columns/select" sortOrder="30">
+            <settings>
+                <options class="GhostFrog\EbayLedger\Model\Account\Options"/>
+                <filter>select</filter>
+                <dataType>select</dataType>
+                <label translate="true">Account</label>
+            </settings>
+        </column>
+        <column name="title" sortOrder="40">
+            <settings>
+                <filter>text</filter>
+                <label translate="true">Title</label>
+            </settings>
+        </column>
+        <column name="status" component="Magento_Ui/js/grid/columns/select" sortOrder="50">
+            <settings>
+                <options class="GhostFrog\EbayLedger\Model\StockUnit\Status"/>
+                <filter>select</filter>
+                <dataType>select</dataType>
+                <label translate="true">Status</label>
+            </settings>
+        </column>
+        <column name="item_price" sortOrder="60">
+            <settings>
+                <filter>textRange</filter>
+                <label translate="true">Price</label>
+            </settings>
+        </column>
+        <column name="postage_paid" sortOrder="70">
+            <settings>
+                <filter>textRange</filter>
+                <label translate="true">Postage</label>
+            </settings>
+        </column>
+        <column name="other_costs" sortOrder="80">
+            <settings>
+                <filter>textRange</filter>
+                <label translate="true">Other Costs</label>
+            </settings>
+        </column>
+        <column name="total_cost" sortOrder="90">
+            <settings>
+                <filter>textRange</filter>
+                <label translate="true">Total Cost</label>
+            </settings>
+        </column>
+        <column name="purchase_method" component="Magento_Ui/js/grid/columns/select" sortOrder="100">
+            <settings>
+                <options class="GhostFrog\EbayLedger\Model\StockUnit\PurchaseMethod"/>
+                <filter>select</filter>
+                <dataType>select</dataType>
+                <label translate="true">How Bought</label>
+            </settings>
+        </column>
+        <column name="model_key" sortOrder="110">
+            <settings>
+                <filter>text</filter>
+                <label translate="true">Model</label>
+            </settings>
+        </column>
+        <column name="predicted_grade" sortOrder="120">
+            <settings>
+                <filter>text</filter>
+                <label translate="true">Predicted Grade</label>
+            </settings>
+        </column>
+        <column name="predicted_resale" sortOrder="130">
+            <settings>
+                <filter>textRange</filter>
+                <label translate="true">Predicted Resale</label>
+            </settings>
+        </column>
+        <column name="predicted_comp_count" sortOrder="140">
+            <settings>
+                <filter>textRange</filter>
+                <label translate="true">Comps</label>
+            </settings>
+        </column>
+        <column name="ebay_order_status" sortOrder="150">
+            <settings>
+                <filter>text</filter>
+                <label translate="true">eBay Order Status</label><visible>false</visible>
+            </settings>
+        </column>
+        <column name="shipped_at" class="Magento\Ui\Component\Listing\Columns\Date" component="Magento_Ui/js/grid/columns/date" sortOrder="160">
+            <settings>
+                <filter>dateRange</filter>
+                <dataType>date</dataType>
+                <dateFormat>yyyy-MM-dd HH:mm</dateFormat>
+                <label translate="true">Dispatched</label><visible>false</visible>
+            </settings>
+        </column>
+        <column name="ebay_item_id" sortOrder="170">
+            <settings>
+                <filter>text</filter>
+                <label translate="true">eBay Item ID</label>
+            </settings>
+        </column>
+        <column name="ebay_order_id" sortOrder="180">
+            <settings>
+                <filter>text</filter>
+                <label translate="true">eBay Order ID</label><visible>false</visible>
+            </settings>
+        </column>
+        <column name="ebay_line_item_id" sortOrder="190">
+            <settings>
+                <filter>text</filter>
+                <label translate="true">eBay Line ID</label><visible>false</visible>
+            </settings>
+        </column>
+        <column name="listing_id" sortOrder="200">
+            <settings>
+                <filter>textRange</filter>
+                <label translate="true">GhostFrog Listing</label><visible>false</visible>
+            </settings>
+        </column>
+        <actionsColumn name="ebay_links" class="GhostFrog\EbayLedger\Ui\Component\Column\EbayLinks" sortOrder="900">
+            <settings>
+                <indexField>stock_unit_id</indexField>
+                <label translate="true">eBay</label>
+            </settings>
+        </actionsColumn>
+    </columns>
+</listing>

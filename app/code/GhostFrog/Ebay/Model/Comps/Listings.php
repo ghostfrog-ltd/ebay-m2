@@ -62,6 +62,15 @@ final class Listings
         return preg_replace('/^v[12]\|(\d+)\|0$/', '$1', $externalId);
     }
 
+    /** Listings of any status collected for these eBay item IDs, with their source and condition evidence. */
+    public function byItemIds(array $itemIds): array
+    {
+        $select = $this->select()
+            ->columns(['sale_type' => 'a.sale_type', 'best_offer' => 'a.best_offer', 'status' => 'a.status'])
+            ->where('a.external_id IN (?)', $this->externalIds($itemIds));
+        return $this->resource->getConnection()->fetchAll($select);
+    }
+
     private function externalIds(array $items): array
     {
         $ids = [];

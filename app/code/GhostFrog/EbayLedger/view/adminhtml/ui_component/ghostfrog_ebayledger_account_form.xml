@@ -1,0 +1,161 @@
+<?xml version="1.0"?>
+<form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Ui:etc/ui_configuration.xsd">
+    <argument name="data" xsi:type="array">
+        <item name="js_config" xsi:type="array">
+            <item name="provider" xsi:type="string">ghostfrog_ebayledger_account_form.ghostfrog_ebayledger_account_form_data_source</item>
+        </item>
+        <item name="label" xsi:type="string" translate="true">eBay Account</item>
+        <item name="template" xsi:type="string">templates/form/collapsible</item>
+    </argument>
+    <settings>
+        <buttons>
+            <button name="back" class="GhostFrog\EbayLedger\Block\Adminhtml\Account\BackButton"/>
+            <button name="disconnect" class="GhostFrog\EbayLedger\Block\Adminhtml\Account\DisconnectButton"/>
+            <button name="import" class="GhostFrog\EbayLedger\Block\Adminhtml\Account\ImportButton"/>
+            <button name="save" class="GhostFrog\EbayLedger\Block\Adminhtml\Account\SaveButton"/>
+            <button name="connect" class="GhostFrog\EbayLedger\Block\Adminhtml\Account\ConnectButton"/>
+        </buttons>
+        <namespace>ghostfrog_ebayledger_account_form</namespace>
+        <dataScope>data</dataScope>
+        <deps>
+            <dep>ghostfrog_ebayledger_account_form.ghostfrog_ebayledger_account_form_data_source</dep>
+        </deps>
+    </settings>
+    <dataSource name="ghostfrog_ebayledger_account_form_data_source">
+        <argument name="data" xsi:type="array">
+            <item name="js_config" xsi:type="array">
+                <item name="component" xsi:type="string">Magento_Ui/js/form/provider</item>
+            </item>
+        </argument>
+        <settings>
+            <submitUrl path="ghostfrog_ledger/account/save"/>
+        </settings>
+        <aclResource>GhostFrog_EbayLedger::accounts</aclResource>
+        <dataProvider class="GhostFrog\EbayLedger\Model\Account\DataProvider" name="ghostfrog_ebayledger_account_form_data_source">
+            <settings>
+                <requestFieldName>account_id</requestFieldName>
+                <primaryFieldName>account_id</primaryFieldName>
+            </settings>
+        </dataProvider>
+    </dataSource>
+    <fieldset name="general">
+        <settings>
+            <label translate="true">Account</label>
+        </settings>
+        <field name="account_id" formElement="input">
+            <settings>
+                <dataType>text</dataType>
+                <visible>false</visible>
+                <dataScope>account_id</dataScope>
+            </settings>
+        </field>
+        <field name="label" formElement="input" sortOrder="10">
+            <settings>
+                <validation>
+                    <rule name="required-entry" xsi:type="boolean">true</rule>
+                </validation>
+                <dataType>text</dataType>
+                <label translate="true">Name</label>
+                <notice translate="true">Your own name for it, such as "Gary" or "Wife".</notice>
+                <dataScope>label</dataScope>
+            </settings>
+        </field>
+        <field name="role" formElement="select" sortOrder="20">
+            <settings>
+                <dataType>text</dataType>
+                <label translate="true">Used For</label>
+                <notice translate="true">Purchases import from buyer accounts; sales import from seller accounts.</notice>
+                <dataScope>role</dataScope>
+            </settings>
+            <formElements>
+                <select>
+                    <settings>
+                        <options class="GhostFrog\EbayLedger\Model\Account\Role"/>
+                    </settings>
+                </select>
+            </formElements>
+        </field>
+        <field name="enabled" formElement="checkbox" sortOrder="30">
+            <settings>
+                <dataType>boolean</dataType>
+                <label translate="true">Import Automatically</label>
+                <dataScope>enabled</dataScope>
+            </settings>
+            <formElements>
+                <checkbox>
+                    <settings>
+                        <valueMap>
+                            <map name="false" xsi:type="number">0</map>
+                            <map name="true" xsi:type="number">1</map>
+                        </valueMap>
+                        <prefer>toggle</prefer>
+                    </settings>
+                </checkbox>
+            </formElements>
+        </field>
+    </fieldset>
+    <fieldset name="connection">
+        <settings>
+            <label translate="true">eBay Connection</label>
+        </settings>
+        <field name="status" formElement="input" sortOrder="10">
+            <settings>
+                <dataType>text</dataType>
+                <label translate="true">Status</label>
+                <disabled>true</disabled>
+                <dataScope>status</dataScope>
+            </settings>
+        </field>
+        <field name="ebay_username" formElement="input" sortOrder="20">
+            <settings>
+                <dataType>text</dataType>
+                <label translate="true">eBay User</label>
+                <disabled>true</disabled>
+                <dataScope>ebay_username</dataScope>
+            </settings>
+        </field>
+        <field name="connected_at" formElement="input" sortOrder="30">
+            <settings>
+                <dataType>text</dataType>
+                <label translate="true">Connected</label>
+                <disabled>true</disabled>
+                <dataScope>connected_at</dataScope>
+            </settings>
+        </field>
+        <field name="access_expires_at" formElement="input" sortOrder="40">
+            <settings>
+                <dataType>text</dataType>
+                <label translate="true">Access Token Expires</label>
+                <notice translate="true">Renewed automatically.</notice>
+                <disabled>true</disabled>
+                <dataScope>access_expires_at</dataScope>
+            </settings>
+        </field>
+        <field name="refresh_expires_at" formElement="input" sortOrder="50">
+            <settings>
+                <dataType>text</dataType>
+                <label translate="true">Connection Expires</label>
+                <notice translate="true">Click Connect to eBay again before this date.</notice>
+                <disabled>true</disabled>
+                <dataScope>refresh_expires_at</dataScope>
+            </settings>
+        </field>
+        <field name="purchases_imported_at" formElement="input" sortOrder="60">
+            <settings>
+                <dataType>text</dataType>
+                <label translate="true">Purchases Last Imported</label>
+                <disabled>true</disabled>
+                <dataScope>purchases_imported_at</dataScope>
+            </settings>
+        </field>
+        <field name="last_error" formElement="textarea" sortOrder="70">
+            <settings>
+                <dataType>text</dataType>
+                <label translate="true">Last Error</label>
+                <disabled>true</disabled>
+                <dataScope>last_error</dataScope>
+            </settings>
+        </field>
+    </fieldset>
+</form>

@@ -9,6 +9,7 @@
     <preference for="GhostFrog\Ebay\Api\LocalLlmInterface" type="GhostFrog\Ebay\Model\Service\LocalLlm"/>
     <preference for="GhostFrog\Ebay\Api\FinalPriceRequestInterface" type="GhostFrog\Ebay\Model\Service\FinalPriceRequest"/>
     <preference for="GhostFrog\Ebay\Api\SlackInterface" type="GhostFrog\Ebay\Model\Service\SlackText"/>
+    <preference for="GhostFrog\Ebay\Api\ListingLookupInterface" type="GhostFrog\Ebay\Model\Service\ListingLookup"/>
     <type name="Magento\Config\Model\Config\TypePool">
         <arguments>
             <argument name="sensitive" xsi:type="array">

@@ -1,0 +1,58 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
+    <system>
+        <section id="ghostfrog_ebay">
+            <group id="ledger" translate="label" sortOrder="200" showInDefault="1">
+                <label>Ledger</label>
+                <group id="connection" translate="label" sortOrder="10" showInDefault="1">
+                    <label>eBay Connection</label>
+                    <comment>Ledger uses core's Application ID and Certificate ID from the eBay API group, and connects each of your eBay accounts separately under GhostFrog → Ledger → Accounts. It only ever reads from eBay.</comment>
+                    <field id="runame" translate="label comment" type="text" sortOrder="10" showInDefault="1">
+                        <label>RuName (eBay Redirect URL name)</label>
+                        <comment>From the developer portal's User Tokens page. Its OAuth accept URL must be this site's /ghostfrog_ledger/oauth/callback.</comment>
+                        <config_path>ghostfrog_ebay/ledger_connection/runame</config_path>
+                    </field>
+                    <field id="scopes" translate="label comment" type="textarea" sortOrder="20" showInDefault="1">
+                        <label>OAuth Scopes</label>
+                        <comment>One per line. Changing them means reconnecting each account.</comment>
+                        <config_path>ghostfrog_ebay/ledger_connection/scopes</config_path>
+                    </field>
+                </group>
+                <group id="import" translate="label" sortOrder="20" showInDefault="1">
+                    <label>Import</label>
+                    <field id="enabled" translate="label" type="select" sortOrder="10" showInDefault="1">
+                        <label>Import on Cron</label>
+                        <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                        <config_path>ghostfrog_ebay/ledger_import/enabled</config_path>
+                    </field>
+                    <field id="cron_expr" translate="label comment" type="text" sortOrder="20" showInDefault="1">
+                        <label>Import Schedule (cron expression)</label>
+                        <comment>How often purchases are imported, such as */30 * * * * for every 30 minutes.</comment>
+                        <config_path>ghostfrog_ebay/ledger_import/cron_expr</config_path>
+                    </field>
+                    <field id="first_run_days" translate="label comment" type="text" sortOrder="30" showInDefault="1">
+                        <label>First Import Looks Back (days)</label>
+                        <comment>eBay returns purchases from the last 90 days at most.</comment>
+                        <validate>validate-digits validate-digits-range digits-range-1-90</validate>
+                        <config_path>ghostfrog_ebay/ledger_import/first_run_days</config_path>
+                    </field>
+                    <field id="refresh_days" translate="label comment" type="text" sortOrder="40" showInDefault="1">
+                        <label>Recheck Recent Purchases (days)</label>
+                        <comment>Each import rereads purchases this recent, to pick up dispatch and cancellation.</comment>
+                        <validate>validate-digits validate-digits-range digits-range-1-90</validate>
+                        <config_path>ghostfrog_ebay/ledger_import/refresh_days</config_path>
+                    </field>
+                </group>
+                <group id="products" translate="label" sortOrder="30" showInDefault="1">
+                    <label>Products</label>
+                    <field id="sku_prefix" translate="label comment" type="text" sortOrder="10" showInDefault="1">
+                        <label>Reference and SKU Prefix</label>
+                        <comment>Used for new stock unit references such as GF-000001. Existing references never change.</comment>
+                        <config_path>ghostfrog_ebay/ledger_products/sku_prefix</config_path>
+                    </field>
+                </group>
+            </group>
+        </section>
+    </system>
+</config>
