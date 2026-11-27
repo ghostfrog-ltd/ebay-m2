@@ -13,21 +13,18 @@
     <type name="GhostFrog\EbayShadow\Model\ResourceModel\Grid\BuyCollection">
         <arguments>
             <argument name="mainTable" xsi:type="string">ghostfrog_ebayshadow_decision</argument>
-            <argument name="resourceModel" xsi:type="string">GhostFrog\EbayShadow\Model\ResourceModel\Pot</argument>
             <argument name="identifierName" xsi:type="string">decision_id</argument>
         </arguments>
     </type>
     <type name="GhostFrog\EbayShadow\Model\ResourceModel\Grid\SellCollection">
         <arguments>
             <argument name="mainTable" xsi:type="string">ghostfrog_ebayshadow_item</argument>
-            <argument name="resourceModel" xsi:type="string">GhostFrog\EbayShadow\Model\ResourceModel\Pot</argument>
             <argument name="identifierName" xsi:type="string">item_id</argument>
         </arguments>
     </type>
     <type name="GhostFrog\EbayShadow\Model\ResourceModel\Grid\PotCollection">
         <arguments>
             <argument name="mainTable" xsi:type="string">ghostfrog_ebayshadow_pot</argument>
-            <argument name="resourceModel" xsi:type="string">GhostFrog\EbayShadow\Model\ResourceModel\Pot</argument>
             <argument name="identifierName" xsi:type="string">pot_id</argument>
         </arguments>
     </type>
