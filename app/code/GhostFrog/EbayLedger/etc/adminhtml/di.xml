@@ -6,6 +6,7 @@
             <argument name="collections" xsi:type="array">
                 <item name="ghostfrog_ebayledger_accounts_data_source" xsi:type="string">GhostFrog\EbayLedger\Model\ResourceModel\Grid\AccountCollection</item>
                 <item name="ghostfrog_ebayledger_templates_data_source" xsi:type="string">GhostFrog\EbayLedger\Model\ResourceModel\Grid\TemplateCollection</item>
+                <item name="ghostfrog_ebayledger_products_data_source" xsi:type="string">GhostFrog\EbayLedger\Model\ResourceModel\Grid\ProductCollection</item>
                 <item name="ghostfrog_ebayledger_stock_units_data_source" xsi:type="string">GhostFrog\EbayLedger\Model\ResourceModel\Grid\StockUnitCollection</item>
             </argument>
         </arguments>
@@ -20,6 +21,12 @@
         <arguments>
             <argument name="mainTable" xsi:type="string">ghostfrog_ebayledger_stock_unit</argument>
             <argument name="identifierName" xsi:type="string">stock_unit_id</argument>
+        </arguments>
+    </type>
+    <type name="GhostFrog\EbayLedger\Model\ResourceModel\Grid\ProductCollection">
+        <arguments>
+            <argument name="mainTable" xsi:type="string">ghostfrog_ebayledger_product</argument>
+            <argument name="identifierName" xsi:type="string">ledger_product_id</argument>
         </arguments>
     </type>
     <virtualType name="GhostFrog\EbayLedger\Model\ResourceModel\Grid\TemplateCollection" type="Magento\Framework\View\Element\UiComponent\DataProvider\SearchResult">

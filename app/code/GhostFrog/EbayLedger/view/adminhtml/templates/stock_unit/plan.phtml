@@ -41,6 +41,34 @@ $sourceLabels = ['comps' => __('sold comparables'), 'old_comps' => __('old sold 
             \GhostFrog\EbayLedger\Model\SellPlan\Calculator::LABELS[$confirmed['chosen_option']] ?? $confirmed['chosen_option'],
             $confirmed['confirmed_at'])) ?></div>
     <?php endif; ?>
+    <?php $products = $block->getProducts(); ?>
+    <?php if ($products !== []): ?>
+        <h2><?= $escaper->escapeHtml(__('Products')) ?></h2>
+        <p class="muted"><?= $escaper->escapeHtml(__('Paste each SKU into its eBay listing\'s Custom label (SKU) field so the sale can be matched.')) ?></p>
+        <table>
+            <thead><tr><th><?= $escaper->escapeHtml(__('SKU')) ?></th><th><?= $escaper->escapeHtml(__('Sells')) ?></th>
+                <th class="num"><?= $escaper->escapeHtml(__('Planned price')) ?></th><th class="num"><?= $escaper->escapeHtml(__('Allocated cost')) ?></th>
+                <th><?= $escaper->escapeHtml(__('Status')) ?></th></tr></thead>
+            <tbody>
+            <?php foreach ($products as $product): ?>
+                <tr>
+                    <td><code class="sku" style="font-size:1.4em;user-select:all"><?= $escaper->escapeHtml($product['sku']) ?></code>
+                        <?php if ($product['product_id']): ?> <a href="<?= $escaper->escapeUrl($block->productUrl((int)$product['product_id'])) ?>"><?= $escaper->escapeHtml(__('Product')) ?></a><?php endif; ?></td>
+                    <td><?= $escaper->escapeHtml($product['part_name']) ?></td>
+                    <td class="num"><?= $escaper->escapeHtml($block->money((float)$product['planned_price'])) ?></td>
+                    <td class="num"><?= $escaper->escapeHtml($block->money((float)$product['allocated_cost'])) ?></td>
+                    <td><?= $escaper->escapeHtml($product['status']) ?></td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+    <?php elseif ($confirmed): ?>
+        <form method="post" action="<?= $escaper->escapeUrl($block->getUrl('*/*/planPost')) ?>">
+            <input type="hidden" name="form_key" value="<?= $escaper->escapeHtmlAttr($block->getFormKey()) ?>">
+            <input type="hidden" name="stock_unit_id" value="<?= (int)$unit['stock_unit_id'] ?>">
+            <button type="submit" name="do" value="create_products" class="action-primary"><?= $escaper->escapeHtml(__('Create the products for the confirmed plan')) ?></button>
+        </form>
+    <?php endif; ?>
     <?php if ($built['template'] === null): ?>
         <div class="message message-notice"><?= $escaper->escapeHtml(__('No parts template covers %1, so only selling whole is shown. Add one under Ledger → Parts Templates.', $unit['model_key'] ?: __('this item'))) ?></div>
     <?php endif; ?>
@@ -81,6 +109,9 @@ $sourceLabels = ['comps' => __('sold comparables'), 'old_comps' => __('old sold 
             <?php foreach ($result['reasons'] as $reason): ?><li><?= $escaper->escapeHtml($reason) ?></li><?php endforeach; ?>
         </ul>
 
+        <?php if ($products !== [] && $block->canPlan()): ?>
+            <p><label><input type="checkbox" name="replace" value="1"> <?= $escaper->escapeHtml(__('Replace the products above: they are deleted and new SKUs are made with the cost shares shown in the option you confirm.')) ?></label></p>
+        <?php endif; ?>
         <?php foreach ($result['options'] as $code => $option): ?>
             <div class="option <?= $code === $result['recommended'] ? 'best' : '' ?>">
                 <h3><?= $escaper->escapeHtml(__($option['label'])) ?><?= $code === $result['recommended'] ? ' — ' . $escaper->escapeHtml(__('recommended')) : '' ?></h3>
@@ -90,9 +121,11 @@ $sourceLabels = ['comps' => __('sold comparables'), 'old_comps' => __('old sold 
                         <th class="num"><?= $escaper->escapeHtml(__('eBay fees')) ?></th><th class="num"><?= $escaper->escapeHtml(__('Postage')) ?></th>
                         <th class="num"><?= $escaper->escapeHtml(__('Nets')) ?></th><th><?= $escaper->escapeHtml(__('Confidence')) ?></th>
                         <th class="num"><?= $escaper->escapeHtml(__('Days to sell')) ?></th>
+                        <th><?= $escaper->escapeHtml(__('SKU')) ?></th><th class="num"><?= $escaper->escapeHtml(__('Cost share')) ?></th>
                     </tr></thead>
                     <tbody>
-                    <?php foreach ($option['lines'] as $line): ?>
+                    <?php $allocation = $block->allocation($option); ?>
+                    <?php foreach ($option['lines'] as $lineIndex => $line): ?>
                         <tr>
                             <td><?= $escaper->escapeHtml($line['name']) ?>
                                 <?php foreach ($line['notes'] as $note): ?><br><span class="muted"><?= $escaper->escapeHtml($note) ?></span><?php endforeach; ?></td>
@@ -102,6 +135,8 @@ $sourceLabels = ['comps' => __('sold comparables'), 'old_comps' => __('old sold 
                             <td class="num"><?= $escaper->escapeHtml($block->money($line['net'])) ?></td>
                             <td class="<?= in_array($line['confidence'], ['low', 'none'], true) ? 'flag' : '' ?>"><?= $escaper->escapeHtml($confidenceLabels[$line['confidence']]) ?></td>
                             <td class="num"><?= $line['days'] === null ? '—' : $escaper->escapeHtml(number_format($line['days'], 1)) ?></td>
+                            <td><?= $escaper->escapeHtml($allocation[$lineIndex]['sku'] ?? '—') ?></td>
+                            <td class="num"><?= $escaper->escapeHtml(isset($allocation[$lineIndex]) ? $block->money($allocation[$lineIndex]['allocated_cost']) : '—') ?></td>
                         </tr>
                     <?php endforeach; ?>
                     </tbody>

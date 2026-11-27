@@ -138,5 +138,31 @@
             "PRIMARY": true,
             "FK_7BFA998C37C7847A43997EE2699B9908": true
         }
+    },
+    "ghostfrog_ebayledger_product": {
+        "column": {
+            "ledger_product_id": true,
+            "stock_unit_id": true,
+            "plan_id": true,
+            "product_id": true,
+            "sku": true,
+            "line_number": true,
+            "part_name": true,
+            "parts": true,
+            "planned_price": true,
+            "allocated_cost": true,
+            "status": true,
+            "ebay_item_id": true,
+            "created_at": true,
+            "updated_at": true
+        },
+        "index": {
+            "GHOSTFROG_EBAYLEDGER_PRODUCT_SKU": true,
+            "GHOSTFROG_EBAYLEDGER_PRODUCT_STOCK_UNIT_ID_STATUS": true
+        },
+        "constraint": {
+            "PRIMARY": true,
+            "FK_9F2FEA23312A8034B1DBA0F66BDA2036": true
+        }
     }
 }

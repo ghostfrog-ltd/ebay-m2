@@ -149,4 +149,33 @@
             <column name="status"/>
         </index>
     </table>
+    <table name="ghostfrog_ebayledger_product" resource="default" engine="innodb" comment="Magento products made from stock units">
+        <column xsi:type="int" name="ledger_product_id" unsigned="true" nullable="false" identity="true"/>
+        <column xsi:type="int" name="stock_unit_id" unsigned="true" nullable="false"/>
+        <column xsi:type="int" name="plan_id" unsigned="true" nullable="false"/>
+        <column xsi:type="int" name="product_id" unsigned="true" nullable="true" comment="Magento product; null once replaced"/>
+        <column xsi:type="varchar" name="sku" length="64" nullable="false"/>
+        <column xsi:type="smallint" name="line_number" unsigned="true" nullable="false" comment="0 when sold whole"/>
+        <column xsi:type="varchar" name="part_name" length="255" nullable="false"/>
+        <column xsi:type="json" name="parts" nullable="true" comment="Template parts in this product"/>
+        <column xsi:type="decimal" name="planned_price" scale="2" precision="12" nullable="false" default="0"/>
+        <column xsi:type="decimal" name="allocated_cost" scale="2" precision="12" nullable="false" default="0"/>
+        <column xsi:type="varchar" name="status" length="12" nullable="false" default="active" comment="active, sold, replaced"/>
+        <column xsi:type="varchar" name="ebay_item_id" length="32" nullable="true" comment="Once listed"/>
+        <column xsi:type="timestamp" name="created_at" nullable="false" default="CURRENT_TIMESTAMP"/>
+        <column xsi:type="timestamp" name="updated_at" nullable="false" default="CURRENT_TIMESTAMP" on_update="true"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="ledger_product_id"/>
+        </constraint>
+        <constraint xsi:type="foreign" referenceId="GHOSTFROG_EBAYLEDGER_PRODUCT_UNIT"
+                    table="ghostfrog_ebayledger_product" column="stock_unit_id"
+                    referenceTable="ghostfrog_ebayledger_stock_unit" referenceColumn="stock_unit_id" onDelete="NO ACTION"/>
+        <index referenceId="GHOSTFROG_EBAYLEDGER_PRODUCT_SKU" indexType="btree">
+            <column name="sku"/>
+        </index>
+        <index referenceId="GHOSTFROG_EBAYLEDGER_PRODUCT_UNIT_STATUS" indexType="btree">
+            <column name="stock_unit_id"/>
+            <column name="status"/>
+        </index>
+    </table>
 </schema>

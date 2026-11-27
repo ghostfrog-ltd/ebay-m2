@@ -1,0 +1,103 @@
+<?xml version="1.0"?>
+<listing xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Ui:etc/ui_configuration.xsd">
+    <argument name="data" xsi:type="array">
+        <item name="js_config" xsi:type="array">
+            <item name="provider" xsi:type="string">ghostfrog_ebayledger_products.ghostfrog_ebayledger_products_data_source</item>
+        </item>
+    </argument>
+    <settings>
+        <spinner>ghostfrog_ebayledger_products_columns</spinner>
+        <deps>
+            <dep>ghostfrog_ebayledger_products.ghostfrog_ebayledger_products_data_source</dep>
+        </deps>
+    </settings>
+    <dataSource name="ghostfrog_ebayledger_products_data_source" component="Magento_Ui/js/grid/provider">
+        <settings>
+            <storageConfig>
+                <param name="indexField" xsi:type="string">ledger_product_id</param>
+            </storageConfig>
+            <updateUrl path="mui/index/render"/>
+        </settings>
+        <aclResource>GhostFrog_EbayLedger::products</aclResource>
+        <dataProvider class="Magento\Framework\View\Element\UiComponent\DataProvider\DataProvider" name="ghostfrog_ebayledger_products_data_source">
+            <settings>
+                <requestFieldName>ledger_product_id</requestFieldName>
+                <primaryFieldName>ledger_product_id</primaryFieldName>
+            </settings>
+        </dataProvider>
+    </dataSource>
+    <listingToolbar name="listing_top">
+        <settings>
+            <sticky>true</sticky>
+        </settings>
+        <bookmark name="bookmarks"/>
+        <columnsControls name="columns_controls"/>
+        <filters name="listing_filters"/>
+        <exportButton name="export_button"/>
+        <paging name="listing_paging"/>
+    </listingToolbar>
+    <columns name="ghostfrog_ebayledger_products_columns">
+        <column name="sku" sortOrder="10">
+            <settings>
+                <filter>text</filter>
+                <label translate="true">SKU</label>
+            </settings>
+        </column>
+        <column name="reference" sortOrder="20">
+            <settings>
+                <filter>text</filter>
+                <label translate="true">Stock Unit</label>
+            </settings>
+        </column>
+        <column name="part_name" sortOrder="30">
+            <settings>
+                <filter>text</filter>
+                <label translate="true">Sells</label>
+            </settings>
+        </column>
+        <column name="unit_title" sortOrder="40">
+            <settings>
+                <filter>text</filter>
+                <label translate="true">eBay Title</label>
+            </settings>
+        </column>
+        <column name="chosen_option" sortOrder="50">
+            <settings>
+                <filter>text</filter>
+                <label translate="true">Plan</label>
+            </settings>
+        </column>
+        <column name="planned_price" sortOrder="60">
+            <settings>
+                <filter>textRange</filter>
+                <label translate="true">Planned Price</label>
+            </settings>
+        </column>
+        <column name="allocated_cost" sortOrder="70">
+            <settings>
+                <filter>textRange</filter>
+                <label translate="true">Allocated Cost</label>
+            </settings>
+        </column>
+        <column name="status" component="Magento_Ui/js/grid/columns/select" sortOrder="80">
+            <settings>
+                <options class="GhostFrog\EbayLedger\Model\Product\LineStatus"/>
+                <filter>select</filter>
+                <dataType>select</dataType>
+                <label translate="true">Status</label>
+            </settings>
+        </column>
+        <column name="ebay_item_id" sortOrder="90">
+            <settings>
+                <filter>text</filter>
+                <label translate="true">eBay Item ID</label>
+            </settings>
+        </column>
+        <actionsColumn name="actions" class="GhostFrog\EbayLedger\Ui\Component\Column\ProductActions" sortOrder="900">
+            <settings>
+                <indexField>ledger_product_id</indexField>
+            </settings>
+        </actionsColumn>
+    </columns>
+</listing>

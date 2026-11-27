@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace GhostFrog\EbayLedger\Block\Adminhtml\StockUnit;
 
+use GhostFrog\EbayLedger\Model\Product\Allocation;
+use GhostFrog\EbayLedger\Model\Product\Creator;
 use GhostFrog\EbayLedger\Model\ResourceModel\StockUnit as StockUnitResource;
 use GhostFrog\EbayLedger\Model\SellPlan\Builder;
 use GhostFrog\EbayLedger\Model\SellPlan\Plans;
@@ -21,6 +23,7 @@ class Plan extends Template
         private readonly StockUnitResource $units,
         private readonly Builder $builder,
         private readonly Plans $plans,
+        private readonly Creator $creator,
         array $data = []
     ) {
         parent::__construct($context, $data);
@@ -60,6 +63,28 @@ class Plan extends Template
     public function canPlan(): bool
     {
         return in_array($this->getUnit()['status'] ?? '', Plans::PLANNABLE, true);
+    }
+
+    /** Products already made from this unit. */
+    public function getProducts(): array
+    {
+        $unit = $this->getUnit();
+        return $unit ? $this->creator->active((int)$unit['stock_unit_id']) : [];
+    }
+
+    /** SKU and cost share for each sale in an option, keyed by line; empty when a sale has no price yet. */
+    public function allocation(array $option): array
+    {
+        try {
+            return Allocation::products($this->getUnit() ?? [], $option);
+        } catch (\InvalidArgumentException) {
+            return [];
+        }
+    }
+
+    public function productUrl(int $productId): string
+    {
+        return $this->getUrl('catalog/product/edit', ['id' => $productId]);
     }
 
     public function money(?float $value): string
