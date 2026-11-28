@@ -63,6 +63,14 @@
              parent="GhostFrog_Ebay::live"
              action="ghostfrog_ebay/bestoffer/index"
              resource="GhostFrog_Ebay::opportunities"/>
+        <add id="GhostFrog_Ebay::accessories"
+             title="Accessories"
+             translate="title"
+             module="GhostFrog_Ebay"
+             sortOrder="33"
+             parent="GhostFrog_Ebay::live"
+             action="ghostfrog_ebay/accessories/index"
+             resource="GhostFrog_Ebay::opportunities"/>
         <add id="GhostFrog_Ebay::sources"
              title="Sources"
              translate="title"

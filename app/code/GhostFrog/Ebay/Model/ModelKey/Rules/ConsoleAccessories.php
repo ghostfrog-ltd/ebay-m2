@@ -35,8 +35,20 @@ final class ConsoleAccessories extends Rule
      */
     private const TYPES = [
         'portal' => '\\bplaystation\\s+portal\\b|\\bps\\s+portal\\b|\\bremote\\s+player\\b',
-        'vr' => '\\bps\\s*vr\\s*2?\\b|\\bvr\\s*2?\\s+headset\\b|\\bvr2\\b',
+        // A VR game names the headset it needs, so the headset must be the item.
+        'vr-controller' => '\\bsense\\s+controllers?\\b',
+        'vr' => '\\b(?:ps\\s*|playstation\\s+)?vr\\s*2?\\s+headset\\b|^\\W*(?:sony\\s+)?(?:playstation\\s+|ps\\s*)vr\\s*2?\\b',
         'skin' => '\\b(?:skins?|wraps?|decals?|stickers?|vinyls?)\\b',
+        // Parts of an accessory come before the accessory they belong to: "Flex Cable For L R Controller",
+        // "Scuf Reflex Controller Back Panel", "Elite Controller Carrying Case", "Wheel Pedals ONLY".
+        'repair-part' => '\\bflex\\s+cables?\\b|\\bribbon\\b|\\bback\\s+(?:panel|plate|shell|paddles?)\\b|\\bthumb\\s?sticks?\\b'
+            . '|\\bhdmi\\s+port\\b|\\bmotherboard\\b|\\breplacement\\b|\\btriggers?\\b|\\bpaddles?\\b'
+            . '|\\bear\\s?(?:pads?|cushions?)\\b',
+        'battery' => '\\bbatter(?:y|ies)\\b|\\bpower\\s+banks?\\b|\\b\\d+\\s?mah\\b',
+        'stand' => '\\bholders?\\b|\\bstand\\b|\\bwall\\s+(?:mount|bracket)\\b',
+        'carry-case' => '\\b(?:carrying|carry|travel|protective|hard|storage)\\s+(?:case|bag|pouch)\\b|\\bcase\\s+only\\b',
+        'pedals' => '\\bpedals?\\s+only\\b|\\bonly\\s+pedals?\\b',
+        'adapter' => '\\b(?:headset|wireless|bluetooth|usb)\\s+(?:adapt[eo]r|dongle|receiver)\\b|\\bdongle\\b',
         'charging-station' => '\\bcharging\\s+(?:station|dock|stand|base)\\b|\\bcharger\\s+(?:dock|station|stand)\\b'
             . '|\\bdual\\s+charg\\w*',
         'disc-drive' => '\\bdis[ck]\\s+drive\\b',
@@ -58,14 +70,11 @@ final class ConsoleAccessories extends Rule
         'screen-protector' => '\\bscreen\\s+protectors?\\b|\\btempere?d?\\s+glass\\b',
         'case' => '\\bcases?\\b|\\bbags?\\b|\\bpouch\\b|\\bsleeve\\b',
         'cover' => '\\b(?:dust\\s+)?covers?\\b',
-        'stand' => '\\bstand\\b|\\bwall\\s+(?:mount|bracket)\\b',
         'cooling' => '\\bcool(?:ing|er)\\b|\\bfans?\\b',
-        'battery' => '\\bbatter(?:y|ies)\\b|\\bpower\\s+banks?\\b|\\b\\d+\\s?mah\\b',
         'shell' => '\\bface\\s?plates?\\b|\\bshells?\\b|\\bhousing\\b|\\bcover\\s+plate\\b',
         'camera' => '\\bcameras?\\b|\\bkinect\\b|\\bweb\\s?cams?\\b',
         'remote' => '\\bremote\\b',
         'keyboard' => '\\bkeyboard\\b',
-        'repair-part' => '\\bthumb\\s?sticks?\\b|\\bhdmi\\s+port\\b|\\bribbon\\b|\\bmotherboard\\b|\\breplacement\\b',
     ];
 
     /** Kinds Sony, Microsoft and Nintendo make and others copy cheaply; the two are priced apart. */
@@ -89,7 +98,7 @@ final class ConsoleAccessories extends Rule
 
     /** Kinds no game title is named after, safe to key when the rest of the title reads like a game. */
     private const UNMISTAKABLE = ['controller', 'controller-elite', 'controller-edge', 'pro-controller', 'joy-con',
-        'joy-con-pair', 'charging-station', 'disc-drive', 'power', 'hdmi-cable', 'charger', 'storage', 'headset', 'vr'];
+        'joy-con-pair', 'charging-station', 'disc-drive', 'power', 'hdmi-cable', 'charger', 'storage', 'headset', 'vr', 'vr-controller', 'stand', 'battery'];
 
     /**
      * Between "console" and the accessory, a size, a count or a list makes the console the item:
@@ -113,6 +122,9 @@ final class ConsoleAccessories extends Rule
             return self::UNKNOWN_KEY;
         }
         [$type, $at, $inItem] = $found;
+        if ($type === 'carry-case') {
+            $type = 'case';
+        }
         if ($type === 'joy-con' && $joyConPair) {
             $type = 'joy-con-pair';
         }
@@ -144,6 +156,12 @@ final class ConsoleAccessories extends Rule
             $type .= self::isThirdParty($text) ? '-third-party' : '-official';
         }
         return self::PREFIX . $platform . '-' . $type;
+    }
+
+    /** Platform families as they appear in keys, most specific first ("xbox-series" before "xbox"). */
+    public static function platforms(): array
+    {
+        return array_keys(self::PLATFORMS);
     }
 
     public static function isAccessoryKey(string $key): bool

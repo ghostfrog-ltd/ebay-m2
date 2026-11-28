@@ -702,6 +702,48 @@ final class ClassifierTest extends TestCase
             [],
             'accessory-ps5-vr',
         ];
+        yield 'a part of a controller is a part' => [
+            'ebay-consoles',
+            'Flex Cable For L R Controller Sony PS5 PlayStation',
+            [],
+            'accessory-ps5-repair-part',
+        ];
+        yield 'a case for an Elite controller is a case' => [
+            'ebay-consoles',
+            'Microsoft Xbox Elite Series 2 controller carrying case. Case ONLY',
+            [],
+            'accessory-xbox-case',
+        ];
+        yield 'pedals alone are not a wheel' => [
+            'ebay-consoles',
+            'Pedals ONLY Hori RWA Racing Wheel Apex Wireless Steering Wheel PS4',
+            [],
+            'accessory-ps4-pedals',
+        ];
+        yield 'a VR game is not a VR headset' => [
+            'ebay-consoles',
+            "Star Wars Tales From The Galaxy's Edge - (PS5 Enhanced) PS VR2",
+            [],
+            'unknown',
+        ];
+        yield 'a controller battery is a battery' => [
+            'ebay-consoles',
+            'Sony PlayStation PS5 DualSense Controller 4000mAh Battery Replacement Kit',
+            [],
+            'accessory-ps5-repair-part',
+        ];
+        yield 'a controller holder is a stand' => [
+            'ebay-consoles',
+            'Ps5 Ps4 Controller Holder',
+            [],
+            'accessory-ps5-stand',
+        ];
+        yield 'earpads are a part' => [
+            'ebay-consoles',
+            'Earpads ONLY Astro A10 Gen 2 gaming headset 3.5mm wired PS5',
+            [],
+            'accessory-ps5-repair-part',
+        ];
         yield 'PS Vita' => [
             'ebay-consoles',
             'Sony PS Vita PCH-2000 Aqua Blue Handheld Console',
