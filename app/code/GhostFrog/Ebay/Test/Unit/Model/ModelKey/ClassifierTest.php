@@ -590,6 +590,36 @@ final class ClassifierTest extends TestCase
             [],
             'unknown',
         ];
+        yield 'console wrap is not a console' => [
+            'ebay-consoles',
+            'Xbox Series X Call Of Duty Black Ops 6 Console Wrap',
+            [],
+            'unknown',
+        ];
+        yield 'console skin is not a console' => [
+            'ebay-consoles',
+            'PS5 Slim Disc Edition Console Skin Decal Spider-Man',
+            [],
+            'unknown',
+        ];
+        yield 'console with a skin is still a console' => [
+            'ebay-consoles',
+            'Microsoft Xbox Series S Home Console Spider-Man Skin + Controller Wi-Fi USB-A',
+            [],
+            'microsoft-xbox-series-s-512gb',
+        ];
+        yield 'console wearing a skin is still a console' => [
+            'ebay-consoles',
+            'Microsoft Xbox One S Home Console Grey/Black Camo Skin Wi-Fi USB-A Console Only 500GB',
+            [],
+            'microsoft-xbox-one-s-500gb',
+        ];
+        yield 'shrink wrapped console is still a console' => [
+            'ebay-consoles',
+            'Xbox Series X 1TB Console Brand New Shrink Wrap',
+            [],
+            'microsoft-xbox-series-x-1tb',
+        ];
         yield 'PS Vita' => [
             'ebay-consoles',
             'Sony PS Vita PCH-2000 Aqua Blue Handheld Console',

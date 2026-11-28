@@ -181,6 +181,23 @@ final class Consoles extends Rule
             . '\\b(?:controllers?|pads?|joy-?cons?|games?|dock)\\b)', $before);
     }
 
+    /**
+     * "Xbox Series X Black Ops 6 Console Wrap" is a wrap, not a console. A console sold with a skin on it
+     * ("Home Console Camo Skin + Controller", "Console w/ Multicolour Skin") is still the console, so the
+     * covering must be the item itself: straight after "console", or followed by "for" or "decal".
+     */
+    private static function isCovering(string $titleText): bool
+    {
+        $covering = '(?:skins?|wraps?|decals?|stickers?|vinyls?)';
+        $match = self::search('\\b(?:consoles?|controllers?)\\s+' . $covering . '\\b'
+            . '|\\b' . $covering . '\\s+(?:for|decal|sticker|set|kit)\\b', $titleText);
+        if (!$match) {
+            return false;
+        }
+        $before = mb_substr($titleText, 0, $match->start());
+        return !self::search('\\b(?:with|plus|includ\\w*|incl?)\\b|\\bw/|\\+', $before);
+    }
+
     private static function isAccessoryOrPart(string $text, bool $hardwareSignal = false): bool
     {
         $explicitAccessoryOrPart = self::containsAny($text, [
@@ -560,7 +577,7 @@ final class Consoles extends Rule
         $titleText = self::asText($title);
         $text = self::blob($attrs, $title);
         $hardwareSignal = self::hasConsoleHardwareSignal($titleText, $text);
-        if (self::isPeripheral($titleText) || self::looksLikeAccessoryOrSoftwareIntent($titleText, $text, $attrs) || self::isAccessoryOrPart($text, hardwareSignal: $hardwareSignal) || self::looksLikeGameOnly($text, $attrs)) {
+        if (self::isPeripheral($titleText) || self::isCovering($titleText) || self::looksLikeAccessoryOrSoftwareIntent($titleText, $text, $attrs) || self::isAccessoryOrPart($text, hardwareSignal: $hardwareSignal) || self::looksLikeGameOnly($text, $attrs)) {
             return self::UNKNOWN_KEY;
         }
         $storage = self::extractStorage($attrs, $title);
