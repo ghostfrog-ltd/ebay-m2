@@ -121,7 +121,8 @@
             "candidate_attempted_at": true,
             "item_type": true,
             "key_source": true,
-            "best_offer": true
+            "best_offer": true,
+            "is_accessory": true
         },
         "index": {
             "GHOSTFROG_EBAY_AUCTION_LISTINGS_SOURCE_ID": true,
@@ -598,7 +599,8 @@
             "bin_price": true,
             "last_seen_at": true,
             "last_price_checked_at": true,
-            "best_offer": true
+            "best_offer": true,
+            "is_accessory": true
         },
         "index": {
             "GHOSTFROG_EBAY_OPPORTUNITIES_EXPECTED_PROFIT_LISTING_ID": true,

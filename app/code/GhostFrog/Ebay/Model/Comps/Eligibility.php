@@ -7,6 +7,7 @@ namespace GhostFrog\Ebay\Model\Comps;
 use GhostFrog\Ebay\Model\Condition\Assessment;
 use GhostFrog\Ebay\Model\Condition\Stage;
 use GhostFrog\Ebay\Model\ModelKey\Classifier;
+use GhostFrog\Ebay\Model\ModelKey\Rules\ConsoleAccessories;
 use GhostFrog\Ebay\Model\ModelKey\Rules\RcCars;
 
 /**
@@ -42,6 +43,13 @@ final class Eligibility
      */
     private const REPLACEMENT = '~\breplacement (?:part|screen|keyboard|battery|shell|case)\b~i';
 
+    /**
+     * An accessory key ("accessory-ps5-controller-official") is the case, charger or cable itself, so only
+     * packaging, lots and locks keep it out.
+     */
+    private const ACCESSORY_EXCLUDED = '~\b(?:empty (?:original )?box|(?:box|packaging) only|job\s*lot|'
+        . '(?:icloud|mdm|account)[ -]locked|blacklisted)\b~i';
+
     public function __construct(private readonly Classifier $classifier)
     {
     }
@@ -59,8 +67,10 @@ final class Eligibility
         if ($key === '' || str_starts_with($key, 'unknown') || str_contains($key, 'generic')
             || str_contains($key, 'gen-unk') || preg_match('/_[a-d](?:-[a-d])?$/', $key)
             || ($listing['review_action'] ?? null) === 'down'
-            || preg_match(self::EXCLUDED, $evidence)
-            || (strtolower($source) !== RcCars::SOURCE && preg_match(self::REPLACEMENT, $evidence))
+            || (ConsoleAccessories::isAccessoryKey($key)
+                ? preg_match(self::ACCESSORY_EXCLUDED, $evidence)
+                : preg_match(self::EXCLUDED, $evidence)
+                    || (strtolower($source) !== RcCars::SOURCE && preg_match(self::REPLACEMENT, $evidence)))
         ) {
             return null;
         }

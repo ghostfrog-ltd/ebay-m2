@@ -88,6 +88,7 @@ final class Rows
                     'bid_price' => $listing['price_bid_current'],
                     'bin_price' => $listing['price_bin_current'],
                     'best_offer' => (int)$listing['best_offer'],
+                    'is_accessory' => (int)($listing['is_accessory'] ?? 0),
                     'last_seen_at' => $listing['last_seen_at'],
                     'last_price_checked_at' => $listing['last_price_checked_at'],
                     'sold_median' => $value['sold_median'],

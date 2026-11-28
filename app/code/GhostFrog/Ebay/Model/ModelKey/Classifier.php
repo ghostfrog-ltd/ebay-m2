@@ -7,6 +7,7 @@ namespace GhostFrog\Ebay\Model\ModelKey;
 use GhostFrog\Ebay\Model\ModelKey\Rules\Bikes;
 use GhostFrog\Ebay\Model\ModelKey\Rules\Cameras;
 use GhostFrog\Ebay\Model\ModelKey\Rules\Components;
+use GhostFrog\Ebay\Model\ModelKey\Rules\ConsoleAccessories;
 use GhostFrog\Ebay\Model\ModelKey\Rules\Consoles;
 use GhostFrog\Ebay\Model\ModelKey\Rules\Headphones;
 use GhostFrog\Ebay\Model\ModelKey\Rules\HondaMsx125;
@@ -24,8 +25,10 @@ use GhostFrog\Ebay\Model\ModelKey\Rules\Watches;
 
 final class Classifier
 {
+    private const CONSOLES = 'ebay-consoles';
+
     /** Columns a classification may set besides the key. Sources without item types leave them alone. */
-    public const DETAIL_COLUMNS = ['item_type', 'key_source', 'brand'];
+    public const DETAIL_COLUMNS = ['item_type', 'key_source', 'brand', 'is_accessory'];
 
     public function __construct(
         private readonly AppleMac $mac,
@@ -65,7 +68,11 @@ final class Classifier
     public function columns(string $source, string $title, array $attrs): array
     {
         if (strtolower(trim($source)) !== RcCars::SOURCE) {
-            return ['model_key' => $this->plainKey($source, $title, $attrs)];
+            $key = $this->plainKey($source, $title, $attrs);
+            if (strtolower(trim($source)) !== self::CONSOLES) {
+                return ['model_key' => $key];
+            }
+            return ['model_key' => $key, 'is_accessory' => ConsoleAccessories::isAccessoryKey($key) ? '1' : '0'];
         }
         // RC reads the item specifics exactly as eBay returned them. The brand column holds the name this
         // classifier chose, so feeding it back in would make the answer depend on the previous run.
@@ -86,7 +93,10 @@ final class Classifier
         $source = strtolower(trim($source));
         // Packaging and empty boxes are not the product. Faulty and repair listings keep their identity:
         // comps eligibility values them only against other faulty sales.
-        if (preg_match('~\b(?:box only|empty box|packaging only|case only|charger only)\b~i', $title)) {
+        // For consoles a case or charger is an accessory with a key of its own.
+        $notTheItem = $source === self::CONSOLES ? 'box only|empty box|packaging only'
+            : 'box only|empty box|packaging only|case only|charger only';
+        if (preg_match('~\b(?:' . $notTheItem . ')\b~i', $title)) {
             return 'unknown';
         }
         foreach (['Brand' => 'brand', 'Model' => 'model_name', 'Colour' => 'colour', 'ePID' => 'epid'] as $key => $column) {

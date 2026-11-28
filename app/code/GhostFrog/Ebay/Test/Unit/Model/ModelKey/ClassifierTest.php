@@ -30,6 +30,16 @@ final class ClassifierTest extends TestCase
         self::assertSame($expected, $classifier->key($source, $title, $attrs));
     }
 
+    public function testConsoleListingsSayWhetherTheyAreAnAccessory(): void
+    {
+        $classifier = new Classifier(new AppleMac(), new AppleDevices());
+        self::assertSame(['model_key' => 'accessory-ps5-controller-official', 'is_accessory' => '1'],
+            $classifier->columns('ebay-consoles', 'Sony PS5 DualSense Wireless Controller White', []));
+        self::assertSame('1', $classifier->columns('ebay-consoles', '2x Xbox One Controllers', [])['is_accessory']);
+        self::assertSame('0', $classifier->columns('ebay-consoles', 'Xbox Series X 1TB Console', [])['is_accessory']);
+        self::assertArrayNotHasKey('is_accessory', $classifier->columns('ebay-lego', 'LEGO 75192 Millennium Falcon', []));
+    }
+
     public static function sourceCases(): iterable
     {
         yield 'ebay-actioncams' => [
@@ -384,7 +394,7 @@ final class ClassifierTest extends TestCase
                 'Brand' => 'Logitech',
                 'Trading Description' => 'Explosive audio to provide comfort. Compatible Products: PS4 PS5 Xbox Series',
             ],
-            'unknown',
+            'unknown-accessory',
         ];
         yield 'Console bundled with a headset stays a console' => [
             'ebay-consoles',
@@ -438,13 +448,13 @@ final class ClassifierTest extends TestCase
             'ebay-consoles',
             'Seagate Storage Expansion Card 1TB for Xbox Series X|S',
             [],
-            'unknown',
+            'accessory-xbox-series-storage',
         ];
         yield 'Series X controller is not a console' => [
             'ebay-consoles',
             'Microsoft Xbox Series X Wireless Controller Carbon Black',
             [],
-            'unknown',
+            'accessory-xbox-series-controller-official',
         ];
         yield 'Switch console with Joy-Con controllers stays a console' => [
             'ebay-consoles',
@@ -456,7 +466,7 @@ final class ClassifierTest extends TestCase
             'ebay-consoles',
             'Nintendo Switch Joy-Con Controller Pair Neon Red Blue',
             [],
-            'unknown',
+            'accessory-switch-joy-con-pair-official',
         ];
         yield 'Dust sleeve for a Series X is not a console' => [
             'ebay-consoles',
@@ -468,19 +478,19 @@ final class ClassifierTest extends TestCase
             'ebay-consoles',
             '5V/2A USB Vertical Dual Silent Fan External Cooler For Xbox Series X Console C',
             [],
-            'unknown',
+            'accessory-xbox-series-cooling',
         ];
         yield 'Wall bracket for a Series X is not a console' => [
             'ebay-consoles',
             'VIVO Steel Wall Mount Bracket Designed for Xbox Series X Gaming Console, Horizon',
             [],
-            'unknown',
+            'accessory-xbox-series-stand',
         ];
         yield 'Joy-Con for a Switch console is not a console' => [
             'ebay-consoles',
             'Wireless Joy-Con Controller for Nintendo Switch Console, Blue/Red',
             [],
-            'unknown',
+            'accessory-switch-joy-con-third-party',
         ];
         yield 'Series X mini fridge is not a console' => [
             'ebay-consoles',
@@ -516,7 +526,7 @@ final class ClassifierTest extends TestCase
             'ebay-consoles',
             'Microsoft Xbox 360 Wired Controller Black',
             [],
-            'unknown',
+            'accessory-xbox-360-controller-official',
         ];
         yield 'PS3 games bundle is not a console' => [
             'ebay-consoles',
@@ -552,7 +562,7 @@ final class ClassifierTest extends TestCase
             'ebay-consoles',
             '320GB Hard Drive for Sony PS3 Slim',
             [],
-            'unknown',
+            'accessory-ps3-storage',
         ];
         yield 'PS3 with a legacy drive size is a console' => [
             'ebay-consoles',
@@ -564,7 +574,7 @@ final class ClassifierTest extends TestCase
             'ebay-consoles',
             'BATTERIE 3200mAh HDH-0003 HDH-A-BPHAT-C0 For Nintendo Switch Lite, HDH-001',
             ['Platform' => ['Nintendo Switch LiTE'], 'Compatible Model' => ['Nintendo Switch']],
-            'unknown',
+            'accessory-switch-battery',
         ];
         yield 'Listing outside the consoles category is not a console' => [
             'ebay-consoles',
@@ -588,19 +598,19 @@ final class ClassifierTest extends TestCase
             'ebay-consoles',
             'PlayVital Back Cover for Nintendo Switch Console NS Joycon Chameleon Scarlet Red',
             [],
-            'unknown',
+            'accessory-switch-cover',
         ];
         yield 'console wrap is not a console' => [
             'ebay-consoles',
             'Xbox Series X Call Of Duty Black Ops 6 Console Wrap',
             [],
-            'unknown',
+            'accessory-xbox-series-skin',
         ];
         yield 'console skin is not a console' => [
             'ebay-consoles',
             'PS5 Slim Disc Edition Console Skin Decal Spider-Man',
             [],
-            'unknown',
+            'accessory-ps5-skin',
         ];
         yield 'console with a skin is still a console' => [
             'ebay-consoles',
@@ -620,6 +630,78 @@ final class ClassifierTest extends TestCase
             [],
             'microsoft-xbox-series-x-1tb',
         ];
+        yield 'official PS5 controller is a keyed accessory' => [
+            'ebay-consoles',
+            'Sony PS5 DualSense Wireless Controller – The Last of Us Limited Edition',
+            [],
+            'accessory-ps5-controller-official',
+        ];
+        yield 'third-party PS5 controller is priced apart from the official one' => [
+            'ebay-consoles',
+            'Gamrombo Wireless Controller for PS5/Pro/Slim/PC/Steam Deck Back #Ivory White',
+            [],
+            'accessory-ps5-controller-third-party',
+        ];
+        yield 'PS5 disc drive is a keyed accessory' => [
+            'ebay-consoles',
+            'Sony PS5 Slim Disc Drive Attachment CFI-ZDD1 Brand New',
+            [],
+            'accessory-ps5-disc-drive',
+        ];
+        yield 'Xbox One power supply is a keyed accessory' => [
+            'ebay-consoles',
+            'Official Microsoft Xbox One Power Supply Model A12-220P1A With UK Plug 1540',
+            [],
+            'accessory-xbox-one-power-official',
+        ];
+        yield 'Elite controller works across Xbox generations' => [
+            'ebay-consoles',
+            'Xbox One Elite Serier 2 Wireless Controller - Black',
+            [],
+            'accessory-xbox-controller-elite',
+        ];
+        yield 'several controllers are an accessory but not one to value' => [
+            'ebay-consoles',
+            '2x Untested Emerald Xbox 1 Power A Controllers',
+            [],
+            'unknown-accessory',
+        ];
+        yield 'console sold with a case is not a case' => [
+            'ebay-consoles',
+            'Galaxy Switch Lite with Protective Case and Carry Case',
+            [],
+            'unknown',
+        ];
+        yield 'console listed as a controller is not a controller' => [
+            'ebay-consoles',
+            'PS4 Console (500gb) 1 Controller, Controller(s) Holder',
+            ['Type' => 'Controller Holder'],
+            'unknown',
+        ];
+        yield 'console with a faulty port is not a part' => [
+            'ebay-consoles',
+            'PS5 825GB Disc Console FAULTY HDMI PORT',
+            [],
+            'unknown',
+        ];
+        yield 'Elite steering wheel is a wheel' => [
+            'ebay-consoles',
+            'Fanatec McLaren GT3 V2 CSL Elite Steering Wheel QR2 Lite Xbox PS PC (not used)',
+            [],
+            'accessory-xbox-wheel',
+        ];
+        yield 'a plainly named controller is the official one' => [
+            'ebay-consoles',
+            'Xbox One Controller Grey Green',
+            [],
+            'accessory-xbox-one-controller-official',
+        ];
+        yield 'PS VR2 is not a headset' => [
+            'ebay-consoles',
+            'Sony Playstation VR2 Headset White Sony Playstation PS5',
+            [],
+            'accessory-ps5-vr',
+        ];
         yield 'PS Vita' => [
             'ebay-consoles',
             'Sony PS Vita PCH-2000 Aqua Blue Handheld Console',
@@ -630,7 +712,7 @@ final class ClassifierTest extends TestCase
             'ebay-consoles',
             'Nintendo Switch 2 Camera/Web-Cam USB with Stand, Privacy Shutter, Black',
             [],
-            'unknown',
+            'accessory-switch-2-camera',
         ];
         yield 'Switch 2 power case is not a console' => [
             'ebay-consoles',
@@ -666,13 +748,13 @@ final class ClassifierTest extends TestCase
             'ebay-consoles',
             'PowerA Nintendo Switch & Switch Lite Car Charger Black USB High-Speed Power A UK',
             ['Type' => 'Car Charger', 'Platform' => 'Nintendo Switch'],
-            'unknown',
+            'accessory-switch-charger-third-party',
         ];
         yield 'Power adapter is not an Xbox 360' => [
             'ebay-consoles',
             'Microsoft Xbox 360 Slim Console CPA09-011A 135W 10.83A AC Power Adapter UK Plug',
             [],
-            'unknown',
+            'accessory-xbox-360-power-official',
         ];
         yield 'Console listed with a charger stays a console' => [
             'ebay-consoles',

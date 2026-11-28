@@ -113,6 +113,7 @@ final class Listings
                 'price_bid_current' => 'a.price_bid_current',
                 'price_bin_current' => 'a.price_bin_current',
                 'best_offer' => 'a.best_offer',
+                'is_accessory' => 'a.is_accessory',
                 'last_seen_at' => 'a.last_seen_at',
                 'last_price_checked_at' => 'a.last_price_checked_at',
                 'eligible_until' => new Expression("LEAST(COALESCE(a.end_time, $freshUntil), $freshUntil)"),

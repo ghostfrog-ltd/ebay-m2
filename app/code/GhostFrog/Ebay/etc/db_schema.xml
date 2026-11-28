@@ -128,6 +128,7 @@
         <column xsi:type="varchar" name="item_type" nullable="true" length="32" comment="Item type the classifier assigned, for sources that have types"/>
         <column xsi:type="varchar" name="key_source" nullable="true" length="16" comment="Evidence the model key came from: specifics, title or mixed"/>
         <column xsi:type="boolean" name="best_offer" nullable="false" default="false" comment="eBay lists BEST_OFFER as a buying option"/>
+        <column xsi:type="boolean" name="is_accessory" nullable="true" comment="Classifier marked the listing as an accessory, for sources that key accessories"/>
         <constraint xsi:type="primary" referenceId="PRIMARY">
             <column name="id"/>
         </constraint>
@@ -275,6 +276,7 @@
         <column xsi:type="decimal" name="bid_price" nullable="true" precision="21" scale="2" comment="Current auction price in GBP"/>
         <column xsi:type="decimal" name="bin_price" nullable="true" precision="21" scale="2" comment="Buy It Now price in GBP"/>
         <column xsi:type="boolean" name="best_offer" nullable="false" default="false" comment="Seller accepts Best Offers"/>
+        <column xsi:type="boolean" name="is_accessory" nullable="false" default="false" comment="Listing is an accessory"/>
         <column xsi:type="datetime" name="last_seen_at" nullable="true" on_update="false" comment="Observation time for the indexed price"/>
         <column xsi:type="datetime" name="last_price_checked_at" nullable="true" on_update="false" comment="Last successful Browse price check in UTC"/>
         <column xsi:type="decimal" name="sold_median" nullable="false" precision="24" scale="3" comment="Median sold price in GBP"/>

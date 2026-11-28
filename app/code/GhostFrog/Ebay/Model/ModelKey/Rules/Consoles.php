@@ -571,14 +571,25 @@ final class Consoles extends Rule
         if ($game !== self::UNKNOWN_KEY) {
             return $game;
         }
-        if (self::inOtherCategory($attrs)) {
-            return self::UNKNOWN_KEY;
-        }
         $titleText = self::asText($title);
         $text = self::blob($attrs, $title);
         $hardwareSignal = self::hasConsoleHardwareSignal($titleText, $text);
-        if (self::isPeripheral($titleText) || self::isCovering($titleText) || self::looksLikeAccessoryOrSoftwareIntent($titleText, $text, $attrs) || self::isAccessoryOrPart($text, hardwareSignal: $hardwareSignal) || self::looksLikeGameOnly($text, $attrs)) {
-            return self::UNKNOWN_KEY;
+        // Accessories get keys of their own, so they are valued against each other and never as the console.
+        if (self::isPeripheral($titleText) || self::isCovering($titleText)
+            || self::looksLikeAccessoryOrSoftwareIntent($titleText, $text, $attrs)
+            || self::isAccessoryOrPart($text, hardwareSignal: $hardwareSignal)
+        ) {
+            return ConsoleAccessories::key($title);
+        }
+        // A listing outside eBay's consoles category is an accessory, part or game whatever its title names.
+        // One whose title still reads as a console (a seller's wrong category) is left unkeyed.
+        if (self::inOtherCategory($attrs)) {
+            return self::hasConsoleHardwareSignal($titleText, $titleText)
+                ? self::UNKNOWN_KEY : ConsoleAccessories::key($title);
+        }
+        if (self::looksLikeGameOnly($text, $attrs)) {
+            // "Xbox One Controllers" names a platform and no console, like a game title does.
+            return self::hasGameAttrs($attrs) ? self::UNKNOWN_KEY : ConsoleAccessories::key($title, unmistakable: true);
         }
         $storage = self::extractStorage($attrs, $title);
         $key = self::playstationKey($attrs, $titleText, $text, $storage);
@@ -589,6 +600,11 @@ final class Consoles extends Rule
         if ($key !== self::UNKNOWN_KEY) {
             return $key;
         }
-        return self::switchKey($attrs, $titleText, $text);
+        $key = self::switchKey($attrs, $titleText, $text);
+        // "Xbox One Controllers" names no console and none of the phrases above: it may still be an accessory.
+        if ($key === self::UNKNOWN_KEY && !self::hasConsoleHardwareSignal($titleText, $titleText)) {
+            return ConsoleAccessories::key($title);
+        }
+        return $key;
     }
 }
