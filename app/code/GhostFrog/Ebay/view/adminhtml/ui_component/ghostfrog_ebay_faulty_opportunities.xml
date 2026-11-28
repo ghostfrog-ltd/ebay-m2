@@ -39,6 +39,11 @@
         <paging name="listing_paging"/>
     </listingToolbar>
     <columns name="opportunity_columns" component="GhostFrog_Ebay/js/grid/source-colour-listing">
+        <selectionsColumn name="ids" sortOrder="0">
+            <settings>
+                <indexField>listing_id</indexField>
+            </settings>
+        </selectionsColumn>
         <column name="listing_id" sortOrder="10">
             <settings>
                 <filter>textRange</filter>

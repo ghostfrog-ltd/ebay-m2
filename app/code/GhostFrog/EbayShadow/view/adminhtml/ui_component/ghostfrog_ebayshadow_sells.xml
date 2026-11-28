@@ -39,6 +39,11 @@
         <paging name="listing_paging"/>
     </listingToolbar>
     <columns name="ghostfrog_ebayshadow_sells_columns">
+        <selectionsColumn name="ids" sortOrder="0">
+            <settings>
+                <indexField>item_id</indexField>
+            </settings>
+        </selectionsColumn>
         <column name="item_id" sortOrder="10">
             <settings>
                 <filter>textRange</filter>

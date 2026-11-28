@@ -45,6 +45,11 @@
         <paging name="listing_paging"/>
     </listingToolbar>
     <columns name="ghostfrog_ebayledger_sales_columns">
+        <selectionsColumn name="ids" sortOrder="0">
+            <settings>
+                <indexField>sale_line_id</indexField>
+            </settings>
+        </selectionsColumn>
         <column name="sold_at" class="Magento\Ui\Component\Listing\Columns\Date" component="Magento_Ui/js/grid/columns/date" sortOrder="10">
             <settings>
                 <filter>dateRange</filter>

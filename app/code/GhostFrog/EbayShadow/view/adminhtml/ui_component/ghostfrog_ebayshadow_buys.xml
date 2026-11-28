@@ -47,6 +47,11 @@
         <paging name="listing_paging"/>
     </listingToolbar>
     <columns name="ghostfrog_ebayshadow_buys_columns">
+        <selectionsColumn name="ids" sortOrder="0">
+            <settings>
+                <indexField>decision_id</indexField>
+            </settings>
+        </selectionsColumn>
         <column name="decision_id" sortOrder="10">
             <settings>
                 <filter>textRange</filter>

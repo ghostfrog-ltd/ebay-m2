@@ -45,6 +45,11 @@
         <paging name="listing_paging"/>
     </listingToolbar>
     <columns name="ghostfrog_ebayledger_stock_units_columns">
+        <selectionsColumn name="ids" sortOrder="0">
+            <settings>
+                <indexField>stock_unit_id</indexField>
+            </settings>
+        </selectionsColumn>
         <column name="reference" sortOrder="10">
             <settings>
                 <filter>text</filter><sorting>asc</sorting>

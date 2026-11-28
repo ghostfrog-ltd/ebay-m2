@@ -38,6 +38,11 @@
         <paging name="listing_paging"/>
     </listingToolbar>
     <columns name="ghostfrog_ebayledger_products_columns">
+        <selectionsColumn name="ids" sortOrder="0">
+            <settings>
+                <indexField>ledger_product_id</indexField>
+            </settings>
+        </selectionsColumn>
         <column name="sku" sortOrder="10">
             <settings>
                 <filter>text</filter>
